@@ -15,5 +15,11 @@ public class MenuNavigationNavigation : MonoBehaviour
             Debug.LogWarning("Nie podano nazwy sceny!");
         }
     }
+
+    public void QuitGame()
+    {
+        Application.Quit();
+    }
 }
+
 
