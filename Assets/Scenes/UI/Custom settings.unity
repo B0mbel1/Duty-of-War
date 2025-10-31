@@ -222,19 +222,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 19355169}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1244157862}
-        m_TargetAssemblyTypeName: BattleInfoDisplay, Assembly-CSharp
-        m_MethodName: Battle_TeutoburgForest
-        m_Mode: 2
-        m_Arguments:
-          m_ObjectArgument: {fileID: 19355168}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.UI.Button, UnityEngine.UI
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &19355169
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2749,19 +2737,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 904399761}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1244157862}
-        m_TargetAssemblyTypeName: BattleInfoDisplay, Assembly-CSharp
-        m_MethodName: Battle_Adrianopol
-        m_Mode: 2
-        m_Arguments:
-          m_ObjectArgument: {fileID: 904399760}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.UI.Button, UnityEngine.UI
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &904399761
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3507,19 +3483,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1101794643}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1244157862}
-        m_TargetAssemblyTypeName: BattleInfoDisplay, Assembly-CSharp
-        m_MethodName: Battle_Jarmuk
-        m_Mode: 2
-        m_Arguments:
-          m_ObjectArgument: {fileID: 1101794642}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.UI.Button, UnityEngine.UI
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1101794643
 MonoBehaviour:
   m_ObjectHideFlags: 0
