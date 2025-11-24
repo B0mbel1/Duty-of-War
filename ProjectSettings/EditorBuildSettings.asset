@@ -5,30 +5,48 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/UI/MainMenu.unity
     guid: 48672e29ccf9fca4aad4ddfb1b2417f6
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/UI/Custom settings.unity
     guid: 4afa3480c0ed282438ed86bf23f0efe9
-  - enabled: 0
+  - enabled: 1
+    path: Assets/Scenes/UI/Scenario.unity
+    guid: 710117e4d72d8124cb883a6ea69cf78c
+  - enabled: 1
+    path: Assets/Scenes/UI/Settings.unity
+    guid: 8cedf6ca85717344280a696930c49fe6
+  - enabled: 1
     path: Assets/Scenes/Maps/Historical/Jarmuk.unity
     guid: 7569eff7051e3314a932295f227c92c6
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/Maps/Historical/LechowePole.unity
     guid: d357475eb2170e44b9785958852ee3b9
   - enabled: 1
+    path: Assets/Scenes/Maps/Historical/Adrianopol.unity
+    guid: 53fd89ce92e4122479c84a4af2534d3a
+  - enabled: 1
     path: Assets/Scenes/Maps/Historical/TeutoburgForest.unity
     guid: 150953fa2131da046aa06f2cb4fce835
-  - enabled: 0
-    path: Assets/Scenes/UI/Settings.unity
-    guid: 8cedf6ca85717344280a696930c49fe6
-  - enabled: 0
+  - enabled: 1
+    path: "Assets/Scenes/Maps/Custom/Wzg\xF3rza Zamieci.unity"
+    guid: 59905607a4bc0464ca8dda8877053849
+  - enabled: 1
+    path: Assets/Scenes/Maps/Historical/Grunwald.unity
+    guid: 5b34249b6845cd9459a476d3a8e0545d
+  - enabled: 1
+    path: "Assets/Scenes/Maps/Custom/Wybrze\u017Ce Pal Galur.unity"
+    guid: 74e62fa5eaf8ac640811ddb1f90d9e47
+  - enabled: 1
+    path: Assets/Scenes/Maps/Historical/AjnDzalut.unity
+    guid: 800bf9958693b9643beea0d396f5d56e
+  - enabled: 1
+    path: Assets/Scenes/Maps/Custom/Orle Gniazdo.unity
+    guid: f91e93c3ea14eba41b263100c66f815b
+  - enabled: 1
     path: Assets/Scenes/Maps/Historical/Hastings.unity
     guid: 148b99b4701d71942b6e4e7fae642a7c
-  - enabled: 0
-    path: Assets/Scenes/UI/Scenario.unity
-    guid: 710117e4d72d8124cb883a6ea69cf78c
   - enabled: 0
     path: Assets/Scenes/UI/Menu.unity
     guid: ff981af3ab746d64e8d51cadd6c999d1

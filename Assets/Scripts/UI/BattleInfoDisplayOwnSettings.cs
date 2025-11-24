@@ -1,19 +1,104 @@
 using UnityEngine;
-using TMPro;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class BattleInfoDisplayOwnSettings : MonoBehaviour
 {
-
     [Header("Sprite'y map")]
     public Sprite WybrzezePalGalur;
     public Sprite WzgorzaZamieci;
     public Sprite OrleGniazdo;
 
+    [Header("Przyciski scenariuszy")]
+    public Button WybrzezePalGalurButton;
+    public Button WzgorzaZamieciButton;
+    public Button OrleGniazdoButton;
 
+    private Button selectedButton = null;
+    private Sprite selectedMap = null;
+
+    public Color selectedColor = Color.blue;
+    public Color defaultColor = Color.white;
+
+    [Header("Obraz mapy")]
     public Image imageMap;
-    public void ShowBattleInfo(Sprite image)
+
+    [Header("Przycisk Graj")]
+    public Button playButton;
+
+    private void Start()
     {
-        imageMap.sprite = image;
+        if (playButton != null)
+            playButton.onClick.AddListener(PlaySelectedMap);
+    }
+
+    // -----------------------------
+    // Metody wywo³ywane w OnClick() przycisków map
+    public void SelectWybrzezePalGalur()
+    {
+        SelectMap(WybrzezePalGalur, WybrzezePalGalurButton);
+    }
+
+    public void SelectWzgorzaZamieci()
+    {
+        SelectMap(WzgorzaZamieci, WzgorzaZamieciButton);
+    }
+
+    public void SelectOrleGniazdo()
+    {
+        SelectMap(OrleGniazdo, OrleGniazdoButton);
+    }
+
+    // -----------------------------
+    private void SelectMap(Sprite map, Button btn)
+    {
+        selectedMap = map;
+
+        // Ustaw obraz w UI
+        imageMap.sprite = selectedMap;
+
+        // Zmieñ kolor przycisku
+        if (selectedButton != null)
+            SetButtonColor(selectedButton, defaultColor);
+
+        selectedButton = btn;
+        SetButtonColor(selectedButton, selectedColor);
+    }
+
+    // -----------------------------
+    private void PlaySelectedMap()
+    {
+        if (selectedMap == null)
+        {
+            Debug.LogWarning("Nie wybrano mapy!");
+            return;
+        }
+
+        // Tutaj musisz wpisaæ nazwê sceny dla ka¿dej mapy
+        string sceneName = "";
+
+        if (selectedMap == WybrzezePalGalur)
+            sceneName = "Wybrze¿e Pal Galur";
+        else if (selectedMap == WzgorzaZamieci)
+            sceneName = "Wzgórza Zamieci";
+        else if (selectedMap == OrleGniazdo)
+            sceneName = "Orle Gniazdo";
+
+        if (!string.IsNullOrEmpty(sceneName))
+            SceneManager.LoadScene(sceneName);
+        else
+            Debug.LogError("Nie ustawiono nazwy sceny dla tej mapy!");
+    }
+
+    // -----------------------------
+    private void SetButtonColor(Button btn, Color color)
+    {
+        btn.image.color = color;
+        ColorBlock cb = btn.colors;
+        cb.normalColor = color;
+        cb.highlightedColor = color;
+        cb.pressedColor = color;
+        cb.selectedColor = color;
+        btn.colors = cb;
     }
 }

@@ -1,5 +1,7 @@
-using UnityEngine;
+using NUnit.Framework;
 using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class BattleInfoDisplay : MonoBehaviour
@@ -36,6 +38,11 @@ public class BattleInfoDisplay : MonoBehaviour
     public Sprite Grunwald;
 
     public Image imageMap;
+
+    private Sprite selectedMap = null;
+
+    [Header("Przycisk Graj")]
+    public Button playButton;
     // -----------------------------
     // Zaznaczanie strony A
     public void SelectSideA() { SetBorder(sideABorder); }
@@ -51,6 +58,43 @@ public class BattleInfoDisplay : MonoBehaviour
 
         selectedBorder = border;
         selectedBorder.SetActive(true);
+    }
+
+    private void Start()
+    {
+        if (playButton != null)
+            playButton.onClick.AddListener(PlaySelectedMap);
+    }
+
+    private void PlaySelectedMap()
+    {
+        if (selectedMap == null)
+        {
+            Debug.LogWarning("Nie wybrano mapy!");
+            return;
+        }
+        string sceneName = "";
+
+        if (selectedMap == LasTeutoburski)
+            sceneName = "TeutoburgForest";
+        else if (selectedMap == Adrianopol)
+            sceneName = "Adrianopol";
+        else if (selectedMap == Jarmuk)
+            sceneName = "Jarmuk";
+        else if (selectedMap == LechowePole)
+            sceneName = "LechowePole";
+        else if (selectedMap == Hastings)
+            sceneName = "Hastings";
+        else if (selectedMap == AjnDzalut)
+            sceneName = "AjnDzalut";
+        else if (selectedMap == Grunwald)
+            sceneName = "Grunwald";
+
+
+        if (!string.IsNullOrEmpty(sceneName))
+            SceneManager.LoadScene(sceneName);
+        else
+            Debug.LogError("Nie ustawiono nazwy sceny dla tej mapy!");
     }
     private void Awake()
     {
@@ -102,6 +146,8 @@ public class BattleInfoDisplay : MonoBehaviour
         selectedButton = clickedButton;
         SetButtonColor(selectedButton, selectedColor);
 
+        // Ustaw mapê do wczytania
+        selectedMap = image;  // <-- TO JEST KLUCZOWE
         imageMap.sprite = image;
     }
 

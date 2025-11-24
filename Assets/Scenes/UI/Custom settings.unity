@@ -225,11 +225,11 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1244157862}
         m_TargetAssemblyTypeName: BattleInfoDisplayOwnSettings, Assembly-CSharp
-        m_MethodName: ShowBattleInfo
-        m_Mode: 2
+        m_MethodName: SelectWybrzezePalGalur
+        m_Mode: 1
         m_Arguments:
-          m_ObjectArgument: {fileID: 21300000, guid: d791fc90203f91947a5d68a7753b6f00, type: 3}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Sprite, UnityEngine
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -2202,7 +2202,19 @@ MonoBehaviour:
   m_VerticalScrollbarSpacing: 0
   m_OnValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 612275190}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: 
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &612275193
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2750,11 +2762,11 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1244157862}
         m_TargetAssemblyTypeName: BattleInfoDisplayOwnSettings, Assembly-CSharp
-        m_MethodName: ShowBattleInfo
-        m_Mode: 2
+        m_MethodName: SelectWzgorzaZamieci
+        m_Mode: 1
         m_Arguments:
-          m_ObjectArgument: {fileID: 21300000, guid: 049738157677cfc46872baec5777b5d5, type: 3}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Sprite, UnityEngine
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -3508,11 +3520,11 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1244157862}
         m_TargetAssemblyTypeName: BattleInfoDisplayOwnSettings, Assembly-CSharp
-        m_MethodName: ShowBattleInfo
-        m_Mode: 2
+        m_MethodName: SelectOrleGniazdo
+        m_Mode: 1
         m_Arguments:
-          m_ObjectArgument: {fileID: 21300000, guid: da6267b9e85a08c40bb69f91894a495e, type: 3}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Sprite, UnityEngine
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -4003,9 +4015,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2016522191}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -763.00006, y: 150}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 196.70367, y: -552.2291}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1244157862
@@ -4023,7 +4035,13 @@ MonoBehaviour:
   WybrzezePalGalur: {fileID: 21300000, guid: d791fc90203f91947a5d68a7753b6f00, type: 3}
   WzgorzaZamieci: {fileID: 21300000, guid: 049738157677cfc46872baec5777b5d5, type: 3}
   OrleGniazdo: {fileID: 21300000, guid: da6267b9e85a08c40bb69f91894a495e, type: 3}
+  WybrzezePalGalurButton: {fileID: 19355168}
+  WzgorzaZamieciButton: {fileID: 904399760}
+  OrleGniazdoButton: {fileID: 1101794642}
+  selectedColor: {r: 0, g: 0, b: 1, a: 1}
+  defaultColor: {r: 1, g: 1, b: 1, a: 1}
   imageMap: {fileID: 672877334}
+  playButton: {fileID: 1716364448}
 --- !u!1 &1371495983
 GameObject:
   m_ObjectHideFlags: 0
@@ -6001,8 +6019,8 @@ RectTransform:
   - {fileID: 1682746516}
   - {fileID: 1511466094}
   - {fileID: 174835392}
-  - {fileID: 612275191}
   - {fileID: 1244157861}
+  - {fileID: 612275191}
   - {fileID: 672877336}
   - {fileID: 981025592}
   - {fileID: 1415152488}
