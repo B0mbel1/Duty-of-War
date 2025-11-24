@@ -222,7 +222,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 19355169}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1244157862}
+        m_TargetAssemblyTypeName: BattleInfoDisplayOwnSettings, Assembly-CSharp
+        m_MethodName: ShowBattleInfo
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 21300000, guid: d791fc90203f91947a5d68a7753b6f00, type: 3}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Sprite, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &19355169
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2325,7 +2337,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.01886791, g: 0.01886791, b: 0.01886791, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2735,7 +2747,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 904399761}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1244157862}
+        m_TargetAssemblyTypeName: BattleInfoDisplayOwnSettings, Assembly-CSharp
+        m_MethodName: ShowBattleInfo
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 21300000, guid: 049738157677cfc46872baec5777b5d5, type: 3}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Sprite, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &904399761
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3481,7 +3505,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1101794643}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1244157862}
+        m_TargetAssemblyTypeName: BattleInfoDisplayOwnSettings, Assembly-CSharp
+        m_MethodName: ShowBattleInfo
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 21300000, guid: da6267b9e85a08c40bb69f91894a495e, type: 3}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Sprite, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1101794643
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3981,31 +4017,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1244157860}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa85204e21368584b879a8837559ff33, type: 3}
+  m_Script: {fileID: 11500000, guid: 34b169f4734e7b44294a6918a866a633, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BattleInfoDisplay
-  sideAText: {fileID: 0}
-  sideBText: {fileID: 0}
-  battleDescriptionText: {fileID: 0}
-  sideAImage: {fileID: 0}
-  sideBImage: {fileID: 0}
-  sideABorder: {fileID: 0}
-  sideBBorder: {fileID: 0}
-  selectedColor: {r: 0.8867924, g: 0.46087247, b: 0.4601281, a: 1}
-  defaultColor: {r: 1, g: 1, b: 1, a: 1}
-  roma: {fileID: 21300000, guid: 938ca062f0e91eb42847370bb33a6420, type: 3}
-  goci: {fileID: 21300000, guid: dd9e639fe27a8a14aac30b20af332a60, type: 3}
-  germania: {fileID: 21300000, guid: abf41ffe77e54c443a50e286c86551dc, type: 3}
-  frankowie: {fileID: 21300000, guid: 14aad9ae193cd374b9d7a8cc417da61e, type: 3}
-  wegry: {fileID: 21300000, guid: 34afd41e91af7c24bbf6fbc1c6dcdddb, type: 3}
-  rzeczpol: {fileID: 21300000, guid: 62590f53e17d6404a8933fce0856a85f, type: 3}
-  teutonic: {fileID: 21300000, guid: 62d1ca31b7931c94888aa1f900baa121, type: 3}
-  normandia: {fileID: 21300000, guid: 8614500f3a94aa5429fffd64e07ad587, type: 3}
-  bizantium: {fileID: 21300000, guid: 11c4f9fc574e6fd4fadc9fbfdd38b5b6, type: 3}
-  arabs: {fileID: 21300000, guid: 6c0a59eb91928aa44adebc381d33afc4, type: 3}
-  anglosas: {fileID: 21300000, guid: e00d9100d06ce5b4794c754c16d15c56, type: 3}
-  mamelucy: {fileID: 21300000, guid: 3d1f2db3566026f49b937f08b869473e, type: 3}
-  mongol: {fileID: 21300000, guid: 4f987ec8d43be9f4385d97723095b0ca, type: 3}
+  m_EditorClassIdentifier: Assembly-CSharp::BattleInfoDisplayOwnSettings
+  WybrzezePalGalur: {fileID: 21300000, guid: d791fc90203f91947a5d68a7753b6f00, type: 3}
+  WzgorzaZamieci: {fileID: 21300000, guid: 049738157677cfc46872baec5777b5d5, type: 3}
+  OrleGniazdo: {fileID: 21300000, guid: da6267b9e85a08c40bb69f91894a495e, type: 3}
+  imageMap: {fileID: 672877334}
 --- !u!1 &1371495983
 GameObject:
   m_ObjectHideFlags: 0

@@ -339,7 +339,7 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
---- !u!1001 &1227269040838020676
+--- !u!1001 &1392828056
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -353,11 +353,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4098271730710563613, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 463.20163
+      value: 351.19742
       objectReference: {fileID: 0}
     - target: {fileID: 4098271730710563613, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 325.70575
+      value: 287.2992
       objectReference: {fileID: 0}
     - target: {fileID: 4098271730710563613, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_LocalPosition.z
@@ -402,4 +402,4 @@ SceneRoots:
   m_Roots:
   - {fileID: 1063418648}
   - {fileID: 390437216}
-  - {fileID: 1227269040838020676}
+  - {fileID: 1392828056}

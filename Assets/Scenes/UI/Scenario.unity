@@ -1608,8 +1608,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1687452677}
   m_HandleRect: {fileID: 1687452676}
   m_Direction: 2
-  m_Value: 0.99999964
-  m_Size: 0.83223355
+  m_Value: 1
+  m_Size: 0.8322336
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -2379,6 +2379,14 @@ MonoBehaviour:
   anglosas: {fileID: 21300000, guid: e00d9100d06ce5b4794c754c16d15c56, type: 3}
   mamelucy: {fileID: 21300000, guid: 3d1f2db3566026f49b937f08b869473e, type: 3}
   mongol: {fileID: 21300000, guid: 4f987ec8d43be9f4385d97723095b0ca, type: 3}
+  LasTeutoburski: {fileID: 21300000, guid: 9853fb8f035d71a4e909af9083f25fc8, type: 3}
+  Adrianopol: {fileID: 21300000, guid: 75d6f29c370a0d548ae529ed78322804, type: 3}
+  Jarmuk: {fileID: 21300000, guid: db141fa77e943cc438f2ff28b3b0bd43, type: 3}
+  LechowePole: {fileID: 21300000, guid: 38327d770e9c01445ab6d82a28f69e55, type: 3}
+  Hastings: {fileID: 21300000, guid: 915da92d011270b4e9ca55a2e0db744f, type: 3}
+  AjnDzalut: {fileID: 21300000, guid: 1889214dada92ed48af58814e58a3dae, type: 3}
+  Grunwald: {fileID: 21300000, guid: f68a2a29a341db140bd583cb545a94f3, type: 3}
+  imageMap: {fileID: 1396176494}
 --- !u!1 &908649152
 GameObject:
   m_ObjectHideFlags: 0
@@ -3183,7 +3191,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.01886791, g: 0.01886791, b: 0.01886791, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
