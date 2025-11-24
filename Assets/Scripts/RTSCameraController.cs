@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.EventSystems; // <-- potrzebne do sprawdzania UI
 
 public class RTSCameraController : MonoBehaviour
 {
@@ -41,6 +42,10 @@ public class RTSCameraController : MonoBehaviour
 
     void Update()
     {
+        // ❌ Sprawdzenie, czy UI ma fokus
+        if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
+            return; // UI element wybrany → nie ruszamy kamerą
+
         if (float.IsNaN(transform.position.x) ||
             float.IsNaN(transform.position.y) ||
             float.IsNaN(transform.position.z))
@@ -105,7 +110,6 @@ public class RTSCameraController : MonoBehaviour
 
             pitch = Mathf.Clamp(pitch + pitchDelta, minPitch, maxPitch);
 
-            // ustawienie nowej rotacji
             transform.localEulerAngles = new Vector3(pitch, transform.localEulerAngles.y, 0f);
         }
     }
