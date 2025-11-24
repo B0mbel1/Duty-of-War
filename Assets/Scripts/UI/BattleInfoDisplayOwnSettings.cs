@@ -1,9 +1,12 @@
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class BattleInfoDisplayOwnSettings : MonoBehaviour
 {
+    public TMP_Text terrainDescription;
+
     [Header("Sprite'y map")]
     public Sprite WybrzezePalGalur;
     public Sprite WzgorzaZamieci;
@@ -37,16 +40,22 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
     public void SelectWybrzezePalGalur()
     {
         SelectMap(WybrzezePalGalur, WybrzezePalGalurButton);
+        string opisterenu = "Wzniesienia terenu | Teren górzysty | Przeprawa przez wodê";
+        terrainDescription.text = opisterenu;
     }
 
     public void SelectWzgorzaZamieci()
     {
         SelectMap(WzgorzaZamieci, WzgorzaZamieciButton);
+        string opisterenu = "Wzniesienia terenu | Teren górzysty | Teren zalesiony";
+        terrainDescription.text = opisterenu;
     }
 
     public void SelectOrleGniazdo()
     {
         SelectMap(OrleGniazdo, OrleGniazdoButton);
+        string opisterenu = "Du¿e wziesienie terenu";
+        terrainDescription.text = opisterenu;
     }
 
     // -----------------------------
