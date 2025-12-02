@@ -443,11 +443,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitsSpawn
   sphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  sphereMaterial: {fileID: 2100000, guid: 471e314883979294d8ed244f3980d207, type: 2}
-  enemyMaterial: {fileID: 2100000, guid: 49fce532c22555f418f7b81052740bc6, type: 2}
+  sphereMaterial: {fileID: 2100000, guid: d1167bac38396604da528ff9a06915d7, type: 2}
+  enemyMaterial: {fileID: 2100000, guid: 2c98766549a169645a133ce67b7d57e5, type: 2}
   count: 10000
   cubeObject: {fileID: 758079941}
   cube2Object: {fileID: 1231677631}
+  cube3Object: {fileID: 0}
   sphereRadius: 0.5
   enemyCount: 10000
   enemyRadius: 0.5
