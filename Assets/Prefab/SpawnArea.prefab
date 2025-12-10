@@ -68,3 +68,7 @@ MonoBehaviour:
   unitDiameter: 1
   unitSpacing: 1.5
   randomness: 0.8
+  battleCamera: {fileID: 0}
+  cameraHeight: 100
+  cameraDistanceBack: 40
+  cameraAngle: 45

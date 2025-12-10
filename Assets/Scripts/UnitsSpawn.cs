@@ -36,7 +36,6 @@ public class UnitsSpawn : MonoBehaviour
     public GameObject spawnAreaB;
 
     [Header("Spawn Areas - Secondary (Optional)")]
-    [Tooltip("Opcjonalny drugi spawn. Jeœli przypisany, armia podzieli siê 50/50 miêdzy g³ówny a ten obszar.")]
     public GameObject spawnAreaA_Secondary;
     public GameObject spawnAreaB_Secondary;
 
@@ -45,6 +44,19 @@ public class UnitsSpawn : MonoBehaviour
     public float unitSpacing = 1.5f;
     [Range(0f, 1f)]
     public float randomness = 0.8f;
+
+    // --- USTAWIENIA KAMERY ---
+    [Header("Camera Start Settings")]
+    public Camera battleCamera;
+
+    [Tooltip("Wysokoœæ kamery nad armi¹")]
+    public float cameraHeight = 60f;
+
+    [Tooltip("Dystans kamery ZA armi¹ (wartoœæ dodatnia odsunie kamerê w ty³)")]
+    public float cameraDistanceBack = 40f;
+
+    [Tooltip("K¹t nachylenia kamery w dó³ (Oœ X)")]
+    public float cameraAngle = 55f;
 
     // --- DANE JEDNOSTEK ---
     private List<Matrix4x4> listA_Inf = new List<Matrix4x4>();
@@ -55,7 +67,6 @@ public class UnitsSpawn : MonoBehaviour
     private List<Matrix4x4> listB_Arc = new List<Matrix4x4>();
     private List<Matrix4x4> listB_Cav = new List<Matrix4x4>();
 
-    // Batche do renderowania
     private List<Matrix4x4[]> batchesA_Inf = new List<Matrix4x4[]>();
     private List<Matrix4x4[]> batchesA_Arc = new List<Matrix4x4[]>();
     private List<Matrix4x4[]> batchesA_Cav = new List<Matrix4x4[]>();
@@ -76,91 +87,121 @@ public class UnitsSpawn : MonoBehaviour
         terrain = Terrain.activeTerrain;
         if (terrain == null) return;
 
-        // 1. Logika Spawnowania Frakcji (Obs³uga 1 lub 2 spawnów)
+        // 1. Spawnowanie
         ProcessFactionSpawns(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true);
         ProcessFactionSpawns(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false);
 
-        // 2. Budowanie batchy (GPU) i aktualizacja UI
+        // 2. Batche
         RebuildAllBatches();
         UpdateUICounters();
+
+        // 3. Ustawienie Kamery (Nowa logika)
+        SetupCameraPosition();
+    }
+
+    // --- NOWA FUNKCJA KAMERY ---
+    void SetupCameraPosition()
+    {
+        if (battleCamera == null) battleCamera = Camera.main;
+        if (battleCamera == null) return;
+
+        string chosenSide = PlayerPrefs.GetString("PlayerSide", "SideA");
+        GameObject mySpawn = (chosenSide == "SideA") ? spawnAreaA : spawnAreaB;
+
+        // Jeœli brakuje spawnu, nic nie rób
+        if (mySpawn == null || spawnAreaA == null || spawnAreaB == null) return;
+
+        // 1. Oblicz œrodek mapy (punkt miêdzy spawnem A i B)
+        Vector3 mapCenter = (spawnAreaA.transform.position + spawnAreaB.transform.position) / 2f;
+
+        // 2. Oblicz wektor kierunku: Od mojej armii -> Do œrodka mapy (Do wroga)
+        Vector3 directionToCenter = (mapCenter - mySpawn.transform.position).normalized;
+
+        // Ignorujemy ró¿nicê wysokoœci przy obliczaniu kierunku "w ty³", chcemy p³aski wektor po ziemi
+        directionToCenter.y = 0;
+        directionToCenter.Normalize();
+
+        // 3. Ustal now¹ pozycjê kamery
+        // Zaczynamy od œrodka mojej armii (mySpawn)
+        // Cofamy siê o 'cameraDistanceBack' (przeciwnie do kierunku na wroga)
+        Vector3 startPos = mySpawn.transform.position;
+        Vector3 newPos = startPos - (directionToCenter * cameraDistanceBack);
+
+        // Ustawiamy wysokoœæ
+        float baseHeight = newPos.y;
+        if (terrain != null) baseHeight = terrain.SampleHeight(newPos) + terrain.transform.position.y;
+
+        // Finalna pozycja (wysokoœæ terenu + cameraHeight)
+        newPos.y = baseHeight + cameraHeight;
+
+        battleCamera.transform.position = newPos;
+
+        // 4. Ustal Rotacjê (Patrz na œrodek, ale zachowaj k¹t pochylenia)
+
+        // Najpierw ka¿ kamerze spojrzeæ na œrodek mapy (ustawi to rotacjê Y - lewo/prawo)
+        battleCamera.transform.LookAt(mapCenter);
+
+        // Teraz nadpisz rotacjê X (góra/dó³) wartoœci¹ z Inspektora (cameraAngle), zachowuj¹c Y i Z
+        Vector3 currentRotation = battleCamera.transform.rotation.eulerAngles;
+        battleCamera.transform.rotation = Quaternion.Euler(cameraAngle, currentRotation.y, 0f);
     }
 
     void Update()
     {
-        // --- RENDEROWANIE ---
         DrawBatches(batchesA_Inf, infantryMesh, factionAMaterial);
         DrawBatches(batchesA_Arc, archerMesh, factionAMaterial);
         DrawBatches(batchesA_Cav, cavalryMesh, factionAMaterial);
-
         DrawBatches(batchesB_Inf, infantryMesh, factionBMaterial);
         DrawBatches(batchesB_Arc, archerMesh, factionBMaterial);
         DrawBatches(batchesB_Cav, cavalryMesh, factionBMaterial);
 
-        // --- TESTOWANIE (KILL SWITCH) ---
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.C)) KillRandomUnit(false);
     }
 
-    // --- NOWA LOGIKA DISTRYBUCJI ---
-    // Ta funkcja decyduje czy spawnujemy wszystko w jednym miejscu, czy dzielimy na pó³
+    // --- RESZTA LOGIKI (BEZ ZMIAN) ---
+
     void ProcessFactionSpawns(ArmyComposition army, GameObject mainArea, GameObject secArea, bool isFactionA)
     {
         if (mainArea == null) return;
-
-        // Ukrywamy renderery (¿eby nie by³o widaæ boxów w grze)
         mainArea.GetComponent<Renderer>().enabled = false;
         if (secArea != null) secArea.GetComponent<Renderer>().enabled = false;
 
         System.Random rand = new System.Random();
 
-        // SCENARIUSZ 1: Tylko jeden spawn (standardowy)
         if (secArea == null)
         {
             Queue<Vector3> queue = GenerateSafeGrid(mainArea);
-
             SpawnUnitGroup(UnitType.Infantry, army.infantryCount, queue, rand, isFactionA);
             SpawnUnitGroup(UnitType.Archer, army.archerCount, queue, rand, isFactionA);
             SpawnUnitGroup(UnitType.Cavalry, army.cavalryCount, queue, rand, isFactionA);
         }
-        // SCENARIUSZ 2: Dwa spawny (dzielimy armiê 50/50)
         else
         {
             Queue<Vector3> queueMain = GenerateSafeGrid(mainArea);
             Queue<Vector3> queueSec = GenerateSafeGrid(secArea);
-
-            // Pomocnicza funkcja do dzielenia i spawnowania
             SplitAndSpawn(UnitType.Infantry, army.infantryCount, queueMain, queueSec, rand, isFactionA);
             SplitAndSpawn(UnitType.Archer, army.archerCount, queueMain, queueSec, rand, isFactionA);
             SplitAndSpawn(UnitType.Cavalry, army.cavalryCount, queueMain, queueSec, rand, isFactionA);
         }
     }
 
-    // Funkcja dziel¹ca konkretny oddzia³ na pó³ i wysy³aj¹ca do dwóch kolejek
     void SplitAndSpawn(UnitType type, int totalCount, Queue<Vector3> q1, Queue<Vector3> q2, System.Random rand, bool isFactionA)
     {
-        // Dzielenie na pó³ (zabezpieczenie dla liczb nieparzystych)
         int count1 = totalCount / 2;
-        int count2 = totalCount - count1; // Reszta idzie do drugiego, wiêc nic nie tracimy
-
+        int count2 = totalCount - count1;
         SpawnUnitGroup(type, count1, q1, rand, isFactionA);
         SpawnUnitGroup(type, count2, q2, rand, isFactionA);
     }
 
-    // --- FUNKCJA SPAWNUJ¥CA (Bez zmian w logice, tylko wywo³ywana z odpowiednimi liczbami) ---
     void SpawnUnitGroup(UnitType type, int count, Queue<Vector3> positionQueue, System.Random rand, bool isFactionA)
     {
         for (int i = 0; i < count; i++)
         {
-            if (positionQueue.Count == 0)
-            {
-                Debug.LogWarning($"Brakuje miejsca w strefie spawnu dla {type} frakcji {(isFactionA ? "A" : "B")}");
-                break;
-            }
-
+            if (positionQueue.Count == 0) break;
             Vector3 rawPos = positionQueue.Dequeue();
             float y = terrain.SampleHeight(rawPos) + terrain.transform.position.y + (unitDiameter * 0.5f);
             Vector3 finalPos = new Vector3(rawPos.x, y, rawPos.z);
-
             float rotY = (float)rand.NextDouble() * 360f;
             Quaternion rotation = Quaternion.Euler(0, rotY, 0);
             Matrix4x4 matrix = Matrix4x4.TRS(finalPos, rotation, Vector3.one * unitDiameter);
@@ -180,23 +221,18 @@ public class UnitsSpawn : MonoBehaviour
         }
     }
 
-    // --- GENEROWANIE SIATKI (Bez zmian) ---
     Queue<Vector3> GenerateSafeGrid(GameObject area)
     {
         List<Vector3> points = new List<Vector3>();
         if (area == null) return new Queue<Vector3>();
-
         Vector3 center = area.transform.position;
         Vector3 size = area.transform.localScale;
-
         if (unitSpacing <= unitDiameter) unitSpacing = unitDiameter + 0.1f;
-
         int cols = Mathf.FloorToInt(size.x / unitSpacing);
         int rows = Mathf.FloorToInt(size.z / unitSpacing);
         float freeSpace = unitSpacing - unitDiameter;
         float maxJitter = (freeSpace * 0.5f) * randomness;
         Vector3 startPos = center - new Vector3(size.x * 0.5f, 0, size.z * 0.5f);
-
         for (int x = 0; x < cols; x++)
         {
             for (int z = 0; z < rows; z++)
@@ -208,34 +244,26 @@ public class UnitsSpawn : MonoBehaviour
                 points.Add(new Vector3(posX + offX, 0, posZ + offZ));
             }
         }
-
         var rand = new System.Random();
         int n = points.Count;
         while (n > 1) { n--; int k = rand.Next(n + 1); Vector3 value = points[k]; points[k] = points[n]; points[n] = value; }
-
         return new Queue<Vector3>(points);
     }
 
-    // --- LOGIKA ZABIJANIA (Bez zmian) ---
     void KillRandomUnit(bool isFactionA)
     {
         var inf = isFactionA ? listA_Inf : listB_Inf;
         var arc = isFactionA ? listA_Arc : listB_Arc;
         var cav = isFactionA ? listA_Cav : listB_Cav;
-
         List<int> availableTypes = new List<int>();
         if (inf.Count > 0) availableTypes.Add(0);
         if (arc.Count > 0) availableTypes.Add(1);
         if (cav.Count > 0) availableTypes.Add(2);
-
         if (availableTypes.Count == 0) return;
-
         int randomTypeIndex = availableTypes[Random.Range(0, availableTypes.Count)];
-
         if (randomTypeIndex == 0) inf.RemoveAt(inf.Count - 1);
         else if (randomTypeIndex == 1) arc.RemoveAt(arc.Count - 1);
         else cav.RemoveAt(cav.Count - 1);
-
         if (isFactionA)
         {
             RebuildBatchesForList(listA_Inf, batchesA_Inf);
@@ -248,7 +276,6 @@ public class UnitsSpawn : MonoBehaviour
             RebuildBatchesForList(listB_Arc, batchesB_Arc);
             RebuildBatchesForList(listB_Cav, batchesB_Cav);
         }
-
         UpdateUICounters();
     }
 
@@ -256,7 +283,6 @@ public class UnitsSpawn : MonoBehaviour
     {
         int totalA = listA_Inf.Count + listA_Arc.Count + listA_Cav.Count;
         if (factionAText != null) factionAText.text = $"{totalA}";
-
         int totalB = listB_Inf.Count + listB_Arc.Count + listB_Cav.Count;
         if (factionBText != null) factionBText.text = $"{totalB}";
     }
@@ -266,7 +292,6 @@ public class UnitsSpawn : MonoBehaviour
         RebuildBatchesForList(listA_Inf, batchesA_Inf);
         RebuildBatchesForList(listA_Arc, batchesA_Arc);
         RebuildBatchesForList(listA_Cav, batchesA_Cav);
-
         RebuildBatchesForList(listB_Inf, batchesB_Inf);
         RebuildBatchesForList(listB_Arc, batchesB_Arc);
         RebuildBatchesForList(listB_Cav, batchesB_Cav);
