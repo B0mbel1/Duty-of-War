@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7081239012547174118
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5889732415969022792}
+  - component: {fileID: 1553181247848204900}
+  m_Layer: 0
+  m_Name: SpawnArea
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5889732415969022792
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7081239012547174118}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 108.82, y: 0, z: 149.04453}
+  m_LocalScale: {x: 7.17, y: 1.8244275, z: 1.8244275}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1553181247848204900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7081239012547174118}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5a924f915487ed47b990f359b25b69c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitsSpawn
+  factionAText: {fileID: 0}
+  factionBText: {fileID: 0}
+  factionA_Army:
+    name: 
+    infantryCount: 0
+    archerCount: 0
+    cavalryCount: 0
+  factionB_Army:
+    name: 
+    infantryCount: 0
+    archerCount: 0
+    cavalryCount: 0
+  factionAMaterial: {fileID: 0}
+  factionBMaterial: {fileID: 0}
+  infantryMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  archerMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  cavalryMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  spawnAreaA: {fileID: 0}
+  spawnAreaB: {fileID: 0}
+  spawnAreaA_Secondary: {fileID: 0}
+  spawnAreaB_Secondary: {fileID: 0}
+  unitDiameter: 1
+  unitSpacing: 1.5
+  randomness: 0.8

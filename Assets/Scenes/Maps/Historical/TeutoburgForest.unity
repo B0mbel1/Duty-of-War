@@ -119,61 +119,123 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &261591522
-GameObject:
+--- !u!1001 &346586451
+PrefabInstance:
   m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 261591524}
-  - component: {fileID: 261591523}
-  m_Layer: 0
-  m_Name: SpawnArea
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &261591523
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 261591522}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b5a924f915487ed47b990f359b25b69c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnitsSpawn
-  sphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  sphereMaterial: {fileID: 2100000, guid: d1167bac38396604da528ff9a06915d7, type: 2}
-  enemyMaterial: {fileID: 2100000, guid: 1ee85991eff42cf439373d2a43c0d0d1, type: 2}
-  count: 500
-  cubeObject: {fileID: 844181008}
-  cube2Object: {fileID: 1958242335}
-  cube3Object: {fileID: 1320167533}
-  sphereRadius: 0.5
-  enemyCount: 500
-  enemyRadius: 0.5
-  minDistanceBetweenUnits: 2
---- !u!4 &261591524
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 261591522}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 108.82, y: 0, z: 149.04453}
-  m_LocalScale: {x: 7.17, y: 1.8244275, z: 1.8244275}
-  m_ConstrainProportionsScale: 1
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: spawnAreaA
+      value: 
+      objectReference: {fileID: 844181008}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: spawnAreaB
+      value: 
+      objectReference: {fileID: 1958242335}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionAText
+      value: 
+      objectReference: {fileID: 1392828058}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionBText
+      value: 
+      objectReference: {fileID: 1392828057}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionAMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: d1167bac38396604da528ff9a06915d7, type: 2}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionBMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 1ee85991eff42cf439373d2a43c0d0d1, type: 2}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionA_Army.name
+      value: Rzym
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionB_Army.name
+      value: Germanie
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: spawnAreaB_Secondary
+      value: 
+      objectReference: {fileID: 1320167533}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionA_Army.archerCount
+      value: 4000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionB_Army.archerCount
+      value: 2000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionA_Army.cavalryCount
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionB_Army.cavalryCount
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionA_Army.infantryCount
+      value: 20000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionB_Army.infantryCount
+      value: 15000
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 108.84083
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.00001
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 145.84682
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7081239012547174118, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_Name
+      value: SpawnArea
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
 --- !u!1 &390437213
 GameObject:
   m_ObjectHideFlags: 0
@@ -673,6 +735,28 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+--- !u!114 &1392828057 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1584888051750262258, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1392828056}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &1392828058 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5559644271591075576, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1392828056}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1 &1958242335
 GameObject:
   m_ObjectHideFlags: 0
@@ -791,7 +875,7 @@ SceneRoots:
   - {fileID: 1063418648}
   - {fileID: 390437216}
   - {fileID: 1392828056}
-  - {fileID: 261591524}
   - {fileID: 844181012}
   - {fileID: 1958242339}
   - {fileID: 1320167537}
+  - {fileID: 346586451}

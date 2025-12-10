@@ -119,6 +119,119 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1001 &13856380
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: spawnAreaA
+      value: 
+      objectReference: {fileID: 758079941}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: spawnAreaB
+      value: 
+      objectReference: {fileID: 1231677631}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionAText
+      value: 
+      objectReference: {fileID: 1601358728}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionBText
+      value: 
+      objectReference: {fileID: 1435450068}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionAMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: d1167bac38396604da528ff9a06915d7, type: 2}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionBMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 2c98766549a169645a133ce67b7d57e5, type: 2}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionA_Army.name
+      value: Rzym
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionB_Army.name
+      value: Goci
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionA_Army.archerCount
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionB_Army.archerCount
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionA_Army.cavalryCount
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionB_Army.cavalryCount
+      value: 2000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionA_Army.infantryCount
+      value: 2500
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: factionB_Army.infantryCount
+      value: 4000
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 497.98987
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.53394
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 285.96732
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7081239012547174118, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_Name
+      value: SpawnArea
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
 --- !u!1001 &488601541
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -398,61 +511,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1313377497
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1313377498}
-  - component: {fileID: 1313377499}
-  m_Layer: 0
-  m_Name: SpawnArea
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1313377498
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1313377497}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 108.82, y: 0, z: 149.04453}
-  m_LocalScale: {x: 7.17, y: 1.8244275, z: 1.8244275}
-  m_ConstrainProportionsScale: 1
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1313377499
+--- !u!114 &1435450068 stripped
 MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 1584888051750262258, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1313377497}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b5a924f915487ed47b990f359b25b69c, type: 3}
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnitsSpawn
-  sphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
-  sphereMaterial: {fileID: 2100000, guid: d1167bac38396604da528ff9a06915d7, type: 2}
-  enemyMaterial: {fileID: 2100000, guid: 2c98766549a169645a133ce67b7d57e5, type: 2}
-  count: 10000
-  cubeObject: {fileID: 758079941}
-  cube2Object: {fileID: 1231677631}
-  cube3Object: {fileID: 0}
-  sphereRadius: 0.5
-  enemyCount: 10000
-  enemyRadius: 0.5
-  minDistanceBetweenUnits: 2
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1 &1557826850
 GameObject:
   m_ObjectHideFlags: 0
@@ -565,6 +634,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -8.511, z: 0}
+--- !u!114 &1601358728 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5559644271591075576, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1 &1843948586
 GameObject:
   m_ObjectHideFlags: 0
@@ -794,5 +874,5 @@ SceneRoots:
   - {fileID: 1557826854}
   - {fileID: 488601541}
   - {fileID: 758079942}
-  - {fileID: 1313377498}
   - {fileID: 1231677635}
+  - {fileID: 13856380}
