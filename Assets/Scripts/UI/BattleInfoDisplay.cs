@@ -21,6 +21,9 @@ public class BattleInfoDisplay : MonoBehaviour
     public GameObject sideBBorder;
     private GameObject selectedBorder = null;
 
+    // Dodatkowa zmienna do œledzenia, któr¹ stronê wybrano (dla logiki gry)
+    private string selectedSideKey = "";
+
     [Header("Przyciski scenariuszy")]
     private Button selectedButton = null;
     public Color selectedColor = Color.blue;
@@ -44,12 +47,21 @@ public class BattleInfoDisplay : MonoBehaviour
 
     [Header("Przycisk Graj")]
     public Button playButton;
+
     // -----------------------------
     // Zaznaczanie strony A
-    public void SelectSideA() { SetBorder(sideABorder); }
+    public void SelectSideA()
+    {
+        SetBorder(sideABorder);
+        selectedSideKey = "SideA"; // Zapamiêtujemy wybór
+    }
 
     // Zaznaczanie strony B
-    public void SelectSideB() { SetBorder(sideBBorder); }
+    public void SelectSideB()
+    {
+        SetBorder(sideBBorder);
+        selectedSideKey = "SideB"; // Zapamiêtujemy wybór
+    }
 
     // W³¹cz/wy³¹cz ramkê pod flag¹
     private void SetBorder(GameObject border)
@@ -59,12 +71,20 @@ public class BattleInfoDisplay : MonoBehaviour
 
         selectedBorder = border;
         selectedBorder.SetActive(true);
+
+        // ZMIANA: Skoro wybrano ramkê (stronê), odblokuj przycisk Play
+        if (playButton != null)
+            playButton.interactable = true;
     }
 
     private void Start()
     {
         if (playButton != null)
+        {
             playButton.onClick.AddListener(PlaySelectedMap);
+            // ZMIANA: Na starcie przycisk jest nieaktywny
+            playButton.interactable = false;
+        }
     }
 
     private void PlaySelectedMap()
@@ -74,6 +94,19 @@ public class BattleInfoDisplay : MonoBehaviour
             Debug.LogWarning("Nie wybrano mapy!");
             return;
         }
+
+        // ZMIANA: Dodatkowe zabezpieczenie, gdyby przycisk jakoœ by³ aktywny
+        if (selectedBorder == null || string.IsNullOrEmpty(selectedSideKey))
+        {
+            Debug.LogWarning("Nie wybrano strony konfliktu!");
+            return;
+        }
+
+        // Zapisujemy wybór gracza, aby nowa scena wiedzia³a kim gramy
+        // Mo¿esz to odebraæ w nowej scenie przez PlayerPrefs.GetString("PlayerSide");
+        PlayerPrefs.SetString("PlayerSide", selectedSideKey);
+        PlayerPrefs.Save();
+
         string sceneName = "";
 
         if (selectedMap == LasTeutoburski)
@@ -97,6 +130,7 @@ public class BattleInfoDisplay : MonoBehaviour
         else
             Debug.LogError("Nie ustawiono nazwy sceny dla tej mapy!");
     }
+
     private void Awake()
     {
         // Ukryj ramki
@@ -139,7 +173,7 @@ public class BattleInfoDisplay : MonoBehaviour
         sideBImage.sprite = spriteB;
         sideBImage.color = Color.white;
 
-        // Czyœæ zaznaczenie frakcji (ramki)
+        // Czyœæ zaznaczenie frakcji (ramki) i blokuj przycisk
         ClearFactionSelection();
 
         // Kolor przycisku scenariusza
@@ -150,7 +184,7 @@ public class BattleInfoDisplay : MonoBehaviour
         SetButtonColor(selectedButton, selectedColor);
 
         // Ustaw mapê do wczytania
-        selectedMap = image;  // <-- TO JEST KLUCZOWE
+        selectedMap = image;
         imageMap.sprite = image;
     }
 
@@ -171,10 +205,15 @@ public class BattleInfoDisplay : MonoBehaviour
             selectedBorder.SetActive(false);
 
         selectedBorder = null;
+        selectedSideKey = ""; // Resetujemy wybór strony
+
+        // ZMIANA: Po zmianie mapy/resetowaniu wyboru, blokujemy przycisk Play
+        if (playButton != null)
+            playButton.interactable = false;
     }
 
     // -----------------------------
-    // Metody bitew
+    // Metody bitew (bez zmian)
     public void Battle_Grunwald(Button btn)
     {
         string opis = "Bitwa pod Grunwaldem (1410 r.)\n\nWojska polsko-litewskie pod wodz¹ W³adys³awa Jagie³³y rozgromi³y Zakon Krzy¿acki. Jedno z najwiêkszych staræ œredniowiecza, które z³ama³o potêgê Krzy¿aków.";
@@ -223,6 +262,4 @@ public class BattleInfoDisplay : MonoBehaviour
         string opisterenu = "Wzniesienia terenu | Przeprawa przez wodê";
         ShowBattleInfo("Cesarstwo Rzymskie", "Goci", btn, roma, goci, opis, Adrianopol, opisterenu);
     }
-    
-
 }
