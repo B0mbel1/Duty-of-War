@@ -1291,6 +1291,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1244157861}
   - {fileID: 2016522191}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -4145,15 +4146,15 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1244157860}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2.0824206, y: 2.0824206, z: 2.0824206}
+  m_LocalPosition: {x: 0, y: 0, z: -152.72003}
+  m_LocalScale: {x: 0.9271109, y: 0.9271109, z: 0.9271109}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2016522191}
+  m_Father: {fileID: 257165303}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 196.70367, y: -552.2291}
+  m_AnchoredPosition: {x: 6.972412, y: 148.74304}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1244157862
@@ -4179,6 +4180,12 @@ MonoBehaviour:
   defaultColor: {r: 1, g: 1, b: 1, a: 1}
   imageMap: {fileID: 672877334}
   playButton: {fileID: 1716364448}
+  inputRedInfantry: {fileID: 593348802}
+  inputRedRange: {fileID: 1682746517}
+  inputRedCavalry: {fileID: 1511466095}
+  inputBlueInfantry: {fileID: 116477560}
+  inputBlueRange: {fileID: 434295286}
+  inputBlueCavalry: {fileID: 952042517}
 --- !u!1 &1371495983
 GameObject:
   m_ObjectHideFlags: 0
@@ -6156,7 +6163,6 @@ RectTransform:
   - {fileID: 1682746516}
   - {fileID: 1511466094}
   - {fileID: 174835392}
-  - {fileID: 1244157861}
   - {fileID: 612275191}
   - {fileID: 672877336}
   - {fileID: 981025592}
