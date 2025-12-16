@@ -59,9 +59,9 @@ public class UnitsSpawn : MonoBehaviour
     public float cameraAngle = 55f;
 
     // --- DANE JEDNOSTEK ---
-    private List<Matrix4x4> listA_Inf = new List<Matrix4x4>();
-    private List<Matrix4x4> listA_Arc = new List<Matrix4x4>();
-    private List<Matrix4x4> listA_Cav = new List<Matrix4x4>();
+    public List<Matrix4x4> listA_Inf = new List<Matrix4x4>();
+    public List<Matrix4x4> listA_Arc = new List<Matrix4x4>();
+    public List<Matrix4x4> listA_Cav = new List<Matrix4x4>();
 
     private List<Matrix4x4> listB_Inf = new List<Matrix4x4>();
     private List<Matrix4x4> listB_Arc = new List<Matrix4x4>();
@@ -287,7 +287,7 @@ public class UnitsSpawn : MonoBehaviour
         if (factionBText != null) factionBText.text = $"{totalB}";
     }
 
-    void RebuildAllBatches()
+    public void RebuildAllBatches()
     {
         RebuildBatchesForList(listA_Inf, batchesA_Inf);
         RebuildBatchesForList(listA_Arc, batchesA_Arc);

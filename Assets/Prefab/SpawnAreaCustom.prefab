@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1497990333018534423}
   - component: {fileID: 6990999978236238867}
+  - component: {fileID: 7928190867704921069}
   m_Layer: 0
   m_Name: SpawnAreaCustom
   m_TagString: Untagged
@@ -68,7 +69,30 @@ MonoBehaviour:
   unitDiameter: 1
   unitSpacing: 1.5
   randomness: 0.8
+  factionAShape: 0
+  factionBShape: 0
   battleCamera: {fileID: 0}
   cameraHeight: 60
   cameraDistanceBack: 40
   cameraAngle: 55
+  listA_Inf: []
+  listA_Arc: []
+  listA_Cav: []
+--- !u!114 &7928190867704921069
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7286001271577634509}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 169f4e61d6ca80548b8b390d8a51b3b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArmyMovement
+  unitsSpawn: {fileID: 6990999978236238867}
+  terrain: {fileID: 0}
+  moveSpeed: 5
+  rotationSpeed: 2
+  stopDistance: 1
+  waterLevel: 10

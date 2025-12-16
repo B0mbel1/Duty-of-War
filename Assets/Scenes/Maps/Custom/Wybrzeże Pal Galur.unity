@@ -305,7 +305,7 @@ GameObject:
   - component: {fileID: 752078925}
   m_Layer: 0
   m_Name: River
-  m_TagString: Untagged
+  m_TagString: Water
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -397,7 +397,7 @@ Transform:
   m_GameObject: {fileID: 752078924}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 500, y: 10, z: 500}
+  m_LocalPosition: {x: 500, y: 8, z: 500}
   m_LocalScale: {x: 100, y: 1, z: 100}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -566,7 +566,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
@@ -635,7 +635,7 @@ Transform:
   m_GameObject: {fileID: 1146834176}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 504.3268, y: 12.5388, z: 865.4997}
+  m_LocalPosition: {x: 504.3268, y: 0, z: 865.4997}
   m_LocalScale: {x: 954.5907, y: 1.8244275, z: 204.70142}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -717,11 +717,42 @@ PrefabInstance:
       propertyPath: m_Name
       value: SpawnAreaCustom
       objectReference: {fileID: 0}
+    - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: terrain
+      value: 
+      objectReference: {fileID: 580976506}
+    - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: unitsSpawn
+      value: 
+      objectReference: {fileID: 1517039892}
+    - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: spawnCustom
+      value: 
+      objectReference: {fileID: 1517039892}
+    - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: autoDetectWater
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+--- !u!114 &1517039892 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6990999978236238867, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+  m_PrefabInstance: {fileID: 1338500092}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60b55f041e59f214fb9da10e3abc6688, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitsSpawnCustom
 --- !u!1 &1798806000
 GameObject:
   m_ObjectHideFlags: 0
@@ -758,7 +789,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
@@ -827,7 +858,7 @@ Transform:
   m_GameObject: {fileID: 1798806000}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 508, y: 13.03882, z: 132}
+  m_LocalPosition: {x: 508, y: 0, z: 132}
   m_LocalScale: {x: 954.5907, y: 1.8244275, z: 204.70142}
   m_ConstrainProportionsScale: 0
   m_Children: []
