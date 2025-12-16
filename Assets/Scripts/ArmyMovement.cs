@@ -220,9 +220,25 @@ public class ArmyMovement : MonoBehaviour
             }
 
             // --- 6. PRZYPISANIE (Hard Snap) ---
-            // ¯adnego Lerp ani MoveTowards. Przypisujemy na sztywno.
-            // Dziêki temu jednostka nigdy nie oderwie siê od ziemi, nawet na pionowej œcianie.
-            newPos.y = finalY;
+            float currentY = currentPos.y;
+
+            // Ustawiamy prêdkoœæ dopasowania do terenu (im wy¿sza liczba, tym szybciej)
+            float heightSmoothSpeed = 10f;
+
+            // Jeœli ró¿nica jest ogromna (teleportacja), zrób snap, w przeciwnym razie wyg³adŸ
+            if (Mathf.Abs(finalY - currentY) > 2.0f)
+            {
+                newPos.y = finalY; // Hard snap przy du¿ej ró¿nicy (np. spawn)
+            }
+            else
+            {
+                // P³ynne przejœcie (Lerp)
+                newPos.y = Mathf.Lerp(currentY, finalY, Time.deltaTime * heightSmoothSpeed);
+            }
+
+            // Opcjonalnie: Zabezpieczenie, by nie wpad³y pod ziemiê przy szybkim ruchu
+            // Jeœli Lerp jest za wolny, a góra stroma -> wymuœ minimum
+            if (newPos.y < finalY) newPos.y = finalY;
 
             // Rotacja
             Quaternion currentRot = mat.rotation;

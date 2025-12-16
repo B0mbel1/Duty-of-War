@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4053610980381789467}
   - component: {fileID: 1722635157299304573}
   - component: {fileID: 4223433595074230840}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Sphere (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -107,7 +107,7 @@ SphereCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
@@ -122,9 +122,9 @@ GameObject:
   - component: {fileID: 209750594249331125}
   - component: {fileID: 7703238054531342561}
   - component: {fileID: 7316968164709396547}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: pivot
-  m_TagString: Untagged
+  m_TagString: Tree
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -237,9 +237,9 @@ GameObject:
   - component: {fileID: 2408041944569214452}
   - component: {fileID: 7345409603089943301}
   - component: {fileID: 5538471585333789173}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Cylinder
-  m_TagString: Untagged
+  m_TagString: Tree
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

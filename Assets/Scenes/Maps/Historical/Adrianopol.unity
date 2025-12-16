@@ -236,6 +236,10 @@ PrefabInstance:
       value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 6720409756539285911, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: avoidanceForce
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6720409756539285911, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
       propertyPath: autoDetectWater
       value: 1
       objectReference: {fileID: 0}
@@ -651,13 +655,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1557826850}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.074206896, z: -0, w: 0.9972429}
-  m_LocalPosition: {x: 496.1842, y: 5, z: 497.619}
-  m_LocalScale: {x: 101.58261, y: 1, z: 18.581999}
+  m_LocalRotation: {x: 0.00017452026, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 496.1842, y: 5, z: 487}
+  m_LocalScale: {x: 101.58261, y: 1, z: 15.987952}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: -8.511, z: 0}
+  m_LocalEulerAnglesHint: {x: 0.02, y: 0, z: 0}
 --- !u!114 &1601358728 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5559644271591075576, guid: 49d326ed6d683cd42b1395750475b645, type: 3}

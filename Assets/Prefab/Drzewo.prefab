@@ -11,9 +11,9 @@ GameObject:
   - component: {fileID: 185308473050668890}
   - component: {fileID: 9018046224236397907}
   - component: {fileID: 8144589705605984638}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Drzewo
-  m_TagString: Untagged
+  m_TagString: Tree
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -126,7 +126,7 @@ GameObject:
   - component: {fileID: 57009130517196520}
   - component: {fileID: 3414818929586305934}
   - component: {fileID: 150727992403843531}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Sphere (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -221,7 +221,7 @@ SphereCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
@@ -237,7 +237,7 @@ GameObject:
   - component: {fileID: 1864716018276898311}
   - component: {fileID: 6736253820835375350}
   - component: {fileID: 8383242508620243462}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Cylinder
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -203,6 +203,22 @@ PrefabInstance:
       propertyPath: spawnCustom
       value: 
       objectReference: {fileID: 378080800}
+    - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: avoidanceForce
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: avoidanceRange
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: groundLayer.m_Bits
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: obstacleLayer.m_Bits
+      value: 8
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -232,7 +248,7 @@ GameObject:
   - component: {fileID: 460758899}
   m_Layer: 0
   m_Name: Terrain
-  m_TagString: Untagged
+  m_TagString: Terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 2147483647
