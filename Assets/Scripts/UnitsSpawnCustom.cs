@@ -17,8 +17,8 @@ public class UnitsSpawnCustom : MonoBehaviour
     // Definicja dostêpnych kszta³tów spawnu
     public enum SpawnShape
     {
-        Rectangle, // Kwadrat lub Prostok¹t
-        Ellipse    // Ko³o lub Elipsa
+        Rectangle,
+        Ellipse
     }
 
     [Header("UI & Counters")]
@@ -52,22 +52,22 @@ public class UnitsSpawnCustom : MonoBehaviour
     [Range(0f, 1f)]
     public float randomness = 0.8f;
 
-    // --- PRZE£¥CZNIK KSZTA£TU ---
-    [Header("Spawn Area Shapes")]
-    [Tooltip("Wybierz kszta³t obszaru dla Frakcji A")]
-    public SpawnShape factionAShape = SpawnShape.Rectangle;
-    [Tooltip("Wybierz kszta³t obszaru dla Frakcji B")]
-    public SpawnShape factionBShape = SpawnShape.Rectangle;
-    // ------------------------------------
+    // --- NOWOŒÆ: USTAWIENIA WODY DLA SPAWNU ---
+    [Header("Water Settings (Spawn Correction)")]
+    public string waterTag = "Water";
+    public float swimmingDepth = 0.5f;
+    // -------------------------------------------
 
-    // --- USTAWIENIA KAMERY ---
+    [Header("Spawn Area Shapes")]
+    public SpawnShape factionAShape = SpawnShape.Rectangle;
+    public SpawnShape factionBShape = SpawnShape.Rectangle;
+
     [Header("Camera Start Settings")]
     public Camera battleCamera;
     public float cameraHeight = 60f;
     public float cameraDistanceBack = 40f;
     public float cameraAngle = 55f;
 
-    // --- DANE JEDNOSTEK ---
     public List<Matrix4x4> listA_Inf = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Arc = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Cav = new List<Matrix4x4>();
@@ -88,6 +88,10 @@ public class UnitsSpawnCustom : MonoBehaviour
     private const int batchSize = 1023;
     enum UnitType { Infantry, Archer, Cavalry }
 
+    // Zmienne wody
+    private float waterSurfaceY;
+    private bool waterFound = false;
+
     void Start()
     {
         if (factionAMaterial) factionAMaterial.enableInstancing = true;
@@ -98,16 +102,29 @@ public class UnitsSpawnCustom : MonoBehaviour
 
         LoadCustomSettings();
 
-        // 1. Spawnowanie
+        // 1. Wykryj wodê
+        DetectWater();
+
+        // 2. Spawnuj
         ProcessFactionSpawns(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true, factionAShape);
         ProcessFactionSpawns(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false, factionBShape);
 
-        // 2. Batche
+        // 3. Batche i UI
         RebuildAllBatches();
         UpdateUICounters();
 
-        // 3. Ustawienie Kamery
+        // 4. Kamera
         SetupCameraPosition();
+    }
+
+    void DetectWater()
+    {
+        GameObject waterObj = GameObject.FindGameObjectWithTag(waterTag);
+        if (waterObj != null)
+        {
+            waterSurfaceY = waterObj.transform.position.y + (waterObj.transform.localScale.y * 0.5f);
+            waterFound = true;
+        }
     }
 
     void LoadCustomSettings()
@@ -122,12 +139,10 @@ public class UnitsSpawnCustom : MonoBehaviour
 
         if (hasCustomData)
         {
-            // Frakcja A (Blue/Green)
             factionA_Army.infantryCount = BattleInfoDisplayOwnSettings.blueInfantryCount;
             factionA_Army.archerCount = BattleInfoDisplayOwnSettings.blueRangeCount;
             factionA_Army.cavalryCount = BattleInfoDisplayOwnSettings.blueCavalryCount;
 
-            // Frakcja B (Red)
             factionB_Army.infantryCount = BattleInfoDisplayOwnSettings.redInfantryCount;
             factionB_Army.archerCount = BattleInfoDisplayOwnSettings.redRangeCount;
             factionB_Army.cavalryCount = BattleInfoDisplayOwnSettings.redCavalryCount;
@@ -139,26 +154,16 @@ public class UnitsSpawnCustom : MonoBehaviour
         if (battleCamera == null) battleCamera = Camera.main;
         if (battleCamera == null) return;
 
-        // --- ZMIANA: WYMUSZENIE POZYCJI KAMERY ---
-        // Zamiast polegaæ na PlayerPrefs ("SideA"/"SideB"), wymuszamy spawnAreaA (Frakcja Zielona).
-        // Jeœli chcesz wróciæ do dynamicznego wyboru, odkomentuj liniê z PlayerPrefs.
-
-        // string chosenSide = PlayerPrefs.GetString("PlayerSide", "SideA");
-        // GameObject mySpawn = (chosenSide == "SideA") ? spawnAreaA : spawnAreaB;
-
-        GameObject mySpawn = spawnAreaA; // <- Wymuszenie Frakcji A (Zielonej/Niebieskiej)
+        GameObject mySpawn = spawnAreaA; // Custom = Zawsze Frakcja A
 
         if (mySpawn == null || spawnAreaA == null || spawnAreaB == null) return;
 
         Vector3 mapCenter = (spawnAreaA.transform.position + spawnAreaB.transform.position) / 2f;
-
-        // Oblicz kierunek OD spawnu DO œrodka mapy
         Vector3 directionToCenter = (mapCenter - mySpawn.transform.position).normalized;
         directionToCenter.y = 0;
         directionToCenter.Normalize();
 
         Vector3 startPos = mySpawn.transform.position;
-        // Cofamy siê od spawnu (przeciwnie do œrodka)
         Vector3 newPos = startPos - (directionToCenter * cameraDistanceBack);
 
         float baseHeight = newPos.y;
@@ -166,7 +171,6 @@ public class UnitsSpawnCustom : MonoBehaviour
 
         newPos.y = baseHeight + cameraHeight;
         battleCamera.transform.position = newPos;
-
         battleCamera.transform.LookAt(mapCenter);
 
         Vector3 currentRotation = battleCamera.transform.rotation.eulerAngles;
@@ -175,32 +179,13 @@ public class UnitsSpawnCustom : MonoBehaviour
 
     void Update()
     {
-        // --- FRAKCJA A (Zielona/Niebieska) ---
-        // Renderuj tylko jeœli lista nie jest pusta (czyli Manager jeszcze jej nie zabra³)
-        if (listA_Inf.Count > 0)
-            DrawBatches(batchesA_Inf, infantryMesh, factionAMaterial);
+        if (listA_Inf.Count > 0) DrawBatches(batchesA_Inf, infantryMesh, factionAMaterial);
+        if (listA_Arc.Count > 0) DrawBatches(batchesA_Arc, archerMesh, factionAMaterial);
+        if (listA_Cav.Count > 0) DrawBatches(batchesA_Cav, cavalryMesh, factionAMaterial);
+        if (listB_Inf.Count > 0) DrawBatches(batchesB_Inf, infantryMesh, factionBMaterial);
+        if (listB_Arc.Count > 0) DrawBatches(batchesB_Arc, archerMesh, factionBMaterial);
+        if (listB_Cav.Count > 0) DrawBatches(batchesB_Cav, cavalryMesh, factionBMaterial);
 
-        if (listA_Arc.Count > 0)
-            DrawBatches(batchesA_Arc, archerMesh, factionAMaterial);
-
-        if (listA_Cav.Count > 0)
-            DrawBatches(batchesA_Cav, cavalryMesh, factionAMaterial);
-
-        // --- FRAKCJA B (Czerwona) ---
-        // Upewnij siê, ¿e zmieni³eœ listy B na 'public' zgodnie z planem, 
-        // aby Manager móg³ je pobraæ i wyczyœciæ.
-        if (listB_Inf.Count > 0)
-            DrawBatches(batchesB_Inf, infantryMesh, factionBMaterial);
-
-        if (listB_Arc.Count > 0)
-            DrawBatches(batchesB_Arc, archerMesh, factionBMaterial);
-
-        if (listB_Cav.Count > 0)
-            DrawBatches(batchesB_Cav, cavalryMesh, factionBMaterial);
-
-        // --- INPUTS (Debug) ---
-        // Te funkcje zadzia³aj¹ teraz tylko wtedy, gdy jednostki s¹ wci¹¿ 
-        // zarz¹dzane przez ten skrypt (przed podzia³em na grupy).
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.C)) KillRandomUnit(false);
     }
@@ -244,8 +229,24 @@ public class UnitsSpawnCustom : MonoBehaviour
         {
             if (positionQueue.Count == 0) break;
             Vector3 rawPos = positionQueue.Dequeue();
-            float y = terrain.SampleHeight(rawPos) + terrain.transform.position.y + (unitDiameter * 0.5f);
-            Vector3 finalPos = new Vector3(rawPos.x, y, rawPos.z);
+
+            // Pobieramy wysokoœæ terenu
+            float terrainY = terrain.SampleHeight(rawPos) + terrain.transform.position.y;
+
+            // Domyœlna pozycja (L¹d)
+            float finalY = terrainY + (unitDiameter * 0.5f);
+
+            // --- KOREKTA WODNA ---
+            if (waterFound)
+            {
+                if (terrainY < waterSurfaceY)
+                {
+                    finalY = waterSurfaceY - swimmingDepth;
+                }
+            }
+            // ---------------------
+
+            Vector3 finalPos = new Vector3(rawPos.x, finalY, rawPos.z);
             float rotY = (float)rand.NextDouble() * 360f;
             Quaternion rotation = Quaternion.Euler(0, rotY, 0);
             Matrix4x4 matrix = Matrix4x4.TRS(finalPos, rotation, Vector3.one * unitDiameter);

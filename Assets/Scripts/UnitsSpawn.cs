@@ -45,17 +45,16 @@ public class UnitsSpawn : MonoBehaviour
     [Range(0f, 1f)]
     public float randomness = 0.8f;
 
-    // --- USTAWIENIA KAMERY ---
+    // --- NOWOŒÆ: USTAWIENIA WODY DLA SPAWNU ---
+    [Header("Water Settings (Spawn Correction)")]
+    public string waterTag = "Water";
+    public float swimmingDepth = 0.5f; // Musi byæ takie samo jak w Managerze
+    // -------------------------------------------
+
     [Header("Camera Start Settings")]
     public Camera battleCamera;
-
-    [Tooltip("Wysokoœæ kamery nad armi¹")]
     public float cameraHeight = 60f;
-
-    [Tooltip("Dystans kamery ZA armi¹ (wartoœæ dodatnia odsunie kamerê w ty³)")]
     public float cameraDistanceBack = 40f;
-
-    [Tooltip("K¹t nachylenia kamery w dó³ (Oœ X)")]
     public float cameraAngle = 55f;
 
     // --- DANE JEDNOSTEK ---
@@ -79,6 +78,10 @@ public class UnitsSpawn : MonoBehaviour
     private const int batchSize = 1023;
     enum UnitType { Infantry, Archer, Cavalry }
 
+    // Zmienne wody
+    private float waterSurfaceY;
+    private bool waterFound = false;
+
     void Start()
     {
         if (factionAMaterial) factionAMaterial.enableInstancing = true;
@@ -87,19 +90,32 @@ public class UnitsSpawn : MonoBehaviour
         terrain = Terrain.activeTerrain;
         if (terrain == null) return;
 
-        // 1. Spawnowanie
+        // 1. Wykryj wodê PRZED spawnowaniem
+        DetectWater();
+
+        // 2. Spawnowanie
         ProcessFactionSpawns(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true);
         ProcessFactionSpawns(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false);
 
-        // 2. Batche
+        // 3. Batche
         RebuildAllBatches();
         UpdateUICounters();
 
-        // 3. Ustawienie Kamery (Nowa logika)
+        // 4. Kamera
         SetupCameraPosition();
     }
 
-    // --- NOWA FUNKCJA KAMERY ---
+    void DetectWater()
+    {
+        GameObject waterObj = GameObject.FindGameObjectWithTag(waterTag);
+        if (waterObj != null)
+        {
+            // Zak³adamy p³ask¹ taflê wody (proste rozwi¹zanie dla spawnu)
+            waterSurfaceY = waterObj.transform.position.y + (waterObj.transform.localScale.y * 0.5f);
+            waterFound = true;
+        }
+    }
+
     void SetupCameraPosition()
     {
         if (battleCamera == null) battleCamera = Camera.main;
@@ -108,40 +124,23 @@ public class UnitsSpawn : MonoBehaviour
         string chosenSide = PlayerPrefs.GetString("PlayerSide", "SideA");
         GameObject mySpawn = (chosenSide == "SideA") ? spawnAreaA : spawnAreaB;
 
-        // Jeœli brakuje spawnu, nic nie rób
         if (mySpawn == null || spawnAreaA == null || spawnAreaB == null) return;
 
-        // 1. Oblicz œrodek mapy (punkt miêdzy spawnem A i B)
         Vector3 mapCenter = (spawnAreaA.transform.position + spawnAreaB.transform.position) / 2f;
-
-        // 2. Oblicz wektor kierunku: Od mojej armii -> Do œrodka mapy (Do wroga)
         Vector3 directionToCenter = (mapCenter - mySpawn.transform.position).normalized;
-
-        // Ignorujemy ró¿nicê wysokoœci przy obliczaniu kierunku "w ty³", chcemy p³aski wektor po ziemi
         directionToCenter.y = 0;
         directionToCenter.Normalize();
 
-        // 3. Ustal now¹ pozycjê kamery
-        // Zaczynamy od œrodka mojej armii (mySpawn)
-        // Cofamy siê o 'cameraDistanceBack' (przeciwnie do kierunku na wroga)
         Vector3 startPos = mySpawn.transform.position;
         Vector3 newPos = startPos - (directionToCenter * cameraDistanceBack);
 
-        // Ustawiamy wysokoœæ
         float baseHeight = newPos.y;
         if (terrain != null) baseHeight = terrain.SampleHeight(newPos) + terrain.transform.position.y;
 
-        // Finalna pozycja (wysokoœæ terenu + cameraHeight)
         newPos.y = baseHeight + cameraHeight;
-
         battleCamera.transform.position = newPos;
-
-        // 4. Ustal Rotacjê (Patrz na œrodek, ale zachowaj k¹t pochylenia)
-
-        // Najpierw ka¿ kamerze spojrzeæ na œrodek mapy (ustawi to rotacjê Y - lewo/prawo)
         battleCamera.transform.LookAt(mapCenter);
 
-        // Teraz nadpisz rotacjê X (góra/dó³) wartoœci¹ z Inspektora (cameraAngle), zachowuj¹c Y i Z
         Vector3 currentRotation = battleCamera.transform.rotation.eulerAngles;
         battleCamera.transform.rotation = Quaternion.Euler(cameraAngle, currentRotation.y, 0f);
     }
@@ -158,8 +157,6 @@ public class UnitsSpawn : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.C)) KillRandomUnit(false);
     }
-
-    // --- RESZTA LOGIKI (BEZ ZMIAN) ---
 
     void ProcessFactionSpawns(ArmyComposition army, GameObject mainArea, GameObject secArea, bool isFactionA)
     {
@@ -200,8 +197,25 @@ public class UnitsSpawn : MonoBehaviour
         {
             if (positionQueue.Count == 0) break;
             Vector3 rawPos = positionQueue.Dequeue();
-            float y = terrain.SampleHeight(rawPos) + terrain.transform.position.y + (unitDiameter * 0.5f);
-            Vector3 finalPos = new Vector3(rawPos.x, y, rawPos.z);
+
+            // Pobieramy wysokoœæ terenu
+            float terrainY = terrain.SampleHeight(rawPos) + terrain.transform.position.y;
+
+            // Domyœlna pozycja (L¹d)
+            float finalY = terrainY + (unitDiameter * 0.5f); // + po³owa wysokoœci jednostki (¿eby sta³a na ziemi)
+
+            // --- KOREKTA WODNA ---
+            if (waterFound)
+            {
+                // Jeœli teren jest poni¿ej lustra wody -> ustaw na wodzie (minus zanurzenie)
+                if (terrainY < waterSurfaceY)
+                {
+                    finalY = waterSurfaceY - swimmingDepth;
+                }
+            }
+            // ---------------------
+
+            Vector3 finalPos = new Vector3(rawPos.x, finalY, rawPos.z);
             float rotY = (float)rand.NextDouble() * 360f;
             Quaternion rotation = Quaternion.Euler(0, rotY, 0);
             Matrix4x4 matrix = Matrix4x4.TRS(finalPos, rotation, Vector3.one * unitDiameter);
