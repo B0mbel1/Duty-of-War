@@ -231,6 +231,10 @@ PrefabInstance:
       propertyPath: terrain
       value: 
       objectReference: {fileID: 390437215}
+    - target: {fileID: 6720409756539285911, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7081239012547174118, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
       propertyPath: m_Name
       value: SpawnArea
@@ -238,8 +242,52 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7081239012547174118, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 346586453}
   m_SourcePrefab: {fileID: 100100000, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+--- !u!1 &346586452 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7081239012547174118, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+  m_PrefabInstance: {fileID: 346586451}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &346586453
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 346586452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6f5ab8a55f1c6b4fa5dc021eb85ece1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArmyHierarchyManager
+  customSpawner: {fileID: 0}
+  historySpawner: {fileID: 346586454}
+  groupUIPrefab: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
+  uiContainer: {fileID: 1392828059}
+  groupSize: 150
+  moveSpeed: 10
+  rotationSpeed: 8
+  stopDistance: 2
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 1
+  factionAGroups: []
+  factionBGroups: []
+--- !u!114 &346586454 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+  m_PrefabInstance: {fileID: 346586451}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 346586452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5a924f915487ed47b990f359b25b69c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitsSpawn
 --- !u!1 &390437213
 GameObject:
   m_ObjectHideFlags: 0
@@ -761,6 +809,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!224 &1392828059 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1392828056}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1958242335
 GameObject:
   m_ObjectHideFlags: 0

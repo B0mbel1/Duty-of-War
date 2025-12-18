@@ -68,13 +68,13 @@ public class UnitsSpawnCustom : MonoBehaviour
     public float cameraAngle = 55f;
 
     // --- DANE JEDNOSTEK ---
-    public  List<Matrix4x4> listA_Inf = new List<Matrix4x4>();
+    public List<Matrix4x4> listA_Inf = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Arc = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Cav = new List<Matrix4x4>();
 
-    private List<Matrix4x4> listB_Inf = new List<Matrix4x4>();
-    private List<Matrix4x4> listB_Arc = new List<Matrix4x4>();
-    private List<Matrix4x4> listB_Cav = new List<Matrix4x4>();
+    public List<Matrix4x4> listB_Inf = new List<Matrix4x4>();
+    public List<Matrix4x4> listB_Arc = new List<Matrix4x4>();
+    public List<Matrix4x4> listB_Cav = new List<Matrix4x4>();
 
     private List<Matrix4x4[]> batchesA_Inf = new List<Matrix4x4[]>();
     private List<Matrix4x4[]> batchesA_Arc = new List<Matrix4x4[]>();
@@ -175,13 +175,32 @@ public class UnitsSpawnCustom : MonoBehaviour
 
     void Update()
     {
-        DrawBatches(batchesA_Inf, infantryMesh, factionAMaterial);
-        DrawBatches(batchesA_Arc, archerMesh, factionAMaterial);
-        DrawBatches(batchesA_Cav, cavalryMesh, factionAMaterial);
-        DrawBatches(batchesB_Inf, infantryMesh, factionBMaterial);
-        DrawBatches(batchesB_Arc, archerMesh, factionBMaterial);
-        DrawBatches(batchesB_Cav, cavalryMesh, factionBMaterial);
+        // --- FRAKCJA A (Zielona/Niebieska) ---
+        // Renderuj tylko jeœli lista nie jest pusta (czyli Manager jeszcze jej nie zabra³)
+        if (listA_Inf.Count > 0)
+            DrawBatches(batchesA_Inf, infantryMesh, factionAMaterial);
 
+        if (listA_Arc.Count > 0)
+            DrawBatches(batchesA_Arc, archerMesh, factionAMaterial);
+
+        if (listA_Cav.Count > 0)
+            DrawBatches(batchesA_Cav, cavalryMesh, factionAMaterial);
+
+        // --- FRAKCJA B (Czerwona) ---
+        // Upewnij siê, ¿e zmieni³eœ listy B na 'public' zgodnie z planem, 
+        // aby Manager móg³ je pobraæ i wyczyœciæ.
+        if (listB_Inf.Count > 0)
+            DrawBatches(batchesB_Inf, infantryMesh, factionBMaterial);
+
+        if (listB_Arc.Count > 0)
+            DrawBatches(batchesB_Arc, archerMesh, factionBMaterial);
+
+        if (listB_Cav.Count > 0)
+            DrawBatches(batchesB_Cav, cavalryMesh, factionBMaterial);
+
+        // --- INPUTS (Debug) ---
+        // Te funkcje zadzia³aj¹ teraz tylko wtedy, gdy jednostki s¹ wci¹¿ 
+        // zarz¹dzane przez ten skrypt (przed podzia³em na grupy).
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.C)) KillRandomUnit(false);
     }

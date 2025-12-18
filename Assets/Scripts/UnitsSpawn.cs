@@ -63,9 +63,9 @@ public class UnitsSpawn : MonoBehaviour
     public List<Matrix4x4> listA_Arc = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Cav = new List<Matrix4x4>();
 
-    private List<Matrix4x4> listB_Inf = new List<Matrix4x4>();
-    private List<Matrix4x4> listB_Arc = new List<Matrix4x4>();
-    private List<Matrix4x4> listB_Cav = new List<Matrix4x4>();
+    public List<Matrix4x4> listB_Inf = new List<Matrix4x4>();
+    public List<Matrix4x4> listB_Arc = new List<Matrix4x4>();
+    public List<Matrix4x4> listB_Cav = new List<Matrix4x4>();
 
     private List<Matrix4x4[]> batchesA_Inf = new List<Matrix4x4[]>();
     private List<Matrix4x4[]> batchesA_Arc = new List<Matrix4x4[]>();

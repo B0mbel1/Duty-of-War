@@ -172,7 +172,8 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 3694877911388947154, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -198,6 +199,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!224 &24725122 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 24725119}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &580976504
 GameObject:
   m_ObjectHideFlags: 0
@@ -723,7 +729,7 @@ PrefabInstance:
       objectReference: {fileID: 580976506}
     - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: m_Enabled
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7928190867704921069, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: unitsSpawn
@@ -737,6 +743,22 @@ PrefabInstance:
       propertyPath: autoDetectWater
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: uiContainer
+      value: 
+      objectReference: {fileID: 24725122}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: customSpawner
+      value: 
+      objectReference: {fileID: 1517039892}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: groupUIPrefab
+      value: 
+      objectReference: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

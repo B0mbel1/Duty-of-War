@@ -228,6 +228,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1843948588}
     - target: {fileID: 6720409756539285911, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6720409756539285911, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
       propertyPath: gravitySpeed
       value: 30
       objectReference: {fileID: 0}
@@ -258,8 +262,52 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7081239012547174118, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 13856382}
   m_SourcePrefab: {fileID: 100100000, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+--- !u!1 &13856381 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7081239012547174118, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+  m_PrefabInstance: {fileID: 13856380}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &13856382
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 13856381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6f5ab8a55f1c6b4fa5dc021eb85ece1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArmyHierarchyManager
+  customSpawner: {fileID: 0}
+  historySpawner: {fileID: 13856383}
+  groupUIPrefab: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
+  uiContainer: {fileID: 488601542}
+  groupSize: 150
+  moveSpeed: 10
+  rotationSpeed: 8
+  stopDistance: 2
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 1
+  factionAGroups: []
+  factionBGroups: []
+--- !u!114 &13856383 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+  m_PrefabInstance: {fileID: 13856380}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 13856381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5a924f915487ed47b990f359b25b69c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitsSpawn
 --- !u!1001 &488601541
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -312,11 +360,24 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5813298606366764871, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5813298606366764871, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+--- !u!224 &488601542 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &758079941
 GameObject:
   m_ObjectHideFlags: 0

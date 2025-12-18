@@ -309,6 +309,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!224 &60639564 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 60639561}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1220153183
 GameObject:
   m_ObjectHideFlags: 0
@@ -851,6 +856,18 @@ PrefabInstance:
       propertyPath: autoDetectWater
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: uiContainer
+      value: 
+      objectReference: {fileID: 60639564}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: customSpawner
+      value: 
+      objectReference: {fileID: 1690024226}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: groupUIPrefab
+      value: 
+      objectReference: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
