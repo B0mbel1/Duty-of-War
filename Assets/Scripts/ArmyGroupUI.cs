@@ -10,9 +10,9 @@ public class ArmyGroupUI : MonoBehaviour
     public Button myButton;
 
     [Header("Unit Shapes (Przypisz Sprites w Inspectorze)")]
-    public Sprite shapeInfantry; // Tu przypisz Kó³ko (np. 'Knob')
-    public Sprite shapeArcher;   // Tu przypisz Kwadrat (np. 'UISprite')
-    public Sprite shapeCavalry;  // Tu przypisz Cylinder/Kapsu³kê
+    public Sprite shapeInfantry;
+    public Sprite shapeArcher;
+    public Sprite shapeCavalry;
 
     private TacticalGroup myGroup;
     private ArmyHierarchyManager manager;
@@ -23,16 +23,19 @@ public class ArmyGroupUI : MonoBehaviour
         myGroup = group;
         manager = mgr;
 
-        // 1. Ustawienie Liczby
-        if (groupNameText != null)
-        {
-            groupNameText.text = group.unitMatrices.Count.ToString();
-        }
+        // 1. Dodaj lub pobierz komponent LayoutElement (dla FlowLayout)
+        LayoutElement layout = GetComponent<LayoutElement>();
+        if (layout == null) layout = gameObject.AddComponent<LayoutElement>();
 
-        // 2. ZMIANA KSZTA£TU (Nowoœæ)
+        // 2. Logika Rozmiaru i Obrazka
         if (backgroundImage != null)
         {
-            // Sprawdzamy nazwê grupy i zmieniamy obrazek
+            backgroundImage.preserveAspect = false;
+
+            // Domyœlny rozmiar (kwadrat dla piechoty/³uczników)
+            layout.preferredWidth = 80f;
+            layout.preferredHeight = 80f;
+
             if (group.groupName.Contains("Infantry") && shapeInfantry != null)
             {
                 backgroundImage.sprite = shapeInfantry;
@@ -43,21 +46,27 @@ public class ArmyGroupUI : MonoBehaviour
             }
             else if (group.groupName.Contains("Cavalry") && shapeCavalry != null)
             {
+                // KAWALERIA
                 backgroundImage.sprite = shapeCavalry;
-            }
+                backgroundImage.preserveAspect = true;
 
-            // Opcjonalnie: Zachowaj proporcje obrazka, ¿eby cylinder nie by³ rozci¹gniêty
-            // backgroundImage.preserveAspect = true; 
+                // Szerszy przycisk dla kawalerii
+                layout.preferredWidth = 140f;
+                layout.preferredHeight = 60f;
+            }
         }
 
-        // 3. Ustawienie Koloru Frakcji
-        Color baseColor;
-        if (group.groupName.StartsWith("A")) baseColor = new Color(0.6f, 0.8f, 1f); // Niebieski
-        else baseColor = new Color(1f, 0.6f, 0.6f); // Czerwony
+        // 3. Tekst
+        if (groupNameText != null)
+        {
+            groupNameText.text = group.unitMatrices.Count.ToString();
+        }
 
-        backgroundImage.color = baseColor;
+        // --- ZMIANA: USUNIÊTO KOLOROWANIE FRAKCJI ---
+        // Ustawiamy kolor na neutralny (Bia³y = brak tintu)
+        backgroundImage.color = Color.white;
+        // --------------------------------------------
 
-        // Podpiêcie klikniêcia
         myButton.onClick.RemoveAllListeners();
         myButton.onClick.AddListener(OnClicked);
     }
@@ -69,14 +78,12 @@ public class ArmyGroupUI : MonoBehaviour
 
     public void SetSelectionState(bool isSelected)
     {
+        if (myGroup.unitMatrices.Count == 0) return; // Jeœli martwy, nie zmieniaj kolorów
+
         if (isSelected)
-            backgroundImage.color = Color.green; // Wybrany
+            backgroundImage.color = Color.green; // Wybrany = Zielony
         else
-        {
-            // Przywróæ kolor frakcji
-            if (myGroup.groupName.StartsWith("A")) backgroundImage.color = new Color(0.6f, 0.8f, 1f);
-            else backgroundImage.color = new Color(1f, 0.6f, 0.6f);
-        }
+            backgroundImage.color = Color.white; // Odznaczony = Neutralny (Bia³y)
     }
 
     public void UpdateUnitCount()
@@ -85,6 +92,7 @@ public class ArmyGroupUI : MonoBehaviour
         {
             groupNameText.text = myGroup.unitMatrices.Count.ToString();
 
+            // Jeœli oddzia³ wybity -> zrób szary i nieaktywny
             if (myGroup.unitMatrices.Count == 0)
             {
                 myButton.interactable = false;
