@@ -688,6 +688,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmyHierarchyManager
   customSpawner: {fileID: 0}
   historySpawner: {fileID: 1805836862}
+  counterTextA: {fileID: 657218913}
+  counterTextB: {fileID: 1577666029}
   groupUIPrefab: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
   uiContainer: {fileID: 253803139}
   groupSize: 150

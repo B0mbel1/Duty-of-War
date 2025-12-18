@@ -752,6 +752,14 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 24725122}
     - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: counterTextA
+      value: 
+      objectReference: {fileID: 24725121}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: counterTextB
+      value: 
+      objectReference: {fileID: 24725120}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: customSpawner
       value: 
       objectReference: {fileID: 1517039892}

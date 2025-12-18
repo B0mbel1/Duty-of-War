@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using TMPro; // <-- Potrzebne do obs³ugi tekstu
 
 public class ArmyHierarchyManager : MonoBehaviour
 {
@@ -7,7 +8,11 @@ public class ArmyHierarchyManager : MonoBehaviour
     public UnitsSpawnCustom customSpawner;
     public UnitsSpawn historySpawner;
 
-    [Header("UI Integration")]
+    [Header("UI Integration (Global Counters)")]
+    public TextMeshProUGUI counterTextA; // Licznik Frakcji A (np. 9000)
+    public TextMeshProUGUI counterTextB; // Licznik Frakcji B (np. 9000)
+
+    [Header("UI Integration (Buttons)")]
     public GameObject groupUIPrefab;
     public Transform uiContainer;
 
@@ -26,16 +31,14 @@ public class ArmyHierarchyManager : MonoBehaviour
     public float minZ = 0f;
     public float maxZ = 2000f;
 
-    // --- NOWOŒÆ: USTAWIENIA WODY I WYSOKOŒCI ---
-    [Header("Advanced Environment (Woda i Teren)")]
+    [Header("Advanced Environment")]
     public string waterTag = "Water";
-    public float swimmingDepth = 0.5f; // Jak g³êboko zanurzyæ w wodzie
+    public float swimmingDepth = 0.5f;
 
-    [Header("Unit Height Offsets (Korekta dla L¹du)")]
+    [Header("Unit Height Offsets")]
     public float offsetInfantry = 0.0f;
     public float offsetArcher = 0.0f;
-    public float offsetCavalry = 0.2f; // Kawaleria czêsto potrzebuje byæ wy¿ej
-    // ---------------------------------------------
+    public float offsetCavalry = 0.2f;
 
     // Listy danych
     public List<TacticalGroup> factionAGroups = new List<TacticalGroup>();
@@ -55,20 +58,16 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         terrain = Terrain.activeTerrain;
 
-        // Auto-wykrywanie rozmiaru terenu
         if (terrain != null && maxX == 2000f && maxZ == 2000f)
         {
             maxX = terrain.terrainData.size.x;
             maxZ = terrain.terrainData.size.z;
         }
 
-        // Wykrywanie wody na starcie
         DetectWater();
-
         Invoke(nameof(InitializeGroups), 0.5f);
     }
 
-    // --- NOWOŒÆ: FUNKCJA SZUKAJ¥CA WODY ---
     void DetectWater()
     {
         GameObject waterObj = GameObject.FindGameObjectWithTag(waterTag);
@@ -77,10 +76,8 @@ public class ArmyHierarchyManager : MonoBehaviour
             waterCollider = waterObj.GetComponent<Collider>();
             if (waterCollider != null)
             {
-                // Zak³adamy, ¿e pivot wody jest na œrodku, wiêc tafla to Y + po³owa skali Y
                 waterSurfaceY = waterObj.transform.position.y + (waterObj.transform.localScale.y * 0.5f);
                 waterFound = true;
-                Debug.Log($"[Manager] Woda wykryta na poziomie Y: {waterSurfaceY}");
             }
         }
     }
@@ -98,6 +95,20 @@ public class ArmyHierarchyManager : MonoBehaviour
             Debug.LogError("ArmyHierarchyManager: Nie znaleziono aktywnego Spawnera!");
             return;
         }
+
+        // --- PRZEJMOWANIE TEKSTÓW ZE SPAWNERA ---
+        // ¯ebyœ nie musia³ ich rêcznie przypisywaæ
+        if (useCustom)
+        {
+            if (counterTextA == null) counterTextA = customSpawner.factionAText;
+            if (counterTextB == null) counterTextB = customSpawner.factionBText;
+        }
+        else if (useHistory)
+        {
+            if (counterTextA == null) counterTextA = historySpawner.factionAText;
+            if (counterTextB == null) counterTextB = historySpawner.factionBText;
+        }
+        // ----------------------------------------
 
         if (uiContainer != null)
         {
@@ -121,6 +132,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             isPlayerB = !isPlayerA;
         }
 
+        // Pobranie danych...
         List<Matrix4x4> a_Inf, a_Arc, a_Cav;
         List<Matrix4x4> b_Inf, b_Arc, b_Cav;
         Mesh mInf, mArc, mCav;
@@ -141,6 +153,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             matA = historySpawner.factionAMaterial; matB = historySpawner.factionBMaterial;
         }
 
+        // Tworzenie grup
         CreateGroupsFromList(a_Inf, mInf, matA, "A_Infantry", factionAGroups, isPlayerA);
         CreateGroupsFromList(a_Arc, mArc, matA, "A_Archers", factionAGroups, isPlayerA);
         CreateGroupsFromList(a_Cav, mCav, matA, "A_Cavalry", factionAGroups, isPlayerA);
@@ -149,6 +162,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         CreateGroupsFromList(b_Arc, mArc, matB, "B_Archers", factionBGroups, isPlayerB);
         CreateGroupsFromList(b_Cav, mCav, matB, "B_Cavalry", factionBGroups, isPlayerB);
 
+        // Czyszczenie list w spawnerze (aby unikn¹æ podwójnego renderowania)
         if (useCustom)
         {
             customSpawner.listA_Inf.Clear(); customSpawner.listA_Arc.Clear(); customSpawner.listA_Cav.Clear();
@@ -163,6 +177,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         groupsInitialized = true;
+        UpdateGlobalCounters(); // <-- Pierwsze ustawienie liczników
     }
 
     void CreateGroupsFromList(List<Matrix4x4> sourceList, Mesh mesh, Material mat, string baseName, List<TacticalGroup> targetCollection, bool createUI)
@@ -200,6 +215,10 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (!groupsInitialized) return;
 
+        // DEBUG: Zabijanie
+        if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
+        if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
+
         foreach (var group in factionAGroups)
         {
             if (group.isMoving) ProcessMovement(group);
@@ -215,6 +234,56 @@ public class ArmyHierarchyManager : MonoBehaviour
         HandleMouseInput();
     }
 
+    void KillRandomUnit(bool isFactionA)
+    {
+        List<TacticalGroup> targetFaction = isFactionA ? factionAGroups : factionBGroups;
+        var aliveGroups = new List<TacticalGroup>();
+        foreach (var g in targetFaction)
+        {
+            if (g.unitMatrices.Count > 0) aliveGroups.Add(g);
+        }
+
+        if (aliveGroups.Count == 0) return;
+
+        TacticalGroup randomGroup = aliveGroups[Random.Range(0, aliveGroups.Count)];
+        int lastIndex = randomGroup.unitMatrices.Count - 1;
+
+        // Usuwanie jednostki
+        randomGroup.unitMatrices.RemoveAt(lastIndex);
+
+        randomGroup.RebuildBatches();
+
+        // Aktualizacja przycisku tej konkretnej grupy
+        foreach (var ui in uiElements)
+        {
+            if (ui.GetGroup() == randomGroup)
+            {
+                ui.UpdateUnitCount();
+                break;
+            }
+        }
+
+        // Aktualizacja G£ÓWNYCH liczników (tych na górze ekranu)
+        UpdateGlobalCounters();
+    }
+
+    // --- NOWA FUNKCJA: SUMUJE I WYŒWIETLA WYNIK ---
+    void UpdateGlobalCounters()
+    {
+        // 1. Policz Frakcjê A
+        int totalA = 0;
+        foreach (var g in factionAGroups) totalA += g.unitMatrices.Count;
+
+        // 2. Policz Frakcjê B
+        int totalB = 0;
+        foreach (var g in factionBGroups) totalB += g.unitMatrices.Count;
+
+        // 3. Wyœwietl
+        if (counterTextA != null) counterTextA.text = totalA.ToString();
+        if (counterTextB != null) counterTextB.text = totalB.ToString();
+    }
+
+    // ... reszta kodu (SelectGroup, HandleMouseInput, IssueMoveOrder, ProcessMovement, OnDrawGizmos) bez zmian
     public void SelectGroup(TacticalGroup group)
     {
         selectedGroup = group;
@@ -230,10 +299,8 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (Input.GetMouseButtonDown(1))
         {
             if (selectedGroup == null) return;
-
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
-
             if (Physics.Raycast(ray, out hit, 10000f, groundLayer))
             {
                 IssueMoveOrder(selectedGroup, hit.point);
@@ -249,16 +316,13 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.isMoving = true;
     }
 
-    // --- NOWOŒÆ: HELPER DO SPRAWDZANIA WODY ---
     bool IsPointInsideWaterBounds(Vector3 point)
     {
         if (waterCollider == null) return false;
-        // Sprawdzamy czy X i Z mieszcz¹ siê w obrysie wody
         Bounds b = waterCollider.bounds;
         return (point.x >= b.min.x && point.x <= b.max.x && point.z >= b.min.z && point.z <= b.max.z);
     }
 
-    // --- ZMODYFIKOWANA LOGIKA RUCHU (Z WOD¥ I OFFSETAMI) ---
     void ProcessMovement(TacticalGroup group)
     {
         if (group.unitMatrices.Count == 0)
@@ -267,7 +331,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             return;
         }
 
-        // 1. Ustal Offset na podstawie typu jednostki (analiza nazwy grupy)
         float currentOffset = 0f;
         if (group.groupName.Contains("Infantry")) currentOffset = offsetInfantry;
         else if (group.groupName.Contains("Archer")) currentOffset = offsetArcher;
@@ -294,43 +357,30 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 currentPos = mat.GetColumn(3);
             Vector3 newPos = currentPos + moveVector;
 
-            // Zabezpieczenie granic mapy
             newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
-            // Pobranie wysokoœci terenu
             float groundHeight = 0f;
             if (terrain != null)
                 groundHeight = terrain.SampleHeight(newPos) + terrain.transform.position.y;
             else
                 groundHeight = newPos.y;
 
-            // --- LOGIKA WODY VS L¥D ---
             float finalY = groundHeight;
             bool inWater = false;
-
             if (waterFound && IsPointInsideWaterBounds(newPos))
             {
-                // Sprawdzamy czy teren jest ni¿ej ni¿ tafla wody
                 if (groundHeight < waterSurfaceY)
                 {
                     inWater = true;
-                    // Jeœli w wodzie -> ustaw na poziomie wody minus zanurzenie
                     finalY = waterSurfaceY - swimmingDepth;
                 }
             }
 
-            if (!inWater)
-            {
-                // Jeœli na l¹dzie -> wysokoœæ terenu + offset dla typu jednostki
-                finalY = groundHeight + currentOffset;
-            }
-            // ---------------------------
+            if (!inWater) finalY = groundHeight + currentOffset;
 
-            // P³ynne dopasowanie wysokoœci (Lerp)
             newPos.y = Mathf.Lerp(currentPos.y, finalY, Time.deltaTime * 10f);
 
-            // Rotacja
             Quaternion currentRot = mat.rotation;
             Quaternion targetRot = Quaternion.LookRotation(direction);
             Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
