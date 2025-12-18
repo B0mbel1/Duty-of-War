@@ -137,6 +137,9 @@ MonoBehaviour:
   groupNameText: {fileID: 5360336136825083616}
   backgroundImage: {fileID: 5266793335934527770}
   myButton: {fileID: 7924091937895212214}
+  shapeInfantry: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
+  shapeArcher: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  shapeCavalry: {fileID: 21300000, guid: 0d106a52f90a3954e8a1e3be203d9e30, type: 3}
 --- !u!1 &3992378212811416667
 GameObject:
   m_ObjectHideFlags: 0
