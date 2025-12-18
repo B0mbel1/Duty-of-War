@@ -80,4 +80,9 @@ public class ArmyGroupUI : MonoBehaviour
             }
         }
     }
+
+    public TacticalGroup GetGroup()
+    {
+        return myGroup;
+    }
 }

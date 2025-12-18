@@ -122,8 +122,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6f5ab8a55f1c6b4fa5dc021eb85ece1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArmyHierarchyManager
-  spawner: {fileID: 6990999978236238867}
-  groupUIPrefab: {fileID: 0}
+  customSpawner: {fileID: 6990999978236238867}
+  historySpawner: {fileID: 0}
+  groupUIPrefab: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
   uiContainer: {fileID: 0}
   groupSize: 150
   moveSpeed: 10
@@ -132,5 +133,14 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 1
+  minX: 0
+  maxX: 2000
+  minZ: 0
+  maxZ: 2000
+  waterTag: Water
+  swimmingDepth: 0.2
+  offsetInfantry: 0.5
+  offsetArcher: 0.5
+  offsetCavalry: 1
   factionAGroups: []
   factionBGroups: []

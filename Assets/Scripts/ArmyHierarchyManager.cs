@@ -4,15 +4,15 @@ using System.Collections.Generic;
 public class ArmyHierarchyManager : MonoBehaviour
 {
     [Header("References (Auto-detected)")]
-    public UnitsSpawnCustom customSpawner; // Dla Custom Battle
-    public UnitsSpawn historySpawner;      // Dla Historical Battle
+    public UnitsSpawnCustom customSpawner;
+    public UnitsSpawn historySpawner;
 
     [Header("UI Integration")]
-    public GameObject groupUIPrefab;    // Prefab przycisku
-    public Transform uiContainer;       // Panel UnitPanel
+    public GameObject groupUIPrefab;
+    public Transform uiContainer;
 
     [Header("Hierarchy Settings")]
-    public HierarchyRank groupSize = HierarchyRank.Company; // 150
+    public HierarchyRank groupSize = HierarchyRank.Company;
 
     [Header("Movement Settings")]
     public float moveSpeed = 10f;
@@ -20,26 +20,73 @@ public class ArmyHierarchyManager : MonoBehaviour
     public float stopDistance = 2.0f;
     public LayerMask groundLayer = 1;
 
+    [Header("Map Boundaries (Granice Mapy)")]
+    public float minX = 0f;
+    public float maxX = 2000f;
+    public float minZ = 0f;
+    public float maxZ = 2000f;
+
+    // --- NOWOŒÆ: USTAWIENIA WODY I WYSOKOŒCI ---
+    [Header("Advanced Environment (Woda i Teren)")]
+    public string waterTag = "Water";
+    public float swimmingDepth = 0.5f; // Jak g³êboko zanurzyæ w wodzie
+
+    [Header("Unit Height Offsets (Korekta dla L¹du)")]
+    public float offsetInfantry = 0.0f;
+    public float offsetArcher = 0.0f;
+    public float offsetCavalry = 0.2f; // Kawaleria czêsto potrzebuje byæ wy¿ej
+    // ---------------------------------------------
+
     // Listy danych
     public List<TacticalGroup> factionAGroups = new List<TacticalGroup>();
     public List<TacticalGroup> factionBGroups = new List<TacticalGroup>();
 
     private List<ArmyGroupUI> uiElements = new List<ArmyGroupUI>();
-
-    // STAN GRY
     private TacticalGroup selectedGroup = null;
     private bool groupsInitialized = false;
     private Terrain terrain;
 
+    // Zmienne do wody
+    private Collider waterCollider;
+    private float waterSurfaceY;
+    private bool waterFound = false;
+
     void Start()
     {
         terrain = Terrain.activeTerrain;
+
+        // Auto-wykrywanie rozmiaru terenu
+        if (terrain != null && maxX == 2000f && maxZ == 2000f)
+        {
+            maxX = terrain.terrainData.size.x;
+            maxZ = terrain.terrainData.size.z;
+        }
+
+        // Wykrywanie wody na starcie
+        DetectWater();
+
         Invoke(nameof(InitializeGroups), 0.5f);
+    }
+
+    // --- NOWOŒÆ: FUNKCJA SZUKAJ¥CA WODY ---
+    void DetectWater()
+    {
+        GameObject waterObj = GameObject.FindGameObjectWithTag(waterTag);
+        if (waterObj != null)
+        {
+            waterCollider = waterObj.GetComponent<Collider>();
+            if (waterCollider != null)
+            {
+                // Zak³adamy, ¿e pivot wody jest na œrodku, wiêc tafla to Y + po³owa skali Y
+                waterSurfaceY = waterObj.transform.position.y + (waterObj.transform.localScale.y * 0.5f);
+                waterFound = true;
+                Debug.Log($"[Manager] Woda wykryta na poziomie Y: {waterSurfaceY}");
+            }
+        }
     }
 
     void InitializeGroups()
     {
-        // 1. AUTO-DETEKCJA SPAWNERA
         if (customSpawner == null) customSpawner = GetComponent<UnitsSpawnCustom>();
         if (historySpawner == null) historySpawner = GetComponent<UnitsSpawn>();
 
@@ -48,40 +95,32 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (!useCustom && !useHistory)
         {
-            Debug.LogError("ArmyHierarchyManager: Nie znaleziono ¿adnego aktywnego skryptu UnitsSpawn!");
+            Debug.LogError("ArmyHierarchyManager: Nie znaleziono aktywnego Spawnera!");
             return;
         }
 
-        // 2. CZYSZCZENIE PANELU UI
         if (uiContainer != null)
         {
             for (int i = uiContainer.childCount - 1; i >= 0; i--)
-            {
                 Destroy(uiContainer.GetChild(i).gameObject);
-            }
         }
+        uiElements.Clear();
 
-        // 3. OKREŒLENIE STRONY GRACZA (MODYFIKACJA TUTAJ)
-        bool isPlayerA = true; // Domyœlna wartoœæ
+        bool isPlayerA = true;
         bool isPlayerB = false;
 
         if (useCustom)
         {
-            // --- TRYB CUSTOM: ZAWSZE JESTEŒMY FRAKCJ¥ A (NIEBIESCY) ---
             isPlayerA = true;
             isPlayerB = false;
-            Debug.Log("Tryb Custom: Wymuszono Frakcjê A (Gracz = Niebiescy).");
         }
         else
         {
-            // --- TRYB HISTORYCZNY: DECYDUJE WYBÓR W MENU (PlayerPrefs) ---
             string playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
             isPlayerA = (playerSide == "SideA");
             isPlayerB = !isPlayerA;
-            Debug.Log($"Tryb Historyczny: Wybrano {playerSide} z PlayerPrefs.");
         }
 
-        // 4. POBRANIE DANYCH
         List<Matrix4x4> a_Inf, a_Arc, a_Cav;
         List<Matrix4x4> b_Inf, b_Arc, b_Cav;
         Mesh mInf, mArc, mCav;
@@ -102,21 +141,14 @@ public class ArmyHierarchyManager : MonoBehaviour
             matA = historySpawner.factionAMaterial; matB = historySpawner.factionBMaterial;
         }
 
-        // 5. TWORZENIE GRUP Z WARUNKIEM
-
-        // --- FRAKCJA A (Niebiescy) ---
-        // Generuj UI tylko jeœli isPlayerA == true
         CreateGroupsFromList(a_Inf, mInf, matA, "A_Infantry", factionAGroups, isPlayerA);
         CreateGroupsFromList(a_Arc, mArc, matA, "A_Archers", factionAGroups, isPlayerA);
         CreateGroupsFromList(a_Cav, mCav, matA, "A_Cavalry", factionAGroups, isPlayerA);
 
-        // --- FRAKCJA B (Czerwoni) ---
-        // Generuj UI tylko jeœli isPlayerB == true
         CreateGroupsFromList(b_Inf, mInf, matB, "B_Infantry", factionBGroups, isPlayerB);
         CreateGroupsFromList(b_Arc, mArc, matB, "B_Archers", factionBGroups, isPlayerB);
         CreateGroupsFromList(b_Cav, mCav, matB, "B_Cavalry", factionBGroups, isPlayerB);
 
-        // 6. PRZEJÊCIE RENDEROWANIA
         if (useCustom)
         {
             customSpawner.listA_Inf.Clear(); customSpawner.listA_Arc.Clear(); customSpawner.listA_Cav.Clear();
@@ -147,6 +179,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             List<Matrix4x4> slice = sourceList.GetRange(i, count);
             newGroup.unitMatrices = slice;
             newGroup.RebuildBatches();
+            newGroup.RecalculateCenter();
             targetCollection.Add(newGroup);
 
             if (createUI && uiContainer != null && groupUIPrefab != null)
@@ -167,8 +200,17 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (!groupsInitialized) return;
 
-        foreach (var group in factionAGroups) group.RenderGroup();
-        foreach (var group in factionBGroups) group.RenderGroup();
+        foreach (var group in factionAGroups)
+        {
+            if (group.isMoving) ProcessMovement(group);
+            group.RenderGroup();
+        }
+
+        foreach (var group in factionBGroups)
+        {
+            if (group.isMoving) ProcessMovement(group);
+            group.RenderGroup();
+        }
 
         HandleMouseInput();
     }
@@ -176,31 +218,69 @@ public class ArmyHierarchyManager : MonoBehaviour
     public void SelectGroup(TacticalGroup group)
     {
         selectedGroup = group;
-        foreach (var ui in uiElements) ui.SetSelectionState(false);
+        foreach (var ui in uiElements)
+        {
+            if (ui.GetGroup() == selectedGroup) ui.SetSelectionState(true);
+            else ui.SetSelectionState(false);
+        }
     }
 
     void HandleMouseInput()
     {
-        if (Input.GetMouseButton(1))
+        if (Input.GetMouseButtonDown(1))
         {
             if (selectedGroup == null) return;
+
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
+
             if (Physics.Raycast(ray, out hit, 10000f, groundLayer))
             {
-                MoveSelectedGroup(selectedGroup, hit.point);
+                IssueMoveOrder(selectedGroup, hit.point);
             }
         }
     }
 
-    public void MoveSelectedGroup(TacticalGroup group, Vector3 destination)
+    void IssueMoveOrder(TacticalGroup group, Vector3 destination)
     {
-        if (group == null || group.unitMatrices.Count == 0) return;
+        float clampedX = Mathf.Clamp(destination.x, minX, maxX);
+        float clampedZ = Mathf.Clamp(destination.z, minZ, maxZ);
+        group.currentDestination = new Vector3(clampedX, destination.y, clampedZ);
+        group.isMoving = true;
+    }
+
+    // --- NOWOŒÆ: HELPER DO SPRAWDZANIA WODY ---
+    bool IsPointInsideWaterBounds(Vector3 point)
+    {
+        if (waterCollider == null) return false;
+        // Sprawdzamy czy X i Z mieszcz¹ siê w obrysie wody
+        Bounds b = waterCollider.bounds;
+        return (point.x >= b.min.x && point.x <= b.max.x && point.z >= b.min.z && point.z <= b.max.z);
+    }
+
+    // --- ZMODYFIKOWANA LOGIKA RUCHU (Z WOD¥ I OFFSETAMI) ---
+    void ProcessMovement(TacticalGroup group)
+    {
+        if (group.unitMatrices.Count == 0)
+        {
+            group.isMoving = false;
+            return;
+        }
+
+        // 1. Ustal Offset na podstawie typu jednostki (analiza nazwy grupy)
+        float currentOffset = 0f;
+        if (group.groupName.Contains("Infantry")) currentOffset = offsetInfantry;
+        else if (group.groupName.Contains("Archer")) currentOffset = offsetArcher;
+        else if (group.groupName.Contains("Cavalry")) currentOffset = offsetCavalry;
 
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
-        Vector3 flatTarget = new Vector3(destination.x, 0, destination.z);
+        Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
-        if (Vector3.Distance(flatCenter, flatTarget) < stopDistance) return;
+        if (Vector3.Distance(flatCenter, flatTarget) < stopDistance)
+        {
+            group.isMoving = false;
+            return;
+        }
 
         Vector3 direction = (flatTarget - flatCenter).normalized;
         Vector3 moveVector = direction * moveSpeed * Time.deltaTime;
@@ -214,14 +294,43 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 currentPos = mat.GetColumn(3);
             Vector3 newPos = currentPos + moveVector;
 
+            // Zabezpieczenie granic mapy
+            newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
+            newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
+
+            // Pobranie wysokoœci terenu
             float groundHeight = 0f;
             if (terrain != null)
                 groundHeight = terrain.SampleHeight(newPos) + terrain.transform.position.y;
             else
                 groundHeight = newPos.y;
 
-            newPos.y = Mathf.Lerp(currentPos.y, groundHeight, Time.deltaTime * 10f);
+            // --- LOGIKA WODY VS L¥D ---
+            float finalY = groundHeight;
+            bool inWater = false;
 
+            if (waterFound && IsPointInsideWaterBounds(newPos))
+            {
+                // Sprawdzamy czy teren jest ni¿ej ni¿ tafla wody
+                if (groundHeight < waterSurfaceY)
+                {
+                    inWater = true;
+                    // Jeœli w wodzie -> ustaw na poziomie wody minus zanurzenie
+                    finalY = waterSurfaceY - swimmingDepth;
+                }
+            }
+
+            if (!inWater)
+            {
+                // Jeœli na l¹dzie -> wysokoœæ terenu + offset dla typu jednostki
+                finalY = groundHeight + currentOffset;
+            }
+            // ---------------------------
+
+            // P³ynne dopasowanie wysokoœci (Lerp)
+            newPos.y = Mathf.Lerp(currentPos.y, finalY, Time.deltaTime * 10f);
+
+            // Rotacja
             Quaternion currentRot = mat.rotation;
             Quaternion targetRot = Quaternion.LookRotation(direction);
             Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
@@ -231,5 +340,13 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         group.RebuildBatches();
         group.RecalculateCenter();
+    }
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Vector3 center = new Vector3((minX + maxX) / 2, 50, (minZ + maxZ) / 2);
+        Vector3 size = new Vector3(maxX - minX, 100, maxZ - minZ);
+        Gizmos.DrawWireCube(center, size);
     }
 }

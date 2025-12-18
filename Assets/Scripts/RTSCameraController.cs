@@ -43,8 +43,8 @@ public class RTSCameraController : MonoBehaviour
     void Update()
     {
         // ❌ Sprawdzenie, czy UI ma fokus
-        if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
-            return; // UI element wybrany → nie ruszamy kamerą
+        if (EventSystem.current.IsPointerOverGameObject())
+            return;
 
         if (float.IsNaN(transform.position.x) ||
             float.IsNaN(transform.position.y) ||
