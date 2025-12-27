@@ -246,7 +246,7 @@ public class BattleInfoDisplay : MonoBehaviour
     {
         string opis = "Bitwa w Lesie Teutoburskim (9 r. n.e.)\n\nZasadzka germañskich plemion dowodzonych przez Arminiusza na trzy rzymskie legiony Warusa. Rzymianie ponieœli druzgoc¹c¹ klêskê, trac¹c kontrolê nad Germani¹.";
         string opisterenu = "Teren zalesiony";
-        ShowBattleInfo("Germanie", "Cesarstwo Rzymskie", btn, germania, roma, opis, LasTeutoburski, opisterenu);
+        ShowBattleInfo("Cesarstwo Rzymskie","Germanie", btn, roma, germania, opis, LasTeutoburski, opisterenu);
     }
 
     public void Battle_LechowePole(Button btn)
