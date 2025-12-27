@@ -298,6 +298,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f6447f09954fb446be9162dd07999b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BackToMenu
+  menuPanel: {fileID: 1311502283060071806}
 --- !u!1 &3870312323290754151
 GameObject:
   m_ObjectHideFlags: 0
@@ -418,7 +419,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8407691360360428106}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1565801894907199339}
+        m_TargetAssemblyTypeName: BackToMenu, Assembly-CSharp
+        m_MethodName: ResumeGame
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &5475912247103247586
 GameObject:
   m_ObjectHideFlags: 0
