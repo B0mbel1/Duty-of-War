@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
-using TMPro; // <-- Potrzebne do obs³ugi tekstu
+using TMPro;
 
 public class ArmyHierarchyManager : MonoBehaviour
 {
@@ -9,8 +9,8 @@ public class ArmyHierarchyManager : MonoBehaviour
     public UnitsSpawn historySpawner;
 
     [Header("UI Integration (Global Counters)")]
-    public TextMeshProUGUI counterTextA; // Licznik Frakcji A (np. 9000)
-    public TextMeshProUGUI counterTextB; // Licznik Frakcji B (np. 9000)
+    public TextMeshProUGUI counterTextA;
+    public TextMeshProUGUI counterTextB;
 
     [Header("UI Integration (Buttons)")]
     public GameObject groupUIPrefab;
@@ -25,7 +25,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     public float stopDistance = 2.0f;
     public LayerMask groundLayer = 1;
 
-    [Header("Map Boundaries (Granice Mapy)")]
+    [Header("Map Boundaries")]
     public float minX = 0f;
     public float maxX = 2000f;
     public float minZ = 0f;
@@ -45,7 +45,11 @@ public class ArmyHierarchyManager : MonoBehaviour
     public List<TacticalGroup> factionBGroups = new List<TacticalGroup>();
 
     private List<ArmyGroupUI> uiElements = new List<ArmyGroupUI>();
-    private TacticalGroup selectedGroup = null;
+
+    // Listy zaznaczenia
+    private List<TacticalGroup> selectedGroups = new List<TacticalGroup>();
+    private TacticalGroup lastSelectedGroup = null;
+
     private bool groupsInitialized = false;
     private Terrain terrain;
 
@@ -96,7 +100,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             return;
         }
 
-        // --- PRZEJMOWANIE TEKSTÓW ZE SPAWNERA ---
         if (useCustom)
         {
             if (counterTextA == null) counterTextA = customSpawner.factionAText;
@@ -107,7 +110,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (counterTextA == null) counterTextA = historySpawner.factionAText;
             if (counterTextB == null) counterTextB = historySpawner.factionBText;
         }
-        // ----------------------------------------
 
         if (uiContainer != null)
         {
@@ -119,19 +121,13 @@ public class ArmyHierarchyManager : MonoBehaviour
         bool isPlayerA = true;
         bool isPlayerB = false;
 
-        if (useCustom)
-        {
-            isPlayerA = true;
-            isPlayerB = false;
-        }
-        else
+        if (!useCustom)
         {
             string playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
             isPlayerA = (playerSide == "SideA");
             isPlayerB = !isPlayerA;
         }
 
-        // Pobranie danych...
         List<Matrix4x4> a_Inf, a_Arc, a_Cav;
         List<Matrix4x4> b_Inf, b_Arc, b_Cav;
         Mesh mInf, mArc, mCav;
@@ -152,7 +148,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             matA = historySpawner.factionAMaterial; matB = historySpawner.factionBMaterial;
         }
 
-        // Tworzenie grup
         CreateGroupsFromList(a_Inf, mInf, matA, "A_Infantry", factionAGroups, isPlayerA);
         CreateGroupsFromList(a_Arc, mArc, matA, "A_Archers", factionAGroups, isPlayerA);
         CreateGroupsFromList(a_Cav, mCav, matA, "A_Cavalry", factionAGroups, isPlayerA);
@@ -161,7 +156,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         CreateGroupsFromList(b_Arc, mArc, matB, "B_Archers", factionBGroups, isPlayerB);
         CreateGroupsFromList(b_Cav, mCav, matB, "B_Cavalry", factionBGroups, isPlayerB);
 
-        // Czyszczenie list w spawnerze
         if (useCustom)
         {
             customSpawner.listA_Inf.Clear(); customSpawner.listA_Arc.Clear(); customSpawner.listA_Cav.Clear();
@@ -214,7 +208,6 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (!groupsInitialized) return;
 
-        // DEBUG: Zabijanie
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
 
@@ -246,13 +239,9 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         TacticalGroup randomGroup = aliveGroups[Random.Range(0, aliveGroups.Count)];
         int lastIndex = randomGroup.unitMatrices.Count - 1;
-
-        // Usuwanie jednostki
         randomGroup.unitMatrices.RemoveAt(lastIndex);
-
         randomGroup.RebuildBatches();
 
-        // Aktualizacja przycisku tej konkretnej grupy
         foreach (var ui in uiElements)
         {
             if (ui.GetGroup() == randomGroup)
@@ -261,8 +250,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                 break;
             }
         }
-
-        // Aktualizacja G£ÓWNYCH liczników
         UpdateGlobalCounters();
     }
 
@@ -270,7 +257,6 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         int totalA = 0;
         foreach (var g in factionAGroups) totalA += g.unitMatrices.Count;
-
         int totalB = 0;
         foreach (var g in factionBGroups) totalB += g.unitMatrices.Count;
 
@@ -278,32 +264,119 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (counterTextB != null) counterTextB.text = totalB.ToString();
     }
 
+    // --- ZMODYFIKOWANA FUNKCJA SELEKCJI ---
     public void SelectGroup(TacticalGroup group)
     {
-        selectedGroup = group;
-        foreach (var ui in uiElements)
+        bool ctrlHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+        bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
+        if (shiftHeld && lastSelectedGroup != null && lastSelectedGroup != group)
         {
-            if (ui.GetGroup() == selectedGroup) ui.SetSelectionState(true);
-            else ui.SetSelectionState(false);
+            // --- TRYB SHIFT ---
+            HandleShiftSelection(group);
+        }
+        else if (ctrlHeld)
+        {
+            // --- TRYB CTRL ---
+            if (selectedGroups.Contains(group))
+            {
+                selectedGroups.Remove(group);
+            }
+            else
+            {
+                selectedGroups.Add(group);
+                lastSelectedGroup = group;
+            }
+        }
+        else
+        {
+            // --- TRYB ZWYK£Y (BEZ KLAWISZY) ---
+
+            // Zmiana o któr¹ prosi³eœ:
+            // Jeœli klikamy na grupê, która JEST JEDYN¥ zaznaczon¹ -> odznaczamy j¹.
+            if (selectedGroups.Count == 1 && selectedGroups.Contains(group))
+            {
+                selectedGroups.Clear();
+                lastSelectedGroup = null;
+            }
+            else
+            {
+                // Standardowe dzia³anie (klikniêcie nowej lub zmiana zaznaczenia z wielu na jedn¹)
+                selectedGroups.Clear();
+                selectedGroups.Add(group);
+                lastSelectedGroup = group;
+            }
+        }
+
+        UpdateUISelectionVisuals();
+    }
+    // --------------------------------------
+
+    void HandleShiftSelection(TacticalGroup currentGroup)
+    {
+        int indexStart = -1;
+        int indexEnd = -1;
+
+        for (int i = 0; i < uiElements.Count; i++)
+        {
+            if (uiElements[i].GetGroup() == lastSelectedGroup) indexStart = i;
+            if (uiElements[i].GetGroup() == currentGroup) indexEnd = i;
+        }
+
+        if (indexStart != -1 && indexEnd != -1)
+        {
+            int min = Mathf.Min(indexStart, indexEnd);
+            int max = Mathf.Max(indexStart, indexEnd);
+
+            if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
+            {
+                selectedGroups.Clear();
+            }
+
+            for (int i = min; i <= max; i++)
+            {
+                TacticalGroup g = uiElements[i].GetGroup();
+                if (!selectedGroups.Contains(g))
+                {
+                    selectedGroups.Add(g);
+                }
+            }
         }
     }
 
-    // --- ZMODYFIKOWANA FUNKCJA ---
+    void UpdateUISelectionVisuals()
+    {
+        foreach (var ui in uiElements)
+        {
+            TacticalGroup g = ui.GetGroup();
+            if (selectedGroups.Contains(g))
+            {
+                ui.SetSelectionState(true);
+            }
+            else
+            {
+                ui.SetSelectionState(false);
+            }
+        }
+    }
+
     void HandleMouseInput()
     {
-        // Zmiana: 0 oznacza lewy przycisk myszy (by³o 1 - prawy)
         if (Input.GetMouseButtonDown(0))
         {
-            if (selectedGroup == null) return;
+            if (selectedGroups.Count == 0) return;
+
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit, 10000f, groundLayer))
             {
-                IssueMoveOrder(selectedGroup, hit.point);
+                foreach (var group in selectedGroups)
+                {
+                    IssueMoveOrder(group, hit.point);
+                }
             }
         }
     }
-    // -----------------------------
 
     void IssueMoveOrder(TacticalGroup group, Vector3 destination)
     {
