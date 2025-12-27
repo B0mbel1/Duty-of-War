@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 5889732415969022792}
   - component: {fileID: 1553181247848204900}
-  - component: {fileID: 6720409756539285911}
   m_Layer: 0
   m_Name: SpawnArea
   m_TagString: Untagged
@@ -69,6 +68,8 @@ MonoBehaviour:
   unitDiameter: 1
   unitSpacing: 1.5
   randomness: 0.8
+  waterTag: Water
+  swimmingDepth: 0.5
   battleCamera: {fileID: 0}
   cameraHeight: 100
   cameraDistanceBack: 40
@@ -76,24 +77,6 @@ MonoBehaviour:
   listA_Inf: []
   listA_Arc: []
   listA_Cav: []
---- !u!114 &6720409756539285911
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7081239012547174118}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 169f4e61d6ca80548b8b390d8a51b3b9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ArmyMovement
-  spawnHistory: {fileID: 1553181247848204900}
-  spawnCustom: {fileID: 0}
-  terrain: {fileID: 0}
-  moveSpeed: 10
-  rotationSpeed: 5
-  stopDistance: 2
-  waterTag: Water
-  autoDetectWater: 1
-  fallbackWaterLevel: -1000
+  listB_Inf: []
+  listB_Arc: []
+  listB_Cav: []

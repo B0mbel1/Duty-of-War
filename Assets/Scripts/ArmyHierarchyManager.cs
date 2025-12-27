@@ -97,7 +97,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         // --- PRZEJMOWANIE TEKSTÓW ZE SPAWNERA ---
-        // ¯ebyœ nie musia³ ich rêcznie przypisywaæ
         if (useCustom)
         {
             if (counterTextA == null) counterTextA = customSpawner.factionAText;
@@ -162,7 +161,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         CreateGroupsFromList(b_Arc, mArc, matB, "B_Archers", factionBGroups, isPlayerB);
         CreateGroupsFromList(b_Cav, mCav, matB, "B_Cavalry", factionBGroups, isPlayerB);
 
-        // Czyszczenie list w spawnerze (aby unikn¹æ podwójnego renderowania)
+        // Czyszczenie list w spawnerze
         if (useCustom)
         {
             customSpawner.listA_Inf.Clear(); customSpawner.listA_Arc.Clear(); customSpawner.listA_Cav.Clear();
@@ -177,7 +176,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         groupsInitialized = true;
-        UpdateGlobalCounters(); // <-- Pierwsze ustawienie liczników
+        UpdateGlobalCounters();
     }
 
     void CreateGroupsFromList(List<Matrix4x4> sourceList, Mesh mesh, Material mat, string baseName, List<TacticalGroup> targetCollection, bool createUI)
@@ -263,27 +262,22 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
 
-        // Aktualizacja G£ÓWNYCH liczników (tych na górze ekranu)
+        // Aktualizacja G£ÓWNYCH liczników
         UpdateGlobalCounters();
     }
 
-    // --- NOWA FUNKCJA: SUMUJE I WYŒWIETLA WYNIK ---
     void UpdateGlobalCounters()
     {
-        // 1. Policz Frakcjê A
         int totalA = 0;
         foreach (var g in factionAGroups) totalA += g.unitMatrices.Count;
 
-        // 2. Policz Frakcjê B
         int totalB = 0;
         foreach (var g in factionBGroups) totalB += g.unitMatrices.Count;
 
-        // 3. Wyœwietl
         if (counterTextA != null) counterTextA.text = totalA.ToString();
         if (counterTextB != null) counterTextB.text = totalB.ToString();
     }
 
-    // ... reszta kodu (SelectGroup, HandleMouseInput, IssueMoveOrder, ProcessMovement, OnDrawGizmos) bez zmian
     public void SelectGroup(TacticalGroup group)
     {
         selectedGroup = group;
@@ -294,9 +288,11 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
     }
 
+    // --- ZMODYFIKOWANA FUNKCJA ---
     void HandleMouseInput()
     {
-        if (Input.GetMouseButtonDown(1))
+        // Zmiana: 0 oznacza lewy przycisk myszy (by³o 1 - prawy)
+        if (Input.GetMouseButtonDown(0))
         {
             if (selectedGroup == null) return;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -307,6 +303,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
     }
+    // -----------------------------
 
     void IssueMoveOrder(TacticalGroup group, Vector3 destination)
     {
