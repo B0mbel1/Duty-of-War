@@ -251,6 +251,7 @@ GameObject:
   m_Component:
   - component: {fileID: 679274933237801207}
   - component: {fileID: 3056118962211800345}
+  - component: {fileID: 1565801894907199339}
   m_Layer: 0
   m_Name: Navigation
   m_TagString: Untagged
@@ -285,6 +286,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecb638c4f136a1945841ebcbccaf50f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MenuNavigationNavigation
+--- !u!114 &1565801894907199339
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2845404565574311554}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f6447f09954fb446be9162dd07999b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BackToMenu
 --- !u!1 &3870312323290754151
 GameObject:
   m_ObjectHideFlags: 0
@@ -527,8 +540,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 3056118962211800345}
-        m_TargetAssemblyTypeName: MenuNavigationNavigation, Assembly-CSharp
+      - m_Target: {fileID: 1565801894907199339}
+        m_TargetAssemblyTypeName: BackToMenu, Assembly-CSharp
         m_MethodName: LoadScene
         m_Mode: 5
         m_Arguments:
