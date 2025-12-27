@@ -16,6 +16,9 @@ public class ArmyHierarchyManager : MonoBehaviour
     public GameObject groupUIPrefab;
     public Transform uiContainer;
 
+    [Header("Visuals (Selection)")]
+    public Material highlightMaterial; // <-- WA¯NE: Przypisz tu materia³ podœwietlenia w Inspectorze!
+
     [Header("Hierarchy Settings")]
     public HierarchyRank groupSize = HierarchyRank.Company;
 
@@ -49,6 +52,9 @@ public class ArmyHierarchyManager : MonoBehaviour
     // Listy zaznaczenia
     private List<TacticalGroup> selectedGroups = new List<TacticalGroup>();
     private TacticalGroup lastSelectedGroup = null;
+
+    // --- NOWOŒÆ: Pamiêæ oryginalnych materia³ów (¿eby wiedzieæ do czego wróciæ) ---
+    private Dictionary<TacticalGroup, Material> originalMaterials = new Dictionary<TacticalGroup, Material>();
 
     private bool groupsInitialized = false;
     private Terrain terrain;
@@ -116,7 +122,9 @@ public class ArmyHierarchyManager : MonoBehaviour
             for (int i = uiContainer.childCount - 1; i >= 0; i--)
                 Destroy(uiContainer.GetChild(i).gameObject);
         }
+
         uiElements.Clear();
+        originalMaterials.Clear(); // Czyœcimy pamiêæ materia³ów przy starcie
 
         bool isPlayerA = true;
         bool isPlayerB = false;
@@ -156,6 +164,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         CreateGroupsFromList(b_Arc, mArc, matB, "B_Archers", factionBGroups, isPlayerB);
         CreateGroupsFromList(b_Cav, mCav, matB, "B_Cavalry", factionBGroups, isPlayerB);
 
+        // Czyszczenie list w spawnerze (¿eby nie rysowa³ podwójnie)
         if (useCustom)
         {
             customSpawner.listA_Inf.Clear(); customSpawner.listA_Arc.Clear(); customSpawner.listA_Cav.Clear();
@@ -184,6 +193,14 @@ public class ArmyHierarchyManager : MonoBehaviour
             int count = Mathf.Min(sizePerGroup, totalUnits - i);
 
             TacticalGroup newGroup = new TacticalGroup($"{baseName}_{groupIndex}", mesh, mat, groupSize);
+
+            // --- ZAPAMIÊTUJEMY ORYGINALNY MATERIA£ ---
+            if (!originalMaterials.ContainsKey(newGroup))
+            {
+                originalMaterials.Add(newGroup, mat);
+            }
+            // -----------------------------------------
+
             List<Matrix4x4> slice = sourceList.GetRange(i, count);
             newGroup.unitMatrices = slice;
             newGroup.RebuildBatches();
@@ -264,7 +281,27 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (counterTextB != null) counterTextB.text = totalB.ToString();
     }
 
-    // --- ZMODYFIKOWANA FUNKCJA SELEKCJI ---
+    // --- NOWA FUNKCJA DO PODMIANY MATERIA£U ---
+    void SetGroupHighlight(TacticalGroup group, bool highlight)
+    {
+        if (group == null) return;
+
+        if (highlight && highlightMaterial != null)
+        {
+            // Podmieniamy na materia³ zaznaczenia
+            group.unitMaterial = highlightMaterial;
+        }
+        else
+        {
+            // Przywracamy orygina³ (Czerwony lub Niebieski)
+            if (originalMaterials.ContainsKey(group))
+            {
+                group.unitMaterial = originalMaterials[group];
+            }
+        }
+    }
+    // ------------------------------------------
+
     public void SelectGroup(TacticalGroup group)
     {
         bool ctrlHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
@@ -272,45 +309,54 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (shiftHeld && lastSelectedGroup != null && lastSelectedGroup != group)
         {
-            // --- TRYB SHIFT ---
             HandleShiftSelection(group);
         }
         else if (ctrlHeld)
         {
-            // --- TRYB CTRL ---
             if (selectedGroups.Contains(group))
             {
+                // Odznaczanie z CTRL
+                SetGroupHighlight(group, false); // <--- Wy³¹cz podœwietlenie
                 selectedGroups.Remove(group);
             }
             else
             {
+                // Zaznaczanie z CTRL
                 selectedGroups.Add(group);
+                SetGroupHighlight(group, true); // <--- W³¹cz podœwietlenie
                 lastSelectedGroup = group;
             }
         }
         else
         {
-            // --- TRYB ZWYK£Y (BEZ KLAWISZY) ---
-
-            // Zmiana o któr¹ prosi³eœ:
-            // Jeœli klikamy na grupê, która JEST JEDYN¥ zaznaczon¹ -> odznaczamy j¹.
+            // Tryb zwyk³y
             if (selectedGroups.Count == 1 && selectedGroups.Contains(group))
             {
+                // Klikniêcie w jedyn¹ -> Odznacz
+                SetGroupHighlight(group, false); // <--- Wy³¹cz podœwietlenie
                 selectedGroups.Clear();
                 lastSelectedGroup = null;
             }
             else
             {
-                // Standardowe dzia³anie (klikniêcie nowej lub zmiana zaznaczenia z wielu na jedn¹)
+                // Klikniêcie w now¹ -> Odznacz wszystkie stare, zaznacz now¹
+
+                // 1. Zdejmij podœwietlenie ze starych
+                foreach (var g in selectedGroups)
+                {
+                    SetGroupHighlight(g, false);
+                }
                 selectedGroups.Clear();
+
+                // 2. Dodaj now¹ i podœwietl
                 selectedGroups.Add(group);
+                SetGroupHighlight(group, true); // <--- W³¹cz podœwietlenie
                 lastSelectedGroup = group;
             }
         }
 
         UpdateUISelectionVisuals();
     }
-    // --------------------------------------
 
     void HandleShiftSelection(TacticalGroup currentGroup)
     {
@@ -330,6 +376,11 @@ public class ArmyHierarchyManager : MonoBehaviour
 
             if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
             {
+                // Czyœcimy stare (zdejmujemy podœwietlenie)
+                foreach (var g in selectedGroups)
+                {
+                    SetGroupHighlight(g, false);
+                }
                 selectedGroups.Clear();
             }
 
@@ -339,6 +390,7 @@ public class ArmyHierarchyManager : MonoBehaviour
                 if (!selectedGroups.Contains(g))
                 {
                     selectedGroups.Add(g);
+                    SetGroupHighlight(g, true); // <--- W³¹cz podœwietlenie nowych
                 }
             }
         }
