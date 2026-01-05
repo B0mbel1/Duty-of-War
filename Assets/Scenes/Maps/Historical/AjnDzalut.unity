@@ -119,6 +119,54 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &315272897
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 315272898}
+  - component: {fileID: 315272899}
+  m_Layer: 0
+  m_Name: FlagChange
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &315272898
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 315272897}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 370.6636, y: 0, z: 584.192}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &315272899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 315272897}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ed9a3cb4c312404b8ee137d9b79c712, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlagChange
+  panelLewy: {fileID: 1557650787}
+  panelPrawy: {fileID: 1557650786}
+  Flaga1: {fileID: 21300000, guid: 3d1f2db3566026f49b937f08b869473e, type: 3}
+  Flaga2: {fileID: 21300000, guid: 4f987ec8d43be9f4385d97723095b0ca, type: 3}
 --- !u!114 &456348918 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1584888051750262258, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -541,6 +589,28 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
   m_PrefabInstance: {fileID: 1557650784}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1557650786 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3178085595226259393, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1557650784}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+--- !u!114 &1557650787 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1175052362104201375, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1557650784}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!114 &1925801567 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5559644271591075576, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -825,3 +895,4 @@ SceneRoots:
   - {fileID: 1446814756}
   - {fileID: 552679424}
   - {fileID: 2048193688271181850}
+  - {fileID: 315272898}

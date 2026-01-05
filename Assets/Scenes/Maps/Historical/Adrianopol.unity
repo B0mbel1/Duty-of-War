@@ -399,6 +399,28 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
   m_PrefabInstance: {fileID: 488601541}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &488601543 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3178085595226259393, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+--- !u!114 &488601544 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1175052362104201375, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1 &758079941
 GameObject:
   m_ObjectHideFlags: 0
@@ -621,6 +643,54 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1391068151
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1391068152}
+  - component: {fileID: 1391068153}
+  m_Layer: 0
+  m_Name: FlagChange
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1391068152
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391068151}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 370.6636, y: 0, z: 584.192}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1391068153
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391068151}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ed9a3cb4c312404b8ee137d9b79c712, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlagChange
+  panelLewy: {fileID: 488601544}
+  panelPrawy: {fileID: 488601543}
+  Flaga1: {fileID: 21300000, guid: 938ca062f0e91eb42847370bb33a6420, type: 3}
+  Flaga2: {fileID: 21300000, guid: dd9e639fe27a8a14aac30b20af332a60, type: 3}
 --- !u!114 &1435450068 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1584888051750262258, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -986,3 +1056,4 @@ SceneRoots:
   - {fileID: 758079942}
   - {fileID: 1231677635}
   - {fileID: 13856380}
+  - {fileID: 1391068152}

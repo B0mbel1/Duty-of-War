@@ -724,6 +724,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f6447f09954fb446be9162dd07999b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BackToMenu
+  menuPanel: {fileID: 0}
 --- !u!114 &174835389
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3097,7 +3098,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.29369166, g: 0.7348045, b: 0.93207544, a: 1}
+  m_Color: {r: 0, g: 1, b: 0.17828703, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
