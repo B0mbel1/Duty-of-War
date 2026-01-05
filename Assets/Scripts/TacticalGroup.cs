@@ -16,14 +16,20 @@ public class TacticalGroup
     public Material arrowMaterial;
 
     public float speedMultiplier = 1.0f;
-    // Dane matematyczne (Zamiast jednej wielkiej listy w UnitsSpawn, ka¿dy oddzia³ ma swoj¹)
+
+    // Dane matematyczne
     public List<Matrix4x4> unitMatrices = new List<Matrix4x4>();
     public List<Matrix4x4[]> renderBatches = new List<Matrix4x4[]>(); // Batche do renderowania
 
     // Logika ruchu
     public Vector3 currentDestination;
     public bool isMoving = false;
-    public Vector3 groupCenter;        // Œrodek formacji
+
+    public Vector3 groupCenter;        // Œrodek formacji (œrednia arytmetyczna)
+
+    // --- NOWOŒÆ: Rzeczywisty promieñ grupy (do wykrywania wody na krawêdziach) ---
+    public float groupRadius = 5.0f;
+    // -----------------------------------------------------------------------------
 
     // Konstruktor
     public TacticalGroup(string name, Mesh mesh, Material mat, HierarchyRank r)
@@ -46,6 +52,8 @@ public class TacticalGroup
             unitMatrices.CopyTo(i, batch, 0, count);
             renderBatches.Add(batch);
         }
+
+        // Zawsze po przebudowaniu batchy przeliczamy centrum i rozmiar
         RecalculateCenter();
     }
 
@@ -61,16 +69,43 @@ public class TacticalGroup
         }
     }
 
+    // --- ZMODYFIKOWANA METODA: OBLICZA ŒRODEK I ROZMIAR (RADIUS) ---
     public void RecalculateCenter()
     {
         if (unitMatrices.Count == 0) return;
+
         Vector3 sum = Vector3.zero;
+
+        // Zmienne do znalezienia skrajnych punktów (Bounding Box)
+        float minX = float.MaxValue;
+        float maxX = float.MinValue;
+        float minZ = float.MaxValue;
+        float maxZ = float.MinValue;
+
         foreach (var mat in unitMatrices)
         {
-            sum += (Vector3)mat.GetColumn(3);
+            Vector3 pos = (Vector3)mat.GetColumn(3); // Pobierz pozycjê z macierzy
+            sum += pos;
+
+            // Sprawdzamy granice
+            if (pos.x < minX) minX = pos.x;
+            if (pos.x > maxX) maxX = pos.x;
+            if (pos.z < minZ) minZ = pos.z;
+            if (pos.z > maxZ) maxZ = pos.z;
         }
+
+        // 1. Œrodek masy
         groupCenter = sum / unitMatrices.Count;
+
+        // 2. Obliczanie promienia (po³owa d³u¿szego boku prostok¹ta otaczaj¹cego)
+        float sizeX = maxX - minX;
+        float sizeZ = maxZ - minZ;
+
+        // Bierzemy wiêkszy wymiar i dzielimy na pó³. 
+        // Dodajemy minimalny margines 1.0f, ¿eby promieñ nie by³ zerowy dla pojedynczej jednostki.
+        groupRadius = (Mathf.Max(sizeX, sizeZ) * 0.5f) + 1.0f;
     }
+    // ---------------------------------------------------------------
 
     // Renderowanie tego konkretnego oddzia³u
     public void RenderGroup()
@@ -83,12 +118,12 @@ public class TacticalGroup
     }
 }
 
-// Hierarchia wg Twojego obrazka
+// Hierarchia
 public enum HierarchyRank
 {
-    Squad = 10,       // Dru¿yna (~10)
-    Platoon = 40,     // Pluton (~40)
-    Company = 150,    // Kompania (~150)
-    Battalion = 800,  // Batalion (~800) - Podstawa Total War
-    Brigade = 3000    // Brygada (~3000)
+    Squad = 10,
+    Platoon = 40,
+    Company = 150,
+    Battalion = 800,
+    Brigade = 3000
 }

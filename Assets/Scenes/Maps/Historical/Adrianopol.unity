@@ -263,6 +263,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SpawnArea
       objectReference: {fileID: 0}
+    - target: {fileID: 7081239012547174118, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: m_Layer
+      value: 2
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 6720409756539285911, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
     m_RemovedGameObjects: []
@@ -304,9 +308,12 @@ MonoBehaviour:
   moveSpeed: 10
   rotationSpeed: 8
   stopDistance: 2
-  groundLayer:
+  cavalrySpeedMultiplier: 1.5
+  waterSpeedPenalty: 0.5
+  shoreTolerance: 0.5
+  detectionLayer:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 17
   minX: 0
   maxX: 2000
   minZ: 0
@@ -714,7 +721,8 @@ GameObject:
   - component: {fileID: 1557826853}
   - component: {fileID: 1557826852}
   - component: {fileID: 1557826851}
-  m_Layer: 0
+  - component: {fileID: 1557826855}
+  m_Layer: 4
   m_Name: Water
   m_TagString: Water
   m_Icon: {fileID: 0}
@@ -814,6 +822,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0.02, y: 0, z: 0}
+--- !u!65 &1557826855
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1557826850}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 10, y: 0.000000004656613, z: 9.999999}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &1601358728 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5559644271591075576, guid: 49d326ed6d683cd42b1395750475b645, type: 3}

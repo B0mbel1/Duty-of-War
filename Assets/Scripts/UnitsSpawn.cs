@@ -162,7 +162,20 @@ public class UnitsSpawn : MonoBehaviour
     {
         if (mainArea == null) return;
         mainArea.GetComponent<Renderer>().enabled = false;
-        if (secArea != null) secArea.GetComponent<Renderer>().enabled = false;
+
+        Collider colMain = mainArea.GetComponent<Collider>();
+        if (colMain != null) colMain.enabled = false;
+
+
+        if (secArea != null)
+        {
+            secArea.GetComponent<Renderer>().enabled = false;
+
+            // --- NOWOŒÆ dla drugiego obszaru ---
+            Collider colSec = secArea.GetComponent<Collider>();
+            if (colSec != null) colSec.enabled = false;
+            // -----------------------------------
+        }
 
         System.Random rand = new System.Random();
 
