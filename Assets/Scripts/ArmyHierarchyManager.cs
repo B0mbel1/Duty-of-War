@@ -51,6 +51,31 @@ public class ArmyHierarchyManager : MonoBehaviour
     [Tooltip("Warstwy terenu do klikania myszk¹ (Ruch)")]
     public LayerMask detectionLayer = 1; // Domyœlnie 'Default'
 
+    // --- NOWA SEKCJA: FIZYKA WZGÓRZ ---
+    [Header("Slope Physics Settings (Wzgórza)")]
+    [Tooltip("Jak daleko przed sob¹ (w metrach) jednostka sprawdza nachylenie terenu.")]
+    public float slopeCheckDistance = 1.0f;
+
+    [Tooltip("K¹t (w stopniach) od którego uznajemy wzniesienie za 'lekkie'.")]
+    public float lightSlopeAngle = 10f;
+
+    [Tooltip("K¹t (w stopniach) od którego uznajemy wzniesienie za 'strome'.")]
+    public float steepSlopeAngle = 30f;
+
+    [Header("Slope Speed Multipliers")]
+    [Tooltip("Mno¿nik: Lekko pod górê (0.5 = 50% wolniej)")]
+    public float uphillLightMult = 0.5f;
+
+    [Tooltip("Mno¿nik: Lekko w dó³ (1.2 = 20% szybciej)")]
+    public float downhillLightMult = 1.2f;
+
+    [Tooltip("Mno¿nik: Stromo pod górê (0.2 = 80% wolniej)")]
+    public float uphillSteepMult = 0.2f;
+
+    [Tooltip("Mno¿nik: Stromo w dó³ (0.7 = 30% wolniej - hamowanie dla bezpieczeñstwa)")]
+    public float downhillSteepMult = 0.7f;
+    // ----------------------------------
+
     [Header("Map Boundaries")]
     public float minX = 0f;
     public float maxX = 2000f;
@@ -249,7 +274,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         HandleMouseInput();
     }
 
-    // --- ZAKTUALIZOWANA METODA: INDYWIDUALNA DETEKCJA WODY ---
+    // --- ZAKTUALIZOWANA METODA: DETEKCJA WODY + NACHYLENIA TERENU (WZGÓRZA) ---
     void ProcessMovement(TacticalGroup group)
     {
         if (group.unitMatrices.Count == 0)
@@ -258,7 +283,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             return;
         }
 
-        // --- KONFIGURACJA ---
+        // --- KONFIGURACJA OFFSETU WIZUALNEGO ---
         float currentOffset = 0f;
         if (group.groupName.Contains("Infantry")) currentOffset = offsetInfantry;
         else if (group.groupName.Contains("Archer")) currentOffset = offsetArcher;
@@ -275,27 +300,23 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         Vector3 direction = (flatTarget - flatCenter).normalized;
 
-        // --- RUCH ---
-        float baseSpeed = moveSpeed * group.speedMultiplier * Time.deltaTime;
+        // --- RUCH BAZOWY ---
+        float groupBaseSpeed = moveSpeed * group.speedMultiplier * Time.deltaTime;
         Vector3 scaleVec = group.unitMatrices[0].lossyScale;
 
         // PÊTLA PO WSZYSTKICH JEDNOSTKACH
-        // Ka¿dy ¿o³nierz sam sprawdza teren pod sob¹.
         for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             Matrix4x4 mat = group.unitMatrices[i];
             Vector3 currentPos = mat.GetColumn(3);
 
-            // 1. Sprawdzamy wysokoœæ terenu pod nogami tej jednostki
+            // 1. Sprawdzamy wysokoœæ terenu pod nogami
             float myGroundHeight = currentPos.y;
             if (terrain != null)
                 myGroundHeight = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
 
-            // 2. Decyzja INDYWIDUALNA: Czy jestem w wodzie?
-            // Porównujemy wysokoœæ gruntu z poziomem wody.
-            // ShoreTolerance (np. 0.4) pozwala wykryæ p³ytk¹ wodê (gdy grunt jest lekko poni¿ej poziomu kolan).
+            // 2. Czy jestem w wodzie?
             bool amIInWater = false;
-
             if (waterFound)
             {
                 if (myGroundHeight < waterSurfaceY + shoreTolerance)
@@ -304,29 +325,74 @@ public class ArmyHierarchyManager : MonoBehaviour
                 }
             }
 
-            // 3. Aplikujemy prêdkoœæ TYLKO dla tego ¿o³nierza
-            float myModifier = amIInWater ? waterSpeedPenalty : 1.0f;
-            Vector3 myMoveVector = direction * baseSpeed * myModifier;
+            // 3. Obliczanie modyfikatora prêdkoœci (Woda LUB Nachylenie)
+            float finalSpeedModifier = 1.0f;
 
+            if (amIInWater)
+            {
+                // Priorytet 1: Woda (zawsze spowalnia wg ustawieñ wody)
+                finalSpeedModifier = waterSpeedPenalty;
+            }
+            else if (terrain != null)
+            {
+                // Priorytet 2: Wzgórza (Slope Physics)
+
+                // Sprawdzamy wysokoœæ terenu kawa³ek przed nami (w kierunku ruchu)
+                Vector3 probePos = currentPos + (direction * slopeCheckDistance);
+                float nextHeightProbe = terrain.SampleHeight(probePos) + terrain.transform.position.y;
+
+                // Ró¿nica wysokoœci
+                float heightDiff = nextHeightProbe - myGroundHeight;
+
+                // Obliczamy k¹t nachylenia (wynik w stopniach)
+                // K¹t > 0 = Pod górê
+                // K¹t < 0 = W dó³
+                float angle = Mathf.Atan2(heightDiff, slopeCheckDistance) * Mathf.Rad2Deg;
+
+                if (angle > steepSlopeAngle)
+                {
+                    // Bardzo stromo pod górê (np. > 30 stopni) -> Bardzo wolno
+                    finalSpeedModifier = uphillSteepMult;
+                }
+                else if (angle > lightSlopeAngle)
+                {
+                    // Lekko pod górê (np. > 10 stopni) -> Wolniej
+                    finalSpeedModifier = uphillLightMult;
+                }
+                else if (angle < -steepSlopeAngle)
+                {
+                    // Bardzo stromo w dó³ -> Hamowanie (bezpieczeñstwo)
+                    finalSpeedModifier = downhillSteepMult;
+                }
+                else if (angle < -lightSlopeAngle)
+                {
+                    // Lekko w dó³ -> Szybciej (rozpêd)
+                    finalSpeedModifier = downhillLightMult;
+                }
+                // Jeœli jest p³asko (pomiêdzy -10 a 10), modyfikator zostaje 1.0f
+            }
+
+            // 4. Aplikujemy wektor ruchu z modyfikatorem
+            Vector3 myMoveVector = direction * groupBaseSpeed * finalSpeedModifier;
             Vector3 newPos = currentPos + myMoveVector;
 
             // Clamp do granic mapy
             newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
-            // 4. Ustalanie wysokoœci (Wizualne zanurzenie)
+            // 5. Ustalanie wysokoœci Y (Wizualne)
             float finalY;
             float nextTerrainY = myGroundHeight;
             if (terrain != null) nextTerrainY = terrain.SampleHeight(newPos) + terrain.transform.position.y;
 
             if (amIInWater)
             {
-                // W WODZIE -> Zanurzenie wzglêdem tafli wody
+                // Zanurzenie w wodzie
                 finalY = waterSurfaceY - swimmingDepth;
             }
             else
             {
-                // NA L¥DZIE -> Po prostu na terenie
+                // Stanie na l¹dzie
                 finalY = nextTerrainY + currentOffset;
             }
 
@@ -346,7 +412,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.RecalculateCenter();
     }
 
-    // --- Reszta metod (SelectGroup, Gizmos) bez zmian logicznych ---
+    // --- Reszta metod (SelectGroup, Gizmos) bez zmian ---
 
     void KillRandomUnit(bool isFactionA)
     {
