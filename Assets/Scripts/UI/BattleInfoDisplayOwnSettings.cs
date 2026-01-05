@@ -82,19 +82,19 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
     public void SelectWybrzezePalGalur()
     {
         SelectMap(WybrzezePalGalur, WybrzezePalGalurButton);
-        if (terrainDescription) terrainDescription.text = "Wzniesienia terenu | Teren górzysty | Przeprawa przez wodê";
+        if (terrainDescription) terrainDescription.text = "<color=#663300>Wzniesienia terenu</color> | <color=#6d6d6d>Teren górzysty</color> | <color=#3399ff>Przeprawa przez wodê</color>";
     }
 
     public void SelectWzgorzaZamieci()
     {
         SelectMap(WzgorzaZamieci, WzgorzaZamieciButton);
-        if (terrainDescription) terrainDescription.text = "Wzniesienia terenu | Teren górzysty | Teren zalesiony";
+        if (terrainDescription) terrainDescription.text = "<color=#663300>Wzniesienia terenu</color> | <color=#6d6d6d>Teren górzysty</color> | <color=#009933>Teren zalesiony</color>";
     }
 
     public void SelectOrleGniazdo()
     {
         SelectMap(OrleGniazdo, OrleGniazdoButton);
-        if (terrainDescription) terrainDescription.text = "Du¿e wzniesienie terenu";
+        if (terrainDescription) terrainDescription.text = "<color=#663300>Du¿e wzniesienie terenu</color>";
     }
 
     private void SelectMap(Sprite map, Button btn)

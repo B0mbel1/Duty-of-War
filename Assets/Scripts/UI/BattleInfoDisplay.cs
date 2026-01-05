@@ -217,49 +217,49 @@ public class BattleInfoDisplay : MonoBehaviour
     public void Battle_Grunwald(Button btn)
     {
         string opis = "Bitwa pod Grunwaldem (1410 r.)\n\nWojska polsko-litewskie pod wodz¹ W³adys³awa Jagie³³y rozgromi³y Zakon Krzy¿acki. Jedno z najwiêkszych staræ œredniowiecza, które z³ama³o potêgê Krzy¿aków.";
-        string opisterenu = "Wzniesienia terenu";
+        string opisterenu = "<color=#663300>Wzniesienia terenu</color>";
         ShowBattleInfo("Korona Królestwa Polskiego", "Zakon Krzy¿acki", btn, rzeczpol, teutonic, opis, Grunwald, opisterenu);
     }
 
     public void Battle_Hastings(Button btn)
     {
         string opis = "Bitwa pod Hastings (1066 r.)\n\nNormanowie Wilhelma Zdobywcy pokonali anglosask¹ armiê króla Harolda II. Bitwa zapocz¹tkowa³a normañskie panowanie w Anglii.";
-        string opisterenu = "Teren zalesiony";
+        string opisterenu = "<color=#009933>Teren zalesiony</color>";
         ShowBattleInfo("Ksiêstwo Normandii", "Anglosasi", btn, normandia, anglosas, opis, Hastings, opisterenu);
     }
 
     public void Battle_Jarmuk(Button btn)
     {
         string opis = "Bitwa pod Jarmukiem (636 r.)\n\nDecyduj¹ce zwyciêstwo Arabów nad Bizancjum. Armia kalifatu Raszidun rozgromi³a wojska cesarza Herakliusza, otwieraj¹c drogê do podboju Syrii i Lewantu.";
-        string opisterenu = "Teren górzysty | Przeprawa przez wodê";
+        string opisterenu = "<color=#6d6d6d>Teren górzysty</color> | <color=#3399ff>Przeprawa przez wodê</color>";
         ShowBattleInfo("Bizancjum", "Arabowie", btn, bizantium, arabs, opis, Jarmuk, opisterenu);
     }
 
     public void Battle_AjnDzalat(Button btn)
     {
         string opis = "Bitwa pod Ajn D¿alat (1260 r.)\n\nMamelucy pod dowództwem Kutuzza i Bajbarsa pokonali armiê mongolsk¹. By³o to pierwsze zdecydowane zwyciêstwo nad Mongo³ami, które zatrzyma³o ich ekspansjê na Bliski Wschód.";
-        string opisterenu = "Wzniesienia terenu";
+        string opisterenu = "<color=#663300>Wzniesienia terenu</color>";
         ShowBattleInfo("Mamelucy", "Imperium Mongolskie", btn, mamelucy, mongol, opis, AjnDzalut, opisterenu);
     }
 
     public void Battle_TeutoburgForest(Button btn)
     {
         string opis = "Bitwa w Lesie Teutoburskim (9 r. n.e.)\n\nZasadzka germañskich plemion dowodzonych przez Arminiusza na trzy rzymskie legiony Warusa. Rzymianie ponieœli druzgoc¹c¹ klêskê, trac¹c kontrolê nad Germani¹.";
-        string opisterenu = "Teren zalesiony";
+        string opisterenu = "<color=#009933>Teren zalesiony</color>";
         ShowBattleInfo("Cesarstwo Rzymskie","Germanie", btn, roma, germania, opis, LasTeutoburski, opisterenu);
     }
 
     public void Battle_LechowePole(Button btn)
     {
         string opis = "Bitwa na Lechowym Polu (955 r.)\n\nKrólestwo Franków pod wodz¹ Ottona I pokona³o najazd Wêgrów. Zwyciêstwo zakoñczy³o wêgierskie najazdy na Europê Zachodni¹ i wzmocni³o w³adzê cesarsk¹.";
-        string opisterenu = "Wzniesienia terenu | Przeprawa przez wodê";
+        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodê</color>";
         ShowBattleInfo("Pañstwo wschodniofrankijskie", "Wêgry", btn, frankowie, wegry, opis, LechowePole, opisterenu);
     }
 
     public void Battle_Adrianopol(Button btn)
     {
         string opis = "Bitwa pod Adrianopolem (378 r.)\n\nStarcie Cesarstwa Rzymskiego z Gotami. Rzym poniós³ wielk¹ pora¿kê, zgin¹³ cesarz Walens, a bitwa zapocz¹tkowa³a upadek zachodniego cesarstwa.";
-        string opisterenu = "Wzniesienia terenu | Przeprawa przez wodê";
+        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodê</color>";
         ShowBattleInfo("Cesarstwo Rzymskie", "Goci", btn, roma, goci, opis, Adrianopol, opisterenu);
     }
 }
