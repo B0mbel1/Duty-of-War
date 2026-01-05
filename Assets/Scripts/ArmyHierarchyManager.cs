@@ -17,11 +17,20 @@ public class ArmyHierarchyManager : MonoBehaviour
     public Transform uiContainer;
 
     [Header("Visuals (Selection)")]
-    public Material highlightMaterial; // <-- WA¯NE: Przypisz tu materia³ podœwietlenia w Inspectorze!
+    public Material highlightMaterial; // <-- Materia³ podœwietlenia zaznaczenia (np. jasny zielony)
 
-    public Mesh directionArrowMesh;       // Np. Quad lub model strza³ki
-    public Material directionArrowMaterial;
-    private Mesh cachedOffsetArrowMesh;
+    [Header("Visuals (Direction Indicators)")]
+    public Material directionArrowMaterial; // <-- Wspólny materia³ wskaŸników (np. bia³y transparentny)
+
+    // Trzy ró¿ne meshe bazowe (przypisz tu zwyk³e Cylindry lub inne kszta³ty w Unity)
+    public Mesh indicatorMeshInfantry;
+    public Mesh indicatorMeshArcher;
+    public Mesh indicatorMeshCavalry;
+
+    // Zmienne przechowuj¹ce przeliczone (przesuniête) meshe
+    private Mesh cachedInfantryMesh;
+    private Mesh cachedArcherMesh;
+    private Mesh cachedCavalryMesh;
 
     [Header("Hierarchy Settings")]
     public HierarchyRank groupSize = HierarchyRank.Company;
@@ -57,7 +66,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     private List<TacticalGroup> selectedGroups = new List<TacticalGroup>();
     private TacticalGroup lastSelectedGroup = null;
 
-    // --- NOWOŒÆ: Pamiêæ oryginalnych materia³ów (¿eby wiedzieæ do czego wróciæ) ---
+    // Pamiêæ oryginalnych materia³ów
     private Dictionary<TacticalGroup, Material> originalMaterials = new Dictionary<TacticalGroup, Material>();
 
     private bool groupsInitialized = false;
@@ -77,10 +86,77 @@ public class ArmyHierarchyManager : MonoBehaviour
             maxX = terrain.terrainData.size.x;
             maxZ = terrain.terrainData.size.z;
         }
-        PrepareArrowMesh();
+
+        // 1. Przygotowanie zmodyfikowanych meshy dla wskaŸników
+        PrepareIndicatorMeshes();
+
+        // 2. Wykrycie wody
         DetectWater();
+
+        // 3. Inicjalizacja grup z opóŸnieniem (¿eby spawner zd¹¿y³ zadzia³aæ)
         Invoke(nameof(InitializeGroups), 0.5f);
     }
+
+    // --- NOWA METODA PRZYGOTOWUJ¥CA MESHE ---
+    void PrepareIndicatorMeshes()
+    {
+        // 1. PIECHOTA: Le¿¹cy cylinder (strza³ka/linia)
+        // Offset Z: 1.5m przed jednostk¹, Y: 0.1m nad ziemi¹
+        cachedInfantryMesh = CreateOffsetMesh(
+            indicatorMeshInfantry,
+            new Vector3(0, 0.1f, 0.5f),
+            new Vector3(90, 0, 0),         // Le¿y na p³asko
+            new Vector3(0.2f, 1.0f, 0.2f)  // Cienki i d³ugi
+        );
+
+        // 2. £UCZNICY: P³aski dysk (ko³o) - symbolizuje zasiêg/obszar
+        // Offset Z: 1.5m przed jednostk¹
+        cachedArcherMesh = CreateOffsetMesh(
+            indicatorMeshArcher,
+            new Vector3(0, 0.1f, 0.5f),
+            new Vector3(-90, 90, 0),           // Stoi pionowo (dla cylindra to standard)
+            new Vector3(1.0f, 0.02f, 1.0f)  // Bardzo niski (plasterek) i szeroki
+        );
+
+        // 3. KAWALERIA: D³u¿sza i grubsza linia
+        // Offset Z: 2.0m (koñ jest d³u¿szy)
+        cachedCavalryMesh = CreateOffsetMesh(
+            indicatorMeshCavalry,
+            new Vector3(0, 0.1f, 0.5f),
+            new Vector3(90, 0, 0),
+            new Vector3(0.2f, 1.0f, 0.2f)
+        );
+    }
+
+    // Funkcja pomocnicza modyfikuj¹ca wierzcho³ki Mesha
+    Mesh CreateOffsetMesh(Mesh sourceMesh, Vector3 positionOffset, Vector3 rotationOffset, Vector3 scale)
+    {
+        if (sourceMesh == null) return null;
+
+        Mesh newMesh = new Mesh();
+        newMesh.name = sourceMesh.name + "_Modified";
+
+        Vector3[] originalVertices = sourceMesh.vertices;
+        Vector3[] newVertices = new Vector3[originalVertices.Length];
+
+        Quaternion rotation = Quaternion.Euler(rotationOffset);
+        Matrix4x4 transformMatrix = Matrix4x4.TRS(positionOffset, rotation, scale);
+
+        for (int i = 0; i < originalVertices.Length; i++)
+        {
+            newVertices[i] = transformMatrix.MultiplyPoint3x4(originalVertices[i]);
+        }
+
+        newMesh.vertices = newVertices;
+        newMesh.triangles = sourceMesh.triangles;
+        newMesh.uv = sourceMesh.uv;
+
+        newMesh.RecalculateNormals();
+        newMesh.RecalculateBounds();
+
+        return newMesh;
+    }
+    // ----------------------------------------
 
     void DetectWater()
     {
@@ -94,26 +170,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                 waterFound = true;
             }
         }
-    }
-
-    void PrepareArrowMesh()
-    {
-        if (directionArrowMesh == null) return;
-
-        // KONFIGURACJA PRZESUNIÊCIA:
-        // 1. PositionOffset: Z = 1.5f (1.5 metra przed œrodkiem jednostki)
-        //    Y = 0.1f (lekko nad ziemi¹, ¿eby nie migota³o)
-        // 2. RotationOffset: Jeœli to cylinder, mo¿e chcesz go po³o¿yæ? (90, 0, 0). 
-        //    Jeœli ma staæ pionowo, zostaw (0, 0, 0).
-        // 3. Scale: Sp³aszczamy go i wyd³u¿amy? Np. (0.2f, 0.05f, 1.0f)
-
-        // Przyk³ad dla le¿¹cego cylindra robi¹cego za wskaŸnik:
-        Vector3 position = new Vector3(0, 0.2f, 0.5f); // 1.5m przed jednostk¹
-        Vector3 rotation = new Vector3(90, 0, 0);      // Po³ó¿ cylinder na p³asko
-        Vector3 scale = new Vector3(0.3f, 0.6f, 0.3f); // Cieñszy cylinder
-
-        // Generujemy nowy mesh
-        cachedOffsetArrowMesh = MeshModifier.CreateModifiedMesh(directionArrowMesh, position, rotation, scale);
     }
 
     void InitializeGroups()
@@ -148,7 +204,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         uiElements.Clear();
-        originalMaterials.Clear(); // Czyœcimy pamiêæ materia³ów przy starcie
+        originalMaterials.Clear();
 
         bool isPlayerA = true;
         bool isPlayerB = false;
@@ -180,6 +236,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             matA = historySpawner.factionAMaterial; matB = historySpawner.factionBMaterial;
         }
 
+        // Tworzenie grup z odpowiednimi nazwami, które potem pos³u¿¹ do doboru wskaŸnika
         CreateGroupsFromList(a_Inf, mInf, matA, "A_Infantry", factionAGroups, isPlayerA);
         CreateGroupsFromList(a_Arc, mArc, matA, "A_Archers", factionAGroups, isPlayerA);
         CreateGroupsFromList(a_Cav, mCav, matA, "A_Cavalry", factionAGroups, isPlayerA);
@@ -188,7 +245,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         CreateGroupsFromList(b_Arc, mArc, matB, "B_Archers", factionBGroups, isPlayerB);
         CreateGroupsFromList(b_Cav, mCav, matB, "B_Cavalry", factionBGroups, isPlayerB);
 
-        // Czyszczenie list w spawnerze (¿eby nie rysowa³ podwójnie)
+        // Czyszczenie list w spawnerze
         if (useCustom)
         {
             customSpawner.listA_Inf.Clear(); customSpawner.listA_Arc.Clear(); customSpawner.listA_Cav.Clear();
@@ -218,15 +275,33 @@ public class ArmyHierarchyManager : MonoBehaviour
 
             TacticalGroup newGroup = new TacticalGroup($"{baseName}_{groupIndex}", mesh, mat, groupSize);
 
-            newGroup.arrowMesh = cachedOffsetArrowMesh;
-            newGroup.arrowMaterial = directionArrowMaterial;
+            // ---------------------------------------------------------
+            // DOBÓR WSKANIKA (Zale¿nie od nazwy jednostki)
+            // ---------------------------------------------------------
+            if (baseName.Contains("Archer") || baseName.Contains("Arc"))
+            {
+                // £ucznicy -> Ko³o/Dysk
+                newGroup.arrowMesh = cachedArcherMesh != null ? cachedArcherMesh : cachedInfantryMesh;
+            }
+            else if (baseName.Contains("Cavalry") || baseName.Contains("Cav"))
+            {
+                // Kawaleria -> D³u¿sza linia
+                newGroup.arrowMesh = cachedCavalryMesh != null ? cachedCavalryMesh : cachedInfantryMesh;
+            }
+            else
+            {
+                // Piechota (Domyœlna) -> Linia
+                newGroup.arrowMesh = cachedInfantryMesh;
+            }
 
-            // --- ZAPAMIÊTUJEMY ORYGINALNY MATERIA£ ---
+            newGroup.arrowMaterial = directionArrowMaterial;
+            // ---------------------------------------------------------
+
+            // Zapamiêtanie materia³u do selekcji
             if (!originalMaterials.ContainsKey(newGroup))
             {
                 originalMaterials.Add(newGroup, mat);
             }
-            // -----------------------------------------
 
             List<Matrix4x4> slice = sourceList.GetRange(i, count);
             newGroup.unitMatrices = slice;
@@ -255,12 +330,13 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
 
+        // --- FRAKCJA A ---
         foreach (var group in factionAGroups)
         {
             if (group.isMoving) ProcessMovement(group);
 
-            group.RenderGroup();      // Rysuje ¿o³nierzy
-            group.RenderIndicators(); // [NOWOŒÆ] Rysuje wskaŸniki dla ka¿dego oddzia³u A
+            group.RenderGroup();      // Renderuj ¿o³nierzy
+            group.RenderIndicators(); // Renderuj wskaŸniki (wszystkich!)
         }
 
         // --- FRAKCJA B ---
@@ -268,15 +344,9 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             if (group.isMoving) ProcessMovement(group);
 
-            group.RenderGroup();      // Rysuje ¿o³nierzy
-            group.RenderIndicators(); // [NOWOŒÆ] Rysuje wskaŸniki dla ka¿dego oddzia³u B
+            group.RenderGroup();      // Renderuj ¿o³nierzy
+            group.RenderIndicators(); // Renderuj wskaŸniki (wszystkich!)
         }
-
-        //foreach (var group in selectedGroups)
-        //{
-        //    // Rysujemy strza³ki pod nogami jednostek w zaznaczonych grupach
-        //    group.RenderIndicators();
-        //}
 
         HandleMouseInput();
     }
@@ -319,26 +389,22 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (counterTextB != null) counterTextB.text = totalB.ToString();
     }
 
-    // --- NOWA FUNKCJA DO PODMIANY MATERIA£U ---
     void SetGroupHighlight(TacticalGroup group, bool highlight)
     {
         if (group == null) return;
 
         if (highlight && highlightMaterial != null)
         {
-            // Podmieniamy na materia³ zaznaczenia
             group.unitMaterial = highlightMaterial;
         }
         else
         {
-            // Przywracamy orygina³ (Czerwony lub Niebieski)
             if (originalMaterials.ContainsKey(group))
             {
                 group.unitMaterial = originalMaterials[group];
             }
         }
     }
-    // ------------------------------------------
 
     public void SelectGroup(TacticalGroup group)
     {
@@ -353,42 +419,34 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             if (selectedGroups.Contains(group))
             {
-                // Odznaczanie z CTRL
-                SetGroupHighlight(group, false); // <--- Wy³¹cz podœwietlenie
+                SetGroupHighlight(group, false);
                 selectedGroups.Remove(group);
             }
             else
             {
-                // Zaznaczanie z CTRL
                 selectedGroups.Add(group);
-                SetGroupHighlight(group, true); // <--- W³¹cz podœwietlenie
+                SetGroupHighlight(group, true);
                 lastSelectedGroup = group;
             }
         }
         else
         {
-            // Tryb zwyk³y
             if (selectedGroups.Count == 1 && selectedGroups.Contains(group))
             {
-                // Klikniêcie w jedyn¹ -> Odznacz
-                SetGroupHighlight(group, false); // <--- Wy³¹cz podœwietlenie
+                SetGroupHighlight(group, false);
                 selectedGroups.Clear();
                 lastSelectedGroup = null;
             }
             else
             {
-                // Klikniêcie w now¹ -> Odznacz wszystkie stare, zaznacz now¹
-
-                // 1. Zdejmij podœwietlenie ze starych
                 foreach (var g in selectedGroups)
                 {
                     SetGroupHighlight(g, false);
                 }
                 selectedGroups.Clear();
 
-                // 2. Dodaj now¹ i podœwietl
                 selectedGroups.Add(group);
-                SetGroupHighlight(group, true); // <--- W³¹cz podœwietlenie
+                SetGroupHighlight(group, true);
                 lastSelectedGroup = group;
             }
         }
@@ -414,7 +472,6 @@ public class ArmyHierarchyManager : MonoBehaviour
 
             if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
             {
-                // Czyœcimy stare (zdejmujemy podœwietlenie)
                 foreach (var g in selectedGroups)
                 {
                     SetGroupHighlight(g, false);
@@ -428,7 +485,7 @@ public class ArmyHierarchyManager : MonoBehaviour
                 if (!selectedGroups.Contains(g))
                 {
                     selectedGroups.Add(g);
-                    SetGroupHighlight(g, true); // <--- W³¹cz podœwietlenie nowych
+                    SetGroupHighlight(g, true);
                 }
             }
         }

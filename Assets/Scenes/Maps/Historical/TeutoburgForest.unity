@@ -271,8 +271,10 @@ MonoBehaviour:
   groupUIPrefab: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
   uiContainer: {fileID: 1392828059}
   highlightMaterial: {fileID: 2100000, guid: 2f5a5901c9d229748acd400c9bf58d52, type: 2}
-  directionArrowMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   directionArrowMaterial: {fileID: 2100000, guid: 61d2d4f0016c8c04297999153128b13f, type: 2}
+  indicatorMeshInfantry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  indicatorMeshArcher: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  indicatorMeshCavalry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   groupSize: 150
   moveSpeed: 10
   rotationSpeed: 8
