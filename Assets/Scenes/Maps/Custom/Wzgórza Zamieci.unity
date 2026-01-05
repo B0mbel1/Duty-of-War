@@ -239,6 +239,14 @@ PrefabInstance:
       propertyPath: groupUIPrefab
       value: 
       objectReference: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: directionArrowMesh
+      value: 
+      objectReference: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: directionArrowMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: 61d2d4f0016c8c04297999153128b13f, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

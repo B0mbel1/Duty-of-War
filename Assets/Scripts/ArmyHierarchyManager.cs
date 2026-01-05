@@ -19,6 +19,10 @@ public class ArmyHierarchyManager : MonoBehaviour
     [Header("Visuals (Selection)")]
     public Material highlightMaterial; // <-- WA¯NE: Przypisz tu materia³ podœwietlenia w Inspectorze!
 
+    public Mesh directionArrowMesh;       // Np. Quad lub model strza³ki
+    public Material directionArrowMaterial;
+    private Mesh cachedOffsetArrowMesh;
+
     [Header("Hierarchy Settings")]
     public HierarchyRank groupSize = HierarchyRank.Company;
 
@@ -73,7 +77,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             maxX = terrain.terrainData.size.x;
             maxZ = terrain.terrainData.size.z;
         }
-
+        PrepareArrowMesh();
         DetectWater();
         Invoke(nameof(InitializeGroups), 0.5f);
     }
@@ -90,6 +94,26 @@ public class ArmyHierarchyManager : MonoBehaviour
                 waterFound = true;
             }
         }
+    }
+
+    void PrepareArrowMesh()
+    {
+        if (directionArrowMesh == null) return;
+
+        // KONFIGURACJA PRZESUNIÊCIA:
+        // 1. PositionOffset: Z = 1.5f (1.5 metra przed œrodkiem jednostki)
+        //    Y = 0.1f (lekko nad ziemi¹, ¿eby nie migota³o)
+        // 2. RotationOffset: Jeœli to cylinder, mo¿e chcesz go po³o¿yæ? (90, 0, 0). 
+        //    Jeœli ma staæ pionowo, zostaw (0, 0, 0).
+        // 3. Scale: Sp³aszczamy go i wyd³u¿amy? Np. (0.2f, 0.05f, 1.0f)
+
+        // Przyk³ad dla le¿¹cego cylindra robi¹cego za wskaŸnik:
+        Vector3 position = new Vector3(0, 0.2f, 0.5f); // 1.5m przed jednostk¹
+        Vector3 rotation = new Vector3(90, 0, 0);      // Po³ó¿ cylinder na p³asko
+        Vector3 scale = new Vector3(0.3f, 0.6f, 0.3f); // Cieñszy cylinder
+
+        // Generujemy nowy mesh
+        cachedOffsetArrowMesh = MeshModifier.CreateModifiedMesh(directionArrowMesh, position, rotation, scale);
     }
 
     void InitializeGroups()
@@ -194,6 +218,9 @@ public class ArmyHierarchyManager : MonoBehaviour
 
             TacticalGroup newGroup = new TacticalGroup($"{baseName}_{groupIndex}", mesh, mat, groupSize);
 
+            newGroup.arrowMesh = cachedOffsetArrowMesh;
+            newGroup.arrowMaterial = directionArrowMaterial;
+
             // --- ZAPAMIÊTUJEMY ORYGINALNY MATERIA£ ---
             if (!originalMaterials.ContainsKey(newGroup))
             {
@@ -231,14 +258,25 @@ public class ArmyHierarchyManager : MonoBehaviour
         foreach (var group in factionAGroups)
         {
             if (group.isMoving) ProcessMovement(group);
-            group.RenderGroup();
+
+            group.RenderGroup();      // Rysuje ¿o³nierzy
+            group.RenderIndicators(); // [NOWOŒÆ] Rysuje wskaŸniki dla ka¿dego oddzia³u A
         }
 
+        // --- FRAKCJA B ---
         foreach (var group in factionBGroups)
         {
             if (group.isMoving) ProcessMovement(group);
-            group.RenderGroup();
+
+            group.RenderGroup();      // Rysuje ¿o³nierzy
+            group.RenderIndicators(); // [NOWOŒÆ] Rysuje wskaŸniki dla ka¿dego oddzia³u B
         }
+
+        //foreach (var group in selectedGroups)
+        //{
+        //    // Rysujemy strza³ki pod nogami jednostek w zaznaczonych grupach
+        //    group.RenderIndicators();
+        //}
 
         HandleMouseInput();
     }

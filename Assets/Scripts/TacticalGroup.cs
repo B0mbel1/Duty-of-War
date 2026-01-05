@@ -12,6 +12,9 @@ public class TacticalGroup
     public Mesh unitMesh;
     public Material unitMaterial;
 
+    public Mesh arrowMesh;
+    public Material arrowMaterial;
+
     // Dane matematyczne (Zamiast jednej wielkiej listy w UnitsSpawn, ka¿dy oddzia³ ma swoj¹)
     public List<Matrix4x4> unitMatrices = new List<Matrix4x4>();
     public List<Matrix4x4[]> renderBatches = new List<Matrix4x4[]>(); // Batche do renderowania
@@ -43,6 +46,18 @@ public class TacticalGroup
             renderBatches.Add(batch);
         }
         RecalculateCenter();
+    }
+
+    public void RenderIndicators()
+    {
+        if (arrowMesh == null || arrowMaterial == null) return;
+
+        // U¿ywamy tych samych batchy co jednostki, wiêc strza³ki 
+        // bêd¹ mia³y identyczn¹ pozycjê i rotacjê.
+        foreach (var batch in renderBatches)
+        {
+            Graphics.DrawMeshInstanced(arrowMesh, 0, arrowMaterial, batch);
+        }
     }
 
     public void RecalculateCenter()
