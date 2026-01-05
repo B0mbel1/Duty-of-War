@@ -15,6 +15,7 @@ public class TacticalGroup
     public Mesh arrowMesh;
     public Material arrowMaterial;
 
+    public float speedMultiplier = 1.0f;
     // Dane matematyczne (Zamiast jednej wielkiej listy w UnitsSpawn, ka¿dy oddzia³ ma swoj¹)
     public List<Matrix4x4> unitMatrices = new List<Matrix4x4>();
     public List<Matrix4x4[]> renderBatches = new List<Matrix4x4[]>(); // Batche do renderowania

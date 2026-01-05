@@ -40,6 +40,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     public float rotationSpeed = 8f;
     public float stopDistance = 2.0f;
     public LayerMask groundLayer = 1;
+    public float cavalrySpeedMultiplier = 1.5f;
 
     [Header("Map Boundaries")]
     public float minX = 0f;
@@ -282,16 +283,19 @@ public class ArmyHierarchyManager : MonoBehaviour
             {
                 // £ucznicy -> Ko³o/Dysk
                 newGroup.arrowMesh = cachedArcherMesh != null ? cachedArcherMesh : cachedInfantryMesh;
+                newGroup.speedMultiplier = 1.0f; // Standardowa prêdkoœæ
             }
             else if (baseName.Contains("Cavalry") || baseName.Contains("Cav"))
             {
                 // Kawaleria -> D³u¿sza linia
                 newGroup.arrowMesh = cachedCavalryMesh != null ? cachedCavalryMesh : cachedInfantryMesh;
+                newGroup.speedMultiplier = cavalrySpeedMultiplier; // SZYBCIEJ (np. 1.5x)
             }
             else
             {
                 // Piechota (Domyœlna) -> Linia
                 newGroup.arrowMesh = cachedInfantryMesh;
+                newGroup.speedMultiplier = 1.0f; // Standardowa prêdkoœæ
             }
 
             newGroup.arrowMaterial = directionArrowMaterial;
@@ -563,7 +567,8 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         Vector3 direction = (flatTarget - flatCenter).normalized;
-        Vector3 moveVector = direction * moveSpeed * Time.deltaTime;
+        float actualSpeed = moveSpeed * group.speedMultiplier;
+        Vector3 moveVector = direction * actualSpeed * Time.deltaTime;
 
         float unitDiameter = group.unitMatrices[0].lossyScale.x;
         Vector3 scaleVec = new Vector3(unitDiameter, unitDiameter, unitDiameter);
