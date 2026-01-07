@@ -379,7 +379,7 @@ GameObject:
   - component: {fileID: 752078927}
   - component: {fileID: 752078926}
   - component: {fileID: 752078925}
-  m_Layer: 0
+  m_Layer: 4
   m_Name: River
   m_TagString: Water
   m_Icon: {fileID: 0}
@@ -841,6 +841,10 @@ PrefabInstance:
       propertyPath: directionArrowMesh
       value: 
       objectReference: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: waterLayerMask.m_Bits
+      value: 16
+      objectReference: {fileID: 0}
     - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: directionArrowMaterial
       value: 

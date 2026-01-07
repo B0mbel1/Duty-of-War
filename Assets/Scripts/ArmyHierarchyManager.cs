@@ -39,52 +39,46 @@ public class ArmyHierarchyManager : MonoBehaviour
     public float stopDistance = 2.0f;
     public float cavalrySpeedMultiplier = 1.5f;
 
-    [Header("Water & Physics Settings")]
-    [Tooltip("Ile % prêdkoœci zostaje w wodzie (0.5 = 50% wolniej)")]
+    [Header("Water Settings (FIXED)")]
+    [Tooltip("Ile % prÄ™dkoÅ›ci zostaje w wodzie (0.5 = 50% wolniej)")]
     [Range(0.1f, 1.0f)]
     public float waterSpeedPenalty = 0.5f;
 
-    [Tooltip("Tolerancja brzegu. Wy¿sza wartoœæ (np. 0.4) sprawia, ¿e jednostki zwalniaj¹ ju¿ w p³ytkiej wodzie.")]
-    [Range(0.01f, 1.0f)]
-    public float shoreTolerance = 0.4f;
+    [Tooltip("Wybierz warstwÄ™, na ktÃ³rej jest obiekt wody. Woda MUSI mieÄ‡ Collider.")]
+    public LayerMask waterLayerMask;
 
-    [Tooltip("Warstwy terenu do klikania myszk¹ (Ruch)")]
-    public LayerMask detectionLayer = 1; // Domyœlnie 'Default'
+    [Tooltip("GÅ‚Ä™bokoÅ›Ä‡ zanurzenia wizualnego.")]
+    public float swimmingDepth = 0.5f;
 
-    // --- NOWA SEKCJA: FIZYKA WZGÓRZ ---
-    [Header("Slope Physics Settings (Wzgórza)")]
-    [Tooltip("Jak daleko przed sob¹ (w metrach) jednostka sprawdza nachylenie terenu.")]
+    [Header("Forest Settings (INDIVIDUAL DETECTION)")]
+    [Tooltip("DokÅ‚adna nazwa warstwy tekstury terenu (w Terrain Layers), ktÃ³ra jest lasem.")]
+    public string forestLayerName = "Forest";
+
+    [Tooltip("MnoÅ¼nik prÄ™dkoÅ›ci dla kawalerii w lesie (0.7 = 30% wolniej).")]
+    public float forestCavalryPenalty = 0.7f;
+
+    [Tooltip("MnoÅ¼nik prÄ™dkoÅ›ci dla piechoty w lesie (1.0 = brak kary, 0.9 = lekko wolniej).")]
+    public float forestInfantryPenalty = 0.9f;
+
+    // Cache indeksu warstwy lasu (Å¼eby nie szukaÄ‡ po stringu co klatkÄ™)
+    private int forestLayerIndex = -1;
+
+    [Header("Slope Physics Settings (WzgÃ³rza)")]
     public float slopeCheckDistance = 1.0f;
-
-    [Tooltip("K¹t (w stopniach) od którego uznajemy wzniesienie za 'lekkie'.")]
     public float lightSlopeAngle = 10f;
-
-    [Tooltip("K¹t (w stopniach) od którego uznajemy wzniesienie za 'strome'.")]
     public float steepSlopeAngle = 30f;
 
     [Header("Slope Speed Multipliers")]
-    [Tooltip("Mno¿nik: Lekko pod górê (0.5 = 50% wolniej)")]
     public float uphillLightMult = 0.5f;
-
-    [Tooltip("Mno¿nik: Lekko w dó³ (1.2 = 20% szybciej)")]
     public float downhillLightMult = 1.2f;
-
-    [Tooltip("Mno¿nik: Stromo pod górê (0.2 = 80% wolniej)")]
     public float uphillSteepMult = 0.2f;
-
-    [Tooltip("Mno¿nik: Stromo w dó³ (0.7 = 30% wolniej - hamowanie dla bezpieczeñstwa)")]
     public float downhillSteepMult = 0.7f;
-    // ----------------------------------
 
     [Header("Map Boundaries")]
     public float minX = 0f;
     public float maxX = 2000f;
     public float minZ = 0f;
     public float maxZ = 2000f;
-
-    [Header("Advanced Environment")]
-    public string waterTag = "Water";
-    public float swimmingDepth = 0.5f;
 
     [Header("Unit Height Offsets")]
     public float offsetInfantry = 0.0f;
@@ -102,42 +96,46 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     private bool groupsInitialized = false;
     private Terrain terrain;
-
-    // Zmienne wodne (obliczane raz)
-    private float waterSurfaceY = -1000f;
-    private bool waterFound = false;
+    private TerrainData terrainData; // Cache danych terenu dla optymalizacji
 
     void Start()
     {
         terrain = Terrain.activeTerrain;
 
-        if (terrain != null && maxX == 2000f && maxZ == 2000f)
+        if (terrain != null)
         {
-            maxX = terrain.terrainData.size.x;
-            maxZ = terrain.terrainData.size.z;
+            terrainData = terrain.terrainData;
+            if (maxX == 2000f && maxZ == 2000f)
+            {
+                maxX = terrainData.size.x;
+                maxZ = terrainData.size.z;
+            }
+
+            // --- DETEKCJA INDEXU LASU ---
+            // Robimy to raz na starcie, Å¼eby wiedzieÄ‡ ktÃ³ry kanaÅ‚ splatmapy to las
+            FindForestLayerIndex();
         }
 
         PrepareIndicatorMeshes();
-        DetectWaterLevel(); // Wykrywamy poziom wody na starcie
+        // DetectWaterLevel(); <- USUNIÄ˜TE: Stara metoda psuÅ‚a logikÄ™. Teraz uÅ¼ywamy Physics Check.
         Invoke(nameof(InitializeGroups), 0.5f);
     }
 
-    void DetectWaterLevel()
+    void FindForestLayerIndex()
     {
-        // Szukamy obiektu wody, aby ustaliæ jej globalny poziom Y
-        GameObject waterObj = GameObject.FindGameObjectWithTag(waterTag);
-        if (waterObj != null)
+        if (terrainData == null) return;
+        if (string.IsNullOrEmpty(forestLayerName)) return;
+
+        for (int i = 0; i < terrainData.terrainLayers.Length; i++)
         {
-            // Zak³adamy, ¿e woda jest p³aska. Pobieramy górn¹ krawêdŸ jej BoxCollidera lub Mesha
-            // (Position Y + po³owa skali Y)
-            waterSurfaceY = waterObj.transform.position.y + (waterObj.transform.localScale.y * 0.5f);
-            waterFound = true;
-            Debug.Log($"[ArmyManager] Wykryto wodê na poziomie Y: {waterSurfaceY}");
+            if (terrainData.terrainLayers[i].name == forestLayerName)
+            {
+                forestLayerIndex = i;
+                Debug.Log($"[ArmyManager] Znaleziono warstwÄ™ lasu '{forestLayerName}' na indeksie: {forestLayerIndex}");
+                return;
+            }
         }
-        else
-        {
-            Debug.LogWarning("[ArmyManager] Nie znaleziono obiektu z tagiem 'Water'. P³ywanie wy³¹czone.");
-        }
+        Debug.LogWarning($"[ArmyManager] Nie znaleziono warstwy terenu o nazwie '{forestLayerName}'. Mechanika lasu nieaktywna.");
     }
 
     void PrepareIndicatorMeshes()
@@ -274,7 +272,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         HandleMouseInput();
     }
 
-    // --- ZAKTUALIZOWANA METODA: DETEKCJA WODY + NACHYLENIA TERENU (WZGÓRZA) ---
+    // --- ZMODYFIKOWANA FIZYKA: INDYWIDUALNA DETEKCJA WODY + LASU ---
     void ProcessMovement(TacticalGroup group)
     {
         if (group.unitMatrices.Count == 0)
@@ -283,11 +281,12 @@ public class ArmyHierarchyManager : MonoBehaviour
             return;
         }
 
-        // --- KONFIGURACJA OFFSETU WIZUALNEGO ---
+        bool isCavalry = group.groupName.Contains("Cavalry") || group.groupName.Contains("Cav");
+
         float currentOffset = 0f;
         if (group.groupName.Contains("Infantry")) currentOffset = offsetInfantry;
         else if (group.groupName.Contains("Archer")) currentOffset = offsetArcher;
-        else if (group.groupName.Contains("Cavalry")) currentOffset = offsetCavalry;
+        else if (isCavalry) currentOffset = offsetCavalry;
 
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
@@ -299,121 +298,140 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         Vector3 direction = (flatTarget - flatCenter).normalized;
-
-        // --- RUCH BAZOWY ---
         float groupBaseSpeed = moveSpeed * group.speedMultiplier * Time.deltaTime;
         Vector3 scaleVec = group.unitMatrices[0].lossyScale;
 
-        // PÊTLA PO WSZYSTKICH JEDNOSTKACH
+        // Cache danych terenu
+        int alphaWidth = 0, alphaHeight = 0;
+        if (terrainData != null)
+        {
+            alphaWidth = terrainData.alphamapWidth;
+            alphaHeight = terrainData.alphamapHeight;
+        }
+
         for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             Matrix4x4 mat = group.unitMatrices[i];
             Vector3 currentPos = mat.GetColumn(3);
 
-            // 1. Sprawdzamy wysokoœæ terenu pod nogami
+            // 1. Gdzie jest ziemia?
             float myGroundHeight = currentPos.y;
             if (terrain != null)
                 myGroundHeight = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
 
-            // 2. Czy jestem w wodzie?
+            // --- FIZYKA WODY (METODA RAYCAST "Z NIEBA") ---
             bool amIInWater = false;
-            if (waterFound)
+            float waterSurfaceHeight = -1000f;
+
+            // Strzelamy promieniem z gÃ³ry (np. Y+100) pionowo w dÃ³Å‚, szukajÄ…c TYLKO warstwy wody
+            RaycastHit waterHit;
+            Vector3 skyPos = new Vector3(currentPos.x, myGroundHeight + 50f, currentPos.z);
+
+            // Raycast ograniczony tylko do maski wody (waterLayerMask)
+            if (Physics.Raycast(skyPos, Vector3.down, out waterHit, 100f, waterLayerMask))
             {
-                if (myGroundHeight < waterSurfaceY + shoreTolerance)
+                waterSurfaceHeight = waterHit.point.y;
+
+                // Logika: JeÅ›li poziom wody jest wyÅ¼szy niÅ¼ poziom gruntu (+ maÅ‚y margines), to jesteÅ›my w wodzie.
+                // To eliminuje problem "wody pod ziemiÄ…" (gdyby woda byÅ‚a na caÅ‚ym levelu pod spodem).
+                if (waterSurfaceHeight > myGroundHeight + 0.1f)
                 {
                     amIInWater = true;
                 }
             }
 
-            // 3. Obliczanie modyfikatora prêdkoœci (Woda LUB Nachylenie)
+            // --- FIZYKA LASU ---
+            bool amIInForest = false;
+            if (terrain != null && forestLayerIndex != -1 && !amIInWater)
+            {
+                int mapX = Mathf.RoundToInt(((currentPos.x - terrain.transform.position.x) / terrainData.size.x) * alphaWidth);
+                int mapZ = Mathf.RoundToInt(((currentPos.z - terrain.transform.position.z) / terrainData.size.z) * alphaHeight);
+
+                if (mapX >= 0 && mapX < alphaWidth && mapZ >= 0 && mapZ < alphaHeight)
+                {
+                    float[,,] splatMap = terrainData.GetAlphamaps(mapX, mapZ, 1, 1);
+                    if (splatMap[0, 0, forestLayerIndex] > 0.5f) amIInForest = true;
+                }
+            }
+
+            // 3. Modyfikatory prÄ™dkoÅ›ci
             float finalSpeedModifier = 1.0f;
 
             if (amIInWater)
             {
-                // Priorytet 1: Woda (zawsze spowalnia wg ustawieñ wody)
                 finalSpeedModifier = waterSpeedPenalty;
             }
-            else if (terrain != null)
+            else
             {
-                // Priorytet 2: Wzgórza (Slope Physics)
-
-                // Sprawdzamy wysokoœæ terenu kawa³ek przed nami (w kierunku ruchu)
-                Vector3 probePos = currentPos + (direction * slopeCheckDistance);
-                float nextHeightProbe = terrain.SampleHeight(probePos) + terrain.transform.position.y;
-
-                // Ró¿nica wysokoœci
-                float heightDiff = nextHeightProbe - myGroundHeight;
-
-                // Obliczamy k¹t nachylenia (wynik w stopniach)
-                // K¹t > 0 = Pod górê
-                // K¹t < 0 = W dó³
-                float angle = Mathf.Atan2(heightDiff, slopeCheckDistance) * Mathf.Rad2Deg;
-
-                if (angle > steepSlopeAngle)
+                if (amIInForest)
                 {
-                    // Bardzo stromo pod górê (np. > 30 stopni) -> Bardzo wolno
-                    finalSpeedModifier = uphillSteepMult;
+                    finalSpeedModifier *= isCavalry ? forestCavalryPenalty : forestInfantryPenalty;
                 }
-                else if (angle > lightSlopeAngle)
+
+                if (terrain != null)
                 {
-                    // Lekko pod górê (np. > 10 stopni) -> Wolniej
-                    finalSpeedModifier = uphillLightMult;
+                    Vector3 probePos = currentPos + (direction * slopeCheckDistance);
+                    float nextHeightProbe = terrain.SampleHeight(probePos) + terrain.transform.position.y;
+                    float angle = Mathf.Atan2(nextHeightProbe - myGroundHeight, slopeCheckDistance) * Mathf.Rad2Deg;
+
+                    if (angle > steepSlopeAngle) finalSpeedModifier *= uphillSteepMult;
+                    else if (angle > lightSlopeAngle) finalSpeedModifier *= uphillLightMult;
+                    else if (angle < -steepSlopeAngle) finalSpeedModifier *= downhillSteepMult;
+                    else if (angle < -lightSlopeAngle) finalSpeedModifier *= downhillLightMult;
                 }
-                else if (angle < -steepSlopeAngle)
-                {
-                    // Bardzo stromo w dó³ -> Hamowanie (bezpieczeñstwo)
-                    finalSpeedModifier = downhillSteepMult;
-                }
-                else if (angle < -lightSlopeAngle)
-                {
-                    // Lekko w dó³ -> Szybciej (rozpêd)
-                    finalSpeedModifier = downhillLightMult;
-                }
-                // Jeœli jest p³asko (pomiêdzy -10 a 10), modyfikator zostaje 1.0f
             }
 
-            // 4. Aplikujemy wektor ruchu z modyfikatorem
+            // 4. Ruch
             Vector3 myMoveVector = direction * groupBaseSpeed * finalSpeedModifier;
             Vector3 newPos = currentPos + myMoveVector;
 
-            // Clamp do granic mapy
             newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
-            // 5. Ustalanie wysokoœci Y (Wizualne)
+            // 5. Ustalanie wysokoÅ›ci Y (Wizualne)
             float finalY;
             float nextTerrainY = myGroundHeight;
             if (terrain != null) nextTerrainY = terrain.SampleHeight(newPos) + terrain.transform.position.y;
 
             if (amIInWater)
             {
-                // Zanurzenie w wodzie
-                finalY = waterSurfaceY - swimmingDepth;
+                // JeÅ›li wchodzimy gÅ‚Ä™biej, uÅ¼ywamy wykrytej powierzchni wody
+                finalY = waterSurfaceHeight - swimmingDepth;
             }
             else
             {
-                // Stanie na l¹dzie
                 finalY = nextTerrainY + currentOffset;
             }
 
-            // P³ynne dopasowanie wysokoœci (Lerp)
             newPos.y = Mathf.Lerp(currentPos.y, finalY, Time.deltaTime * 10f);
 
-            // Rotacja
             Quaternion currentRot = mat.rotation;
             Quaternion targetRot = Quaternion.LookRotation(direction);
             Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
 
-            // Zapisz macierz
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
         }
 
         group.RebuildBatches();
         group.RecalculateCenter();
     }
+    // --- Reszta metod bez zmian ---
+    void OnDrawGizmosSelected()
+    {
+        if (!Application.isPlaying || factionAGroups.Count == 0) return;
 
-    // --- Reszta metod (SelectGroup, Gizmos) bez zmian ---
+        // Rysuje liniÄ™ nad pierwszÄ… jednostkÄ… pierwszej grupy, Å¼ebyÅ› widziaÅ‚ detekcjÄ™
+        var group = factionAGroups[0];
+        if (group.unitMatrices.Count > 0)
+        {
+            Vector3 pos = (Vector3)group.unitMatrices[0].GetColumn(3);
+            Vector3 skyPos = pos + Vector3.up * 50f;
 
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(skyPos, pos);
+            Gizmos.DrawSphere(skyPos, 1.0f);
+        }
+    }
     void KillRandomUnit(bool isFactionA)
     {
         List<TacticalGroup> targetFaction = isFactionA ? factionAGroups : factionBGroups;
@@ -486,13 +504,16 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void UpdateUISelectionVisuals() { foreach (var ui in uiElements) ui.SetSelectionState(selectedGroups.Contains(ui.GetGroup())); }
 
+    [Header("Selection Raycast")]
+    public LayerMask terrainLayerMask = 1; // DomyÅ›lnie Default
+
     void HandleMouseInput()
     {
         if (Input.GetMouseButtonDown(0) && selectedGroups.Count > 0)
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 10000f, detectionLayer))
+            if (Physics.Raycast(ray, out hit, 10000f, terrainLayerMask))
             {
                 foreach (var group in selectedGroups) IssueMoveOrder(group, hit.point);
             }
