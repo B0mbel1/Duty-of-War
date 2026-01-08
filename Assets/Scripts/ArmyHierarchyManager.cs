@@ -8,20 +8,15 @@ public class ArmyHierarchyManager : MonoBehaviour
     public UnitsSpawnCustom customSpawner;
     public UnitsSpawn historySpawner;
 
-    [Header("UI Integration (Global Counters)")]
+    [Header("UI Integration")]
     public TextMeshProUGUI counterTextA;
     public TextMeshProUGUI counterTextB;
-
-    [Header("UI Integration (Buttons)")]
     public GameObject groupUIPrefab;
     public Transform uiContainer;
 
-    [Header("Visuals (Selection)")]
+    [Header("Visuals")]
     public Material highlightMaterial;
-
-    [Header("Visuals (Direction Indicators)")]
     public Material directionArrowMaterial;
-
     public Mesh indicatorMeshInfantry;
     public Mesh indicatorMeshArcher;
     public Mesh indicatorMeshCavalry;
@@ -30,62 +25,60 @@ public class ArmyHierarchyManager : MonoBehaviour
     private Mesh cachedArcherMesh;
     private Mesh cachedCavalryMesh;
 
-    [Header("Hierarchy Settings")]
+    [Header("Hierarchy & Speed")]
     public HierarchyRank groupSize = HierarchyRank.Company;
-
-    [Header("Movement Settings")]
     public float moveSpeed = 10f;
     public float rotationSpeed = 8f;
     public float stopDistance = 2.0f;
     public float cavalrySpeedMultiplier = 1.5f;
 
-    [Header("Water Settings (FIXED)")]
-    [Tooltip("Ile % prędkości zostaje w wodzie (0.5 = 50% wolniej)")]
-    [Range(0.1f, 1.0f)]
-    public float waterSpeedPenalty = 0.5f;
-
-    [Tooltip("Wybierz warstwę, na której jest obiekt wody. Woda MUSI mieć Collider.")]
+    [Header("Water Settings")]
     public LayerMask waterLayerMask;
-
-    [Tooltip("Głębokość zanurzenia wizualnego.")]
+    public float waterSpeedPenalty = 0.5f;
     public float swimmingDepth = 0.5f;
 
-    [Header("Forest Settings (INDIVIDUAL DETECTION)")]
-    [Tooltip("Dokładna nazwa warstwy tekstury terenu (w Terrain Layers), która jest lasem.")]
-    public string forestLayerName = "Forest";
-
-    [Tooltip("Mnożnik prędkości dla kawalerii w lesie (0.7 = 30% wolniej).")]
-    public float forestCavalryPenalty = 0.7f;
-
-    [Tooltip("Mnożnik prędkości dla piechoty w lesie (1.0 = brak kary, 0.9 = lekko wolniej).")]
-    public float forestInfantryPenalty = 0.9f;
-
-    // Cache indeksu warstwy lasu (żeby nie szukać po stringu co klatkę)
+    // --- NOWOŚĆ: PRZYWRÓCONY LAS ---
+    [Header("Forest Settings")]
+    [Tooltip("Dokładna nazwa warstwy terenu (Terrain Layer), która jest lasem.")]
+    public string forestLayerName = "Forest"; 
+    public float forestCavalryPenalty = 0.7f; // Kawaleria zwalnia mocniej
+    public float forestInfantryPenalty = 0.9f; // Piechota radzi sobie lepiej
     private int forestLayerIndex = -1;
+    // --------------------------------
 
-    [Header("Slope Physics Settings (Wzgórza)")]
-    public float slopeCheckDistance = 1.0f;
+    [Header("Slope Physics")]
+    public float slopeCheckDistance = 2.0f; 
     public float lightSlopeAngle = 10f;
-    public float steepSlopeAngle = 30f;
+    public float steepSlopeAngle = 30f; 
+    
+    [Header("Slope Multipliers")]
+    public float uphillLightMult = 0.8f;
+    public float uphillSteepMult = 0.4f;   
+    public float downhillLightMult = 1.1f;
+    public float downhillSteepMult = 0.9f; 
 
-    [Header("Slope Speed Multipliers")]
-    public float uphillLightMult = 0.5f;
-    public float downhillLightMult = 1.2f;
-    public float uphillSteepMult = 0.2f;
-    public float downhillSteepMult = 0.7f;
+    [Header("Combat Settings")]
+    public float attackRangeMelee = 3.5f; 
+    public float attackRangeArcher = 80f; 
+    public float attackCooldown = 1.0f; 
+    public float archerAttackCooldown = 2.0f;
 
     [Header("Map Boundaries")]
-    public float minX = 0f;
-    public float maxX = 2000f;
-    public float minZ = 0f;
-    public float maxZ = 2000f;
+    public float minX = 0f; public float maxX = 2000f;
+    public float minZ = 0f; public float maxZ = 2000f;
 
-    [Header("Unit Height Offsets")]
-    public float offsetInfantry = 0.0f;
-    public float offsetArcher = 0.0f;
-    public float offsetCavalry = 0.2f;
+    [Header("Performance")]
+    public int maxCombatChecksPerFrame = 2000; 
 
-    // Listy danych
+    [Header("Base Stats")]
+    public float hpMax = 2.0f;
+    public float dmgInfantry = 1.0f;
+    public float dmgArcherMin = 0.5f;
+    public float dmgArcherMax = 1.0f;
+    public float dmgCavalryCharge = 2.0f;
+    public float dmgCavalryStatic = 0.8f;
+
+    // --- DANE ---
     public List<TacticalGroup> factionAGroups = new List<TacticalGroup>();
     public List<TacticalGroup> factionBGroups = new List<TacticalGroup>();
 
@@ -96,46 +89,59 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     private bool groupsInitialized = false;
     private Terrain terrain;
-    private TerrainData terrainData; // Cache danych terenu dla optymalizacji
+    private TerrainData terrainData; // Cache danych terenu
+
+    // --- SPATIAL GRID ---
+    private Dictionary<int, List<UnitRef>> spatialGrid = new Dictionary<int, List<UnitRef>>();
+    private float cellSize = 10.0f; 
+
+    // --- FAIR SCHEDULER ---
+    private int nextGroupIdxA = 0;
+    private int nextUnitIdxA = 0;
+    private int nextGroupIdxB = 0;
+    private int nextUnitIdxB = 0;
+
+    struct UnitRef
+    {
+        public TacticalGroup group;
+        public int index;
+        public Vector3 position;
+    }
+
+    public LayerMask terrainLayerMask = 1;
 
     void Start()
     {
         terrain = Terrain.activeTerrain;
-
         if (terrain != null)
         {
             terrainData = terrain.terrainData;
-            if (maxX == 2000f && maxZ == 2000f)
-            {
-                maxX = terrainData.size.x;
-                maxZ = terrainData.size.z;
-            }
+            Vector3 tPos = terrain.transform.position;
+            Vector3 tSize = terrainData.size;
+            minX = tPos.x; minZ = tPos.z;
+            maxX = tPos.x + tSize.x; maxZ = tPos.z + tSize.z;
 
-            // --- DETEKCJA INDEXU LASU ---
-            // Robimy to raz na starcie, żeby wiedzieć który kanał splatmapy to las
+            // Znajdź indeks warstwy lasu
             FindForestLayerIndex();
         }
 
         PrepareIndicatorMeshes();
-        // DetectWaterLevel(); <- USUNIĘTE: Stara metoda psuła logikę. Teraz używamy Physics Check.
         Invoke(nameof(InitializeGroups), 0.5f);
     }
 
     void FindForestLayerIndex()
     {
         if (terrainData == null) return;
-        if (string.IsNullOrEmpty(forestLayerName)) return;
-
         for (int i = 0; i < terrainData.terrainLayers.Length; i++)
         {
             if (terrainData.terrainLayers[i].name == forestLayerName)
             {
                 forestLayerIndex = i;
-                Debug.Log($"[ArmyManager] Znaleziono warstwę lasu '{forestLayerName}' na indeksie: {forestLayerIndex}");
+                Debug.Log($"[ArmyManager] Las znaleziony na indeksie warstwy: {i}");
                 return;
             }
         }
-        Debug.LogWarning($"[ArmyManager] Nie znaleziono warstwy terenu o nazwie '{forestLayerName}'. Mechanika lasu nieaktywna.");
+        Debug.LogWarning($"[ArmyManager] Nie znaleziono warstwy lasu o nazwie: {forestLayerName}");
     }
 
     void PrepareIndicatorMeshes()
@@ -149,17 +155,14 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (sourceMesh == null) return null;
         Mesh newMesh = new Mesh();
-        newMesh.name = sourceMesh.name + "_Modified";
         Vector3[] originalVertices = sourceMesh.vertices;
         Vector3[] newVertices = new Vector3[originalVertices.Length];
-        Quaternion rotation = Quaternion.Euler(rotationOffset);
-        Matrix4x4 transformMatrix = Matrix4x4.TRS(positionOffset, rotation, scale);
-        for (int i = 0; i < originalVertices.Length; i++) newVertices[i] = transformMatrix.MultiplyPoint3x4(originalVertices[i]);
+        Matrix4x4 trs = Matrix4x4.TRS(positionOffset, Quaternion.Euler(rotationOffset), scale);
+        for (int i = 0; i < originalVertices.Length; i++) newVertices[i] = trs.MultiplyPoint3x4(originalVertices[i]);
         newMesh.vertices = newVertices;
         newMesh.triangles = sourceMesh.triangles;
         newMesh.uv = sourceMesh.uv;
         newMesh.RecalculateNormals();
-        newMesh.RecalculateBounds();
         return newMesh;
     }
 
@@ -167,35 +170,17 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (customSpawner == null) customSpawner = GetComponent<UnitsSpawnCustom>();
         if (historySpawner == null) historySpawner = GetComponent<UnitsSpawn>();
-
         bool useCustom = (customSpawner != null && customSpawner.enabled);
-        bool useHistory = (historySpawner != null && historySpawner.enabled);
+        if (!useCustom && (historySpawner == null || !historySpawner.enabled)) return;
 
-        if (!useCustom && !useHistory) return;
-
-        if (useCustom)
-        {
-            if (counterTextA == null) counterTextA = customSpawner.factionAText;
-            if (counterTextB == null) counterTextB = customSpawner.factionBText;
-        }
-        else
-        {
-            if (counterTextA == null) counterTextA = historySpawner.factionAText;
-            if (counterTextB == null) counterTextB = historySpawner.factionBText;
-        }
+        if (useCustom) { if (counterTextA == null) counterTextA = customSpawner.factionAText; if (counterTextB == null) counterTextB = customSpawner.factionBText; }
+        else { if (counterTextA == null) counterTextA = historySpawner.factionAText; if (counterTextB == null) counterTextB = historySpawner.factionBText; }
 
         if (uiContainer != null) { for (int i = uiContainer.childCount - 1; i >= 0; i--) Destroy(uiContainer.GetChild(i).gameObject); }
-        uiElements.Clear();
-        originalMaterials.Clear();
+        uiElements.Clear(); originalMaterials.Clear(); factionAGroups.Clear(); factionBGroups.Clear();
 
-        bool isPlayerA = true;
-        bool isPlayerB = false;
-
-        if (!useCustom)
-        {
-            isPlayerA = (PlayerPrefs.GetString("PlayerSide", "SideA") == "SideA");
-            isPlayerB = !isPlayerA;
-        }
+        bool isPlayerA = useCustom ? true : (PlayerPrefs.GetString("PlayerSide", "SideA") == "SideA");
+        bool isPlayerB = !isPlayerA;
 
         List<Matrix4x4> a_Inf, a_Arc, a_Cav, b_Inf, b_Arc, b_Cav;
         Mesh mInf, mArc, mCav;
@@ -216,39 +201,53 @@ public class ArmyHierarchyManager : MonoBehaviour
             matA = historySpawner.factionAMaterial; matB = historySpawner.factionBMaterial;
         }
 
-        CreateGroupsFromList(a_Inf, mInf, matA, "A_Infantry", factionAGroups, isPlayerA);
-        CreateGroupsFromList(a_Arc, mArc, matA, "A_Archers", factionAGroups, isPlayerA);
-        CreateGroupsFromList(a_Cav, mCav, matA, "A_Cavalry", factionAGroups, isPlayerA);
-        CreateGroupsFromList(b_Inf, mInf, matB, "B_Infantry", factionBGroups, isPlayerB);
-        CreateGroupsFromList(b_Arc, mArc, matB, "B_Archers", factionBGroups, isPlayerB);
-        CreateGroupsFromList(b_Cav, mCav, matB, "B_Cavalry", factionBGroups, isPlayerB);
+        CreateGroupsFromList(a_Inf, mInf, matA, "A_Infantry", factionAGroups, isPlayerA, UnitType.Infantry);
+        CreateGroupsFromList(a_Arc, mArc, matA, "A_Archers", factionAGroups, isPlayerA, UnitType.Archer);
+        CreateGroupsFromList(a_Cav, mCav, matA, "A_Cavalry", factionAGroups, isPlayerA, UnitType.Cavalry);
+
+        CreateGroupsFromList(b_Inf, mInf, matB, "B_Infantry", factionBGroups, isPlayerB, UnitType.Infantry);
+        CreateGroupsFromList(b_Arc, mArc, matB, "B_Archers", factionBGroups, isPlayerB, UnitType.Archer);
+        CreateGroupsFromList(b_Cav, mCav, matB, "B_Cavalry", factionBGroups, isPlayerB, UnitType.Cavalry);
 
         if (useCustom) customSpawner.RebuildAllBatches(); else historySpawner.RebuildAllBatches();
         groupsInitialized = true;
         UpdateGlobalCounters();
+
+        if (customSpawner != null) customSpawner.enabled = false;
+        if (historySpawner != null) historySpawner.enabled = false;
     }
 
-    void CreateGroupsFromList(List<Matrix4x4> sourceList, Mesh mesh, Material mat, string baseName, List<TacticalGroup> targetCollection, bool createUI)
+    void CreateGroupsFromList(List<Matrix4x4> sourceList, Mesh mesh, Material mat, string baseName, List<TacticalGroup> targetCollection, bool createUI, UnitType type)
     {
         int sizePerGroup = (int)groupSize;
         int totalUnits = sourceList.Count;
         int groupIndex = 1;
+
         for (int i = 0; i < totalUnits; i += sizePerGroup)
         {
             int count = Mathf.Min(sizePerGroup, totalUnits - i);
-            TacticalGroup newGroup = new TacticalGroup($"{baseName}_{groupIndex}", mesh, mat, groupSize);
+            TacticalGroup newGroup = new TacticalGroup($"{baseName}_{groupIndex}", mesh, mat, groupSize, type);
 
-            if (baseName.Contains("Archer") || baseName.Contains("Arc")) { newGroup.arrowMesh = cachedArcherMesh != null ? cachedArcherMesh : cachedInfantryMesh; newGroup.speedMultiplier = 1.0f; }
-            else if (baseName.Contains("Cavalry") || baseName.Contains("Cav")) { newGroup.arrowMesh = cachedCavalryMesh != null ? cachedCavalryMesh : cachedInfantryMesh; newGroup.speedMultiplier = cavalrySpeedMultiplier; }
-            else { newGroup.arrowMesh = cachedInfantryMesh; newGroup.speedMultiplier = 1.0f; }
+            switch (type)
+            {
+                case UnitType.Archer: newGroup.arrowMesh = cachedArcherMesh ?? cachedInfantryMesh; newGroup.speedMultiplier = 1.0f; break;
+                case UnitType.Cavalry: newGroup.arrowMesh = cachedCavalryMesh ?? cachedInfantryMesh; newGroup.speedMultiplier = cavalrySpeedMultiplier; break;
+                default: newGroup.arrowMesh = cachedInfantryMesh; newGroup.speedMultiplier = 1.0f; break;
+            }
             newGroup.arrowMaterial = directionArrowMaterial;
-
             if (!originalMaterials.ContainsKey(newGroup)) originalMaterials.Add(newGroup, mat);
 
             List<Matrix4x4> slice = sourceList.GetRange(i, count);
             newGroup.unitMatrices = slice;
-            newGroup.RebuildBatches();
-            newGroup.RecalculateCenter();
+            foreach (var matrix in slice)
+            {
+                newGroup.unitHealth.Add(hpMax);
+                newGroup.attackCooldowns.Add(Random.Range(0f, 1.0f)); 
+                newGroup.lastPositions.Add((Vector3)matrix.GetColumn(3));
+            }
+            
+            if (newGroup.unitMatrices.Count > 0) newGroup.RebuildBatchesFull();
+            
             targetCollection.Add(newGroup);
 
             if (createUI && uiContainer != null)
@@ -267,41 +266,34 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
 
-        foreach (var group in factionAGroups) { if (group.isMoving) ProcessMovement(group); group.RenderGroup(); group.RenderIndicators(); }
-        foreach (var group in factionBGroups) { if (group.isMoving) ProcessMovement(group); group.RenderGroup(); group.RenderIndicators(); }
+        foreach (var group in factionAGroups) { if (group.unitMatrices.Count > 0) { if (group.isMoving) ProcessMovement(group); group.RenderGroup(); group.RenderIndicators(); } }
+        foreach (var group in factionBGroups) { if (group.unitMatrices.Count > 0) { if (group.isMoving) ProcessMovement(group); group.RenderGroup(); group.RenderIndicators(); } }
+
         HandleMouseInput();
+        ResolveCombatRoundRobin();
     }
 
-    // --- ZMODYFIKOWANA FIZYKA: INDYWIDUALNA DETEKCJA WODY + LASU ---
     void ProcessMovement(TacticalGroup group)
     {
-        if (group.unitMatrices.Count == 0)
-        {
-            group.isMoving = false;
-            return;
-        }
-
-        bool isCavalry = group.groupName.Contains("Cavalry") || group.groupName.Contains("Cav");
-
-        float currentOffset = 0f;
-        if (group.groupName.Contains("Infantry")) currentOffset = offsetInfantry;
-        else if (group.groupName.Contains("Archer")) currentOffset = offsetArcher;
-        else if (isCavalry) currentOffset = offsetCavalry;
-
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
-        if (Vector3.Distance(flatCenter, flatTarget) < stopDistance)
+        if (Vector3.SqrMagnitude(flatTarget - flatCenter) < stopDistance * stopDistance)
         {
             group.isMoving = false;
             return;
         }
 
         Vector3 direction = (flatTarget - flatCenter).normalized;
-        float groupBaseSpeed = moveSpeed * group.speedMultiplier * Time.deltaTime;
+        float baseSpeed = moveSpeed * group.speedMultiplier * Time.deltaTime;
+        
+        Quaternion currentRot = group.unitMatrices[0].rotation;
+        Quaternion targetRot = Quaternion.LookRotation(direction);
+        Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
+
         Vector3 scaleVec = group.unitMatrices[0].lossyScale;
 
-        // Cache danych terenu
+        // Cache danych terenu (dla lasu)
         int alphaWidth = 0, alphaHeight = 0;
         if (terrainData != null)
         {
@@ -314,135 +306,293 @@ public class ArmyHierarchyManager : MonoBehaviour
             Matrix4x4 mat = group.unitMatrices[i];
             Vector3 currentPos = mat.GetColumn(3);
 
-            // 1. Gdzie jest ziemia?
-            float myGroundHeight = currentPos.y;
-            if (terrain != null)
-                myGroundHeight = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
+            float terrainY = currentPos.y;
+            if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
 
-            // --- FIZYKA WODY (METODA RAYCAST "Z NIEBA") ---
-            bool amIInWater = false;
-            float waterSurfaceHeight = -1000f;
-
-            // Strzelamy promieniem z góry (np. Y+100) pionowo w dół, szukając TYLKO warstwy wody
-            RaycastHit waterHit;
-            Vector3 skyPos = new Vector3(currentPos.x, myGroundHeight + 50f, currentPos.z);
-
-            // Raycast ograniczony tylko do maski wody (waterLayerMask)
-            if (Physics.Raycast(skyPos, Vector3.down, out waterHit, 100f, waterLayerMask))
+            // 1. WODA (Raycast)
+            bool inWater = false;
+            float waterHeight = -1000f;
+            RaycastHit hit;
+            if (Physics.Raycast(currentPos + Vector3.up * 50f, Vector3.down, out hit, 100f, waterLayerMask))
             {
-                waterSurfaceHeight = waterHit.point.y;
-
-                // Logika: Jeśli poziom wody jest wyższy niż poziom gruntu (+ mały margines), to jesteśmy w wodzie.
-                // To eliminuje problem "wody pod ziemią" (gdyby woda była na całym levelu pod spodem).
-                if (waterSurfaceHeight > myGroundHeight + 0.1f)
+                if (hit.point.y > terrainY - 0.1f) 
                 {
-                    amIInWater = true;
+                    inWater = true;
+                    waterHeight = hit.point.y;
                 }
             }
 
-            // --- FIZYKA LASU ---
-            bool amIInForest = false;
-            if (terrain != null && forestLayerIndex != -1 && !amIInWater)
+            // 2. POCHYŁOŚĆ
+            float slopeMod = 1.0f;
+            if (terrain != null && !inWater)
             {
+                Vector3 probePos = currentPos + (direction * slopeCheckDistance);
+                float nextY = terrain.SampleHeight(probePos) + terrain.transform.position.y;
+                float heightDiff = nextY - terrainY;
+                float angle = Mathf.Atan2(heightDiff, slopeCheckDistance) * Mathf.Rad2Deg;
+
+                if (angle > steepSlopeAngle) slopeMod = uphillSteepMult;       
+                else if (angle > lightSlopeAngle) slopeMod = uphillLightMult;  
+                else if (angle < -steepSlopeAngle) slopeMod = downhillSteepMult; 
+                else if (angle < -lightSlopeAngle) slopeMod = downhillLightMult; 
+            }
+
+            // --- 3. LAS (ALPHAMAP CHECK) ---
+            float forestMod = 1.0f;
+            if (forestLayerIndex != -1 && !inWater && terrainData != null)
+            {
+                // Obliczamy współrzędne na splatmapie
                 int mapX = Mathf.RoundToInt(((currentPos.x - terrain.transform.position.x) / terrainData.size.x) * alphaWidth);
                 int mapZ = Mathf.RoundToInt(((currentPos.z - terrain.transform.position.z) / terrainData.size.z) * alphaHeight);
 
+                // Sprawdzamy czy jednostka jest w granicach
                 if (mapX >= 0 && mapX < alphaWidth && mapZ >= 0 && mapZ < alphaHeight)
                 {
-                    float[,,] splatMap = terrainData.GetAlphamaps(mapX, mapZ, 1, 1);
-                    if (splatMap[0, 0, forestLayerIndex] > 0.5f) amIInForest = true;
+                    // Pobieramy wartość tekstury lasu w tym punkcie
+                    float[,,] splat = terrainData.GetAlphamaps(mapX, mapZ, 1, 1);
+                    if (splat[0, 0, forestLayerIndex] > 0.5f) // Jeśli tekstura lasu > 50%
+                    {
+                        forestMod = (group.type == UnitType.Cavalry) ? forestCavalryPenalty : forestInfantryPenalty;
+                    }
                 }
             }
+            // --------------------------------
 
-            // 3. Modyfikatory prędkości
-            float finalSpeedModifier = 1.0f;
+            float finalMod = slopeMod * forestMod;
+            if (inWater) finalMod *= waterSpeedPenalty;
 
-            if (amIInWater)
-            {
-                finalSpeedModifier = waterSpeedPenalty;
-            }
-            else
-            {
-                if (amIInForest)
-                {
-                    finalSpeedModifier *= isCavalry ? forestCavalryPenalty : forestInfantryPenalty;
-                }
-
-                if (terrain != null)
-                {
-                    Vector3 probePos = currentPos + (direction * slopeCheckDistance);
-                    float nextHeightProbe = terrain.SampleHeight(probePos) + terrain.transform.position.y;
-                    float angle = Mathf.Atan2(nextHeightProbe - myGroundHeight, slopeCheckDistance) * Mathf.Rad2Deg;
-
-                    if (angle > steepSlopeAngle) finalSpeedModifier *= uphillSteepMult;
-                    else if (angle > lightSlopeAngle) finalSpeedModifier *= uphillLightMult;
-                    else if (angle < -steepSlopeAngle) finalSpeedModifier *= downhillSteepMult;
-                    else if (angle < -lightSlopeAngle) finalSpeedModifier *= downhillLightMult;
-                }
-            }
-
-            // 4. Ruch
-            Vector3 myMoveVector = direction * groupBaseSpeed * finalSpeedModifier;
-            Vector3 newPos = currentPos + myMoveVector;
+            Vector3 newPos = currentPos + (direction * baseSpeed * finalMod);
 
             newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
-            // 5. Ustalanie wysokości Y (Wizualne)
-            float finalY;
-            float nextTerrainY = myGroundHeight;
-            if (terrain != null) nextTerrainY = terrain.SampleHeight(newPos) + terrain.transform.position.y;
-
-            if (amIInWater)
-            {
-                // Jeśli wchodzimy głębiej, używamy wykrytej powierzchni wody
-                finalY = waterSurfaceHeight - swimmingDepth;
-            }
-            else
-            {
-                finalY = nextTerrainY + currentOffset;
-            }
-
-            newPos.y = Mathf.Lerp(currentPos.y, finalY, Time.deltaTime * 10f);
-
-            Quaternion currentRot = mat.rotation;
-            Quaternion targetRot = Quaternion.LookRotation(direction);
-            Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
+            if (inWater) newPos.y = waterHeight - swimmingDepth;
+            else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y;
+            else newPos.y = terrainY;
 
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
         }
-
-        group.RebuildBatches();
+        
+        group.UpdateBatchData(); 
         group.RecalculateCenter();
     }
-    // --- Reszta metod bez zmian ---
-    void OnDrawGizmosSelected()
+
+    void ResolveCombatRoundRobin()
     {
-        if (!Application.isPlaying || factionAGroups.Count == 0) return;
+        int totalBudget = maxCombatChecksPerFrame;
+        int halfBudget = totalBudget / 2;
 
-        // Rysuje linię nad pierwszą jednostką pierwszej grupy, żebyś widział detekcję
-        var group = factionAGroups[0];
-        if (group.unitMatrices.Count > 0)
+        // Faza 1: A atakuje B
+        spatialGrid.Clear();
+        foreach (var groupB in factionBGroups)
         {
-            Vector3 pos = (Vector3)group.unitMatrices[0].GetColumn(3);
-            Vector3 skyPos = pos + Vector3.up * 50f;
+            if (groupB.unitMatrices.Count == 0) continue;
+            for(int i=0; i<groupB.unitMatrices.Count; i++)
+                AddToGrid(groupB, i, (Vector3)groupB.unitMatrices[i].GetColumn(3));
+        }
+        ProcessFactionAttack(factionAGroups, factionBGroups, ref nextGroupIdxA, ref nextUnitIdxA, halfBudget);
 
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawLine(skyPos, pos);
-            Gizmos.DrawSphere(skyPos, 1.0f);
+        // Faza 2: B atakuje A
+        spatialGrid.Clear();
+        foreach (var groupA in factionAGroups)
+        {
+            if (groupA.unitMatrices.Count == 0) continue;
+            for(int i=0; i<groupA.unitMatrices.Count; i++)
+                AddToGrid(groupA, i, (Vector3)groupA.unitMatrices[i].GetColumn(3));
+        }
+        ProcessFactionAttack(factionBGroups, factionAGroups, ref nextGroupIdxB, ref nextUnitIdxB, halfBudget);
+    }
+
+    void ProcessFactionAttack(List<TacticalGroup> attackers, List<TacticalGroup> defenders, ref int groupIdx, ref int unitIdx, int budget)
+    {
+        int groupsChecked = 0;
+        while (budget > 0 && groupsChecked < attackers.Count)
+        {
+            if (groupIdx >= attackers.Count) { groupIdx = 0; unitIdx = 0; }
+
+            var attGroup = attackers[groupIdx];
+
+            if (attGroup.unitMatrices.Count == 0)
+            {
+                groupIdx++;
+                unitIdx = 0;
+                groupsChecked++;
+                continue;
+            }
+
+            while (unitIdx < attGroup.unitMatrices.Count && budget > 0)
+            {
+                ProcessSingleAttacker(attGroup, defenders, unitIdx);
+                unitIdx++;
+                budget--; 
+            }
+
+            if (unitIdx >= attGroup.unitMatrices.Count)
+            {
+                groupIdx++;
+                unitIdx = 0;
+                groupsChecked++;
+            }
         }
     }
+
+    void ProcessSingleAttacker(TacticalGroup attackerGroup, List<TacticalGroup> enemyFaction, int idx)
+    {
+        if (idx >= attackerGroup.attackCooldowns.Count || idx >= attackerGroup.unitMatrices.Count) return;
+
+        float dt = Time.deltaTime;
+        if (attackerGroup.attackCooldowns[idx] > 0)
+        {
+            attackerGroup.attackCooldowns[idx] -= dt;
+            return;
+        }
+
+        bool isArcher = attackerGroup.type == UnitType.Archer;
+        float range = isArcher ? attackRangeArcher : attackRangeMelee;
+        float rangeSq = range * range;
+        float cooldownTime = isArcher ? archerAttackCooldown : attackCooldown;
+
+        Vector3 myPos = (Vector3)attackerGroup.unitMatrices[idx].GetColumn(3);
+        
+        UnitRef target = new UnitRef { group = null };
+
+        if (isArcher)
+        {
+            target = FindTargetGlobal(myPos, range, rangeSq, enemyFaction);
+        }
+        else
+        {
+            target = FindTargetInGrid(myPos, rangeSq);
+        }
+
+        if (target.group != null)
+        {
+            if (target.index >= target.group.unitMatrices.Count) return;
+
+            float dmg = CalculateDamage(attackerGroup, target.group, idx, target.index, myPos, target.position);
+            target.group.unitHealth[target.index] -= dmg;
+            attackerGroup.attackCooldowns[idx] = cooldownTime * Random.Range(0.8f, 1.2f);
+
+            if (target.group.unitHealth[target.index] <= 0)
+            {
+                KillUnit(target.group, target.index);
+            }
+        }
+    }
+
+    UnitRef FindTargetGlobal(Vector3 myPos, float range, float rangeSq, List<TacticalGroup> enemies)
+    {
+        int startIdx = Random.Range(0, enemies.Count);
+
+        for(int i=0; i<enemies.Count; i++)
+        {
+            int idx = (startIdx + i) % enemies.Count;
+            var group = enemies[idx];
+
+            if (group.unitMatrices.Count == 0) continue;
+
+            float distToGroup = Vector3.Distance(myPos, group.groupCenter);
+            if (distToGroup < range + group.groupRadius)
+            {
+                for(int k=0; k<3; k++)
+                {
+                    int randIdx = Random.Range(0, group.unitMatrices.Count);
+                    Vector3 enemyPos = (Vector3)group.unitMatrices[randIdx].GetColumn(3);
+
+                    if ((myPos - enemyPos).sqrMagnitude < rangeSq)
+                    {
+                        return new UnitRef { group = group, index = randIdx, position = enemyPos };
+                    }
+                }
+            }
+        }
+        return new UnitRef { group = null };
+    }
+
+    void AddToGrid(TacticalGroup group, int index, Vector3 pos)
+    {
+        int key = GetGridKey(pos);
+        if (!spatialGrid.ContainsKey(key)) spatialGrid[key] = new List<UnitRef>();
+        spatialGrid[key].Add(new UnitRef { group = group, index = index, position = pos });
+    }
+
+    int GetGridKey(Vector3 pos)
+    {
+        int x = Mathf.FloorToInt(pos.x / cellSize);
+        int z = Mathf.FloorToInt(pos.z / cellSize);
+        return (x * 73856093) ^ (z * 19349663); 
+    }
+
+    UnitRef FindTargetInGrid(Vector3 pos, float rangeSq)
+    {
+        int cx = Mathf.FloorToInt(pos.x / cellSize);
+        int cz = Mathf.FloorToInt(pos.z / cellSize);
+
+        for (int x = -1; x <= 1; x++)
+        {
+            for (int z = -1; z <= 1; z++)
+            {
+                int nx = cx + x;
+                int nz = cz + z;
+                int key = (nx * 73856093) ^ (nz * 19349663);
+
+                if (spatialGrid.TryGetValue(key, out List<UnitRef> list))
+                {
+                    foreach (var u in list)
+                    {
+                        if ((u.position - pos).sqrMagnitude < rangeSq) return u; 
+                    }
+                }
+            }
+        }
+        return new UnitRef { group = null };
+    }
+
+    float CalculateDamage(TacticalGroup attGroup, TacticalGroup defGroup, int attIdx, int defIdx, Vector3 attPos, Vector3 defPos)
+    {
+        float finalDamage = 0f;
+        switch (attGroup.type)
+        {
+            case UnitType.Infantry: finalDamage = dmgInfantry; break;
+            case UnitType.Archer: finalDamage = Random.Range(dmgArcherMin, dmgArcherMax); break;
+            case UnitType.Cavalry: finalDamage = attGroup.isMoving ? dmgCavalryCharge : dmgCavalryStatic; break;
+        }
+
+        if (attPos.y > defPos.y + 1.0f) finalDamage *= 1.25f;
+        else if (attPos.y < defPos.y - 1.0f) finalDamage *= 0.75f;
+
+        return finalDamage;
+    }
+
+    void KillUnit(TacticalGroup group, int index)
+    {
+        group.RemoveUnitAt(index);
+        group.RebuildBatchesFull();
+
+        if (group.unitMatrices.Count == 0)
+        {
+            for (int i = uiElements.Count - 1; i >= 0; i--)
+            {
+                if (uiElements[i].GetGroup() == group)
+                {
+                    Destroy(uiElements[i].gameObject); 
+                    uiElements.RemoveAt(i); break;
+                }
+            }
+            if (selectedGroups.Contains(group)) selectedGroups.Remove(group);
+            if (lastSelectedGroup == group) lastSelectedGroup = null;
+        }
+        else
+        {
+            foreach (var ui in uiElements) if (ui.GetGroup() == group) { ui.UpdateUnitCount(); break; }
+        }
+        UpdateGlobalCounters();
+    }
+
     void KillRandomUnit(bool isFactionA)
     {
-        List<TacticalGroup> targetFaction = isFactionA ? factionAGroups : factionBGroups;
-        var aliveGroups = new List<TacticalGroup>();
-        foreach (var g in targetFaction) if (g.unitMatrices.Count > 0) aliveGroups.Add(g);
-        if (aliveGroups.Count == 0) return;
-        TacticalGroup randomGroup = aliveGroups[Random.Range(0, aliveGroups.Count)];
-        randomGroup.unitMatrices.RemoveAt(randomGroup.unitMatrices.Count - 1);
-        randomGroup.RebuildBatches();
-        foreach (var ui in uiElements) if (ui.GetGroup() == randomGroup) { ui.UpdateUnitCount(); break; }
-        UpdateGlobalCounters();
+        var targetFaction = isFactionA ? factionAGroups : factionBGroups;
+        foreach (var g in targetFaction) if (g.unitMatrices.Count > 0) { KillUnit(g, g.unitMatrices.Count - 1); return; }
     }
 
     void UpdateGlobalCounters()
@@ -455,23 +605,23 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void SetGroupHighlight(TacticalGroup group, bool highlight)
     {
-        if (group == null) return;
+        if (group == null || group.unitMatrices.Count == 0) return;
         if (highlight && highlightMaterial != null) group.unitMaterial = highlightMaterial;
         else if (originalMaterials.ContainsKey(group)) group.unitMaterial = originalMaterials[group];
     }
 
     public void SelectGroup(TacticalGroup group)
     {
+        if (group.unitMatrices.Count == 0) return; 
         bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
         bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
         if (shift && lastSelectedGroup != null && lastSelectedGroup != group) HandleShiftSelection(group);
-        else if (ctrl)
-        {
+        else if (ctrl) {
             if (selectedGroups.Contains(group)) { SetGroupHighlight(group, false); selectedGroups.Remove(group); }
             else { selectedGroups.Add(group); SetGroupHighlight(group, true); lastSelectedGroup = group; }
         }
-        else
-        {
+        else {
             foreach (var g in selectedGroups) SetGroupHighlight(g, false);
             selectedGroups.Clear(); selectedGroups.Add(group); SetGroupHighlight(group, true); lastSelectedGroup = group;
         }
@@ -481,21 +631,17 @@ public class ArmyHierarchyManager : MonoBehaviour
     void HandleShiftSelection(TacticalGroup currentGroup)
     {
         int indexStart = -1, indexEnd = -1;
-        for (int i = 0; i < uiElements.Count; i++)
-        {
+        for (int i = 0; i < uiElements.Count; i++) {
             if (uiElements[i].GetGroup() == lastSelectedGroup) indexStart = i;
             if (uiElements[i].GetGroup() == currentGroup) indexEnd = i;
         }
-        if (indexStart != -1 && indexEnd != -1)
-        {
-            int min = Mathf.Min(indexStart, indexEnd), max = Mathf.Max(indexStart, indexEnd);
-            if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
-            {
+        if (indexStart != -1 && indexEnd != -1) {
+            int min = Mathf.Min(indexStart, indexEnd); int max = Mathf.Max(indexStart, indexEnd);
+            if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl)) {
                 foreach (var g in selectedGroups) SetGroupHighlight(g, false);
                 selectedGroups.Clear();
             }
-            for (int i = min; i <= max; i++)
-            {
+            for (int i = min; i <= max; i++) {
                 TacticalGroup g = uiElements[i].GetGroup();
                 if (!selectedGroups.Contains(g)) { selectedGroups.Add(g); SetGroupHighlight(g, true); }
             }
@@ -504,18 +650,13 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void UpdateUISelectionVisuals() { foreach (var ui in uiElements) ui.SetSelectionState(selectedGroups.Contains(ui.GetGroup())); }
 
-    [Header("Selection Raycast")]
-    public LayerMask terrainLayerMask = 1; // Domyślnie Default
-
     void HandleMouseInput()
     {
-        if (Input.GetMouseButtonDown(0) && selectedGroups.Count > 0)
-        {
+        if (Input.GetMouseButtonDown(0) && selectedGroups.Count > 0) {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 10000f, terrainLayerMask))
-            {
-                foreach (var group in selectedGroups) IssueMoveOrder(group, hit.point);
+            if (Physics.Raycast(ray, out hit, 10000f, terrainLayerMask)) {
+                foreach (var group in selectedGroups) if (group.unitMatrices.Count > 0) IssueMoveOrder(group, hit.point);
             }
         }
     }
@@ -534,5 +675,13 @@ public class ArmyHierarchyManager : MonoBehaviour
         Vector3 center = new Vector3((minX + maxX) / 2, 50, (minZ + maxZ) / 2);
         Vector3 size = new Vector3(maxX - minX, 100, maxZ - minZ);
         Gizmos.DrawWireCube(center, size);
+
+        if (factionAGroups.Count > 0 && factionAGroups[0].unitMatrices.Count > 0) {
+            Matrix4x4 mat = factionAGroups[0].unitMatrices[0];
+            Vector3 pos = (Vector3)mat.GetColumn(3);
+            Vector3 dir = (factionAGroups[0].currentDestination - factionAGroups[0].groupCenter).normalized;
+            Gizmos.color = Color.blue;
+            Gizmos.DrawLine(pos, pos + dir * slopeCheckDistance);
+        }
     }
 }

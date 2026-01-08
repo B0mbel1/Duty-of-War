@@ -309,28 +309,25 @@ MonoBehaviour:
   rotationSpeed: 8
   stopDistance: 2
   cavalrySpeedMultiplier: 1.5
-  waterSpeedPenalty: 0.5
   waterLayerMask:
     serializedVersion: 2
     m_Bits: 16
+  waterSpeedPenalty: 0.5
   swimmingDepth: 0.2
-  forestLayerName: Forest
-  forestCavalryPenalty: 0.7
-  forestInfantryPenalty: 1
-  slopeCheckDistance: 1
-  lightSlopeAngle: 10
-  steepSlopeAngle: 30
-  uphillLightMult: 0.5
-  downhillLightMult: 1.2
-  uphillSteepMult: 0.2
-  downhillSteepMult: 0.7
   minX: 0
   maxX: 2000
   minZ: 0
   maxZ: 2000
-  offsetInfantry: 0.5
-  offsetArcher: 0.5
-  offsetCavalry: 1
+  attackRangeMelee: 1.5
+  attackRangeArcher: 100
+  attackCooldown: 1.5
+  archerAttackCooldown: 1.5
+  hpMax: 2
+  dmgInfantry: 1
+  dmgArcherMin: 0.4
+  dmgArcherMax: 0.8
+  dmgCavalryCharge: 2
+  dmgCavalryStatic: 0.8
   factionAGroups: []
   factionBGroups: []
   terrainLayerMask:

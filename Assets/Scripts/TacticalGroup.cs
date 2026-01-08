@@ -1,120 +1,147 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+public enum UnitType { Infantry, Archer, Cavalry }
+
 [System.Serializable]
 public class TacticalGroup
 {
-    public string groupName;           // Np. "1. Kompania Piechoty"
-    public int unitID;                 // Unikalne ID do UI
-    public HierarchyRank rank;         // Np. Kompania, Batalion
+    public string groupName;
+    public UnitType type;
+    public int unitID;
+    public HierarchyRank rank;
 
     // Wizualia
     public Mesh unitMesh;
     public Material unitMaterial;
-
     public Mesh arrowMesh;
     public Material arrowMaterial;
-
     public float speedMultiplier = 1.0f;
 
-    // Dane matematyczne
+    // --- DANE ---
     public List<Matrix4x4> unitMatrices = new List<Matrix4x4>();
-    public List<Matrix4x4[]> renderBatches = new List<Matrix4x4[]>(); // Batche do renderowania
+    
+    // ZMIANA: Buforowane tablice do renderowania (Å¼eby nie tworzyÄ‡ nowych co klatkÄ™)
+    // Instancing wymaga tablicy max 1023 elementowej.
+    public List<Matrix4x4[]> batchBuffers = new List<Matrix4x4[]>(); 
+    
+    public List<float> unitHealth = new List<float>();
+    public List<float> attackCooldowns = new List<float>();
+    public List<Vector3> lastPositions = new List<Vector3>();
 
-    // Logika ruchu
     public Vector3 currentDestination;
     public bool isMoving = false;
-
-    public Vector3 groupCenter;        // Œrodek formacji (œrednia arytmetyczna)
-
-    // --- NOWOŒÆ: Rzeczywisty promieñ grupy (do wykrywania wody na krawêdziach) ---
+    public Vector3 groupCenter;
     public float groupRadius = 5.0f;
-    // -----------------------------------------------------------------------------
 
-    // Konstruktor
-    public TacticalGroup(string name, Mesh mesh, Material mat, HierarchyRank r)
+    private const int BATCH_SIZE = 1023;
+
+    public TacticalGroup(string name, Mesh mesh, Material mat, HierarchyRank r, UnitType unitType)
     {
         groupName = name;
         unitMesh = mesh;
         unitMaterial = mat;
         rank = r;
+        type = unitType;
     }
 
-    // Przeliczanie batchy (GPU Instancing wymaga paczek po 1023)
-    public void RebuildBatches()
+    public void AddUnit(Matrix4x4 matrix, float hp)
     {
-        renderBatches.Clear();
-        int batchSize = 1023;
-        for (int i = 0; i < unitMatrices.Count; i += batchSize)
+        unitMatrices.Add(matrix);
+        unitHealth.Add(hp);
+        attackCooldowns.Add(0f);
+        lastPositions.Add((Vector3)matrix.GetColumn(3));
+    }
+
+    public void RemoveUnitAt(int index)
+    {
+        // Swap-and-pop (szybsze usuwanie, ale zmienia kolejnoÅ›Ä‡ - w instancingu to nie przeszkadza wizualnie)
+        int lastIndex = unitMatrices.Count - 1;
+        if (index != lastIndex)
         {
-            int count = Mathf.Min(batchSize, unitMatrices.Count - i);
-            var batch = new Matrix4x4[count];
-            unitMatrices.CopyTo(i, batch, 0, count);
-            renderBatches.Add(batch);
+            unitMatrices[index] = unitMatrices[lastIndex];
+            unitHealth[index] = unitHealth[lastIndex];
+            attackCooldowns[index] = attackCooldowns[lastIndex];
+            lastPositions[index] = lastPositions[lastIndex];
         }
 
-        // Zawsze po przebudowaniu batchy przeliczamy centrum i rozmiar
+        unitMatrices.RemoveAt(lastIndex);
+        unitHealth.RemoveAt(lastIndex);
+        attackCooldowns.RemoveAt(lastIndex);
+        lastPositions.RemoveAt(lastIndex);
+        
+        // Po usuniÄ™ciu jednostki musimy przebudowaÄ‡ strukturÄ™ tablic
+        RebuildBatchesFull(); 
+    }
+
+    // PeÅ‚na przebudowa (tylko przy starcie lub Å›mierci jednostki) -> Tworzy nowe tablice (Alokacja)
+    public void RebuildBatchesFull()
+    {
+        batchBuffers.Clear();
+        for (int i = 0; i < unitMatrices.Count; i += BATCH_SIZE)
+        {
+            int count = Mathf.Min(BATCH_SIZE, unitMatrices.Count - i);
+            batchBuffers.Add(new Matrix4x4[count]); // Tu alokujemy pamiÄ™Ä‡
+        }
+        UpdateBatchData(); // WypeÅ‚nij danymi
         RecalculateCenter();
+    }
+
+    // Szybka aktualizacja (co klatkÄ™ przy ruchu) -> NIE ALOKUJE PAMIÄ˜CI!
+    public void UpdateBatchData()
+    {
+        int globalIndex = 0;
+        for (int b = 0; b < batchBuffers.Count; b++)
+        {
+            Matrix4x4[] batch = batchBuffers[b];
+            for (int k = 0; k < batch.Length; k++)
+            {
+                if (globalIndex < unitMatrices.Count)
+                {
+                    batch[k] = unitMatrices[globalIndex];
+                    globalIndex++;
+                }
+            }
+        }
+    }
+
+    public void RecalculateCenter()
+    {
+        if (unitMatrices.Count == 0) return;
+        // Optymalizacja: Licz Å›rodek tylko na podstawie co 10 jednostki (przybliÅ¼enie)
+        // przy 5000 jednostek, iterowanie wszystkich co klatkÄ™ jest zbÄ™dne.
+        Vector3 sum = Vector3.zero;
+        int step = Mathf.Max(1, unitMatrices.Count / 50); // PrÃ³bkuj max 50 jednostek
+        int sampledCount = 0;
+
+        float minX = float.MaxValue, maxX = float.MinValue;
+        float minZ = float.MaxValue, maxZ = float.MinValue;
+
+        for (int i = 0; i < unitMatrices.Count; i += step)
+        {
+            Vector3 pos = (Vector3)unitMatrices[i].GetColumn(3);
+            sum += pos;
+            if (pos.x < minX) minX = pos.x; if (pos.x > maxX) maxX = pos.x;
+            if (pos.z < minZ) minZ = pos.z; if (pos.z > maxZ) maxZ = pos.z;
+            sampledCount++;
+        }
+
+        groupCenter = sum / sampledCount;
+        float sizeX = maxX - minX;
+        float sizeZ = maxZ - minZ;
+        groupRadius = (Mathf.Max(sizeX, sizeZ) * 0.5f) + 1.0f;
+    }
+
+    public void RenderGroup()
+    {
+        if (unitMesh == null || unitMaterial == null) return;
+        foreach (var batch in batchBuffers) Graphics.DrawMeshInstanced(unitMesh, 0, unitMaterial, batch);
     }
 
     public void RenderIndicators()
     {
         if (arrowMesh == null || arrowMaterial == null) return;
-
-        // U¿ywamy tych samych batchy co jednostki, wiêc strza³ki 
-        // bêd¹ mia³y identyczn¹ pozycjê i rotacjê.
-        foreach (var batch in renderBatches)
-        {
-            Graphics.DrawMeshInstanced(arrowMesh, 0, arrowMaterial, batch);
-        }
-    }
-
-    // --- ZMODYFIKOWANA METODA: OBLICZA ŒRODEK I ROZMIAR (RADIUS) ---
-    public void RecalculateCenter()
-    {
-        if (unitMatrices.Count == 0) return;
-
-        Vector3 sum = Vector3.zero;
-
-        // Zmienne do znalezienia skrajnych punktów (Bounding Box)
-        float minX = float.MaxValue;
-        float maxX = float.MinValue;
-        float minZ = float.MaxValue;
-        float maxZ = float.MinValue;
-
-        foreach (var mat in unitMatrices)
-        {
-            Vector3 pos = (Vector3)mat.GetColumn(3); // Pobierz pozycjê z macierzy
-            sum += pos;
-
-            // Sprawdzamy granice
-            if (pos.x < minX) minX = pos.x;
-            if (pos.x > maxX) maxX = pos.x;
-            if (pos.z < minZ) minZ = pos.z;
-            if (pos.z > maxZ) maxZ = pos.z;
-        }
-
-        // 1. Œrodek masy
-        groupCenter = sum / unitMatrices.Count;
-
-        // 2. Obliczanie promienia (po³owa d³u¿szego boku prostok¹ta otaczaj¹cego)
-        float sizeX = maxX - minX;
-        float sizeZ = maxZ - minZ;
-
-        // Bierzemy wiêkszy wymiar i dzielimy na pó³. 
-        // Dodajemy minimalny margines 1.0f, ¿eby promieñ nie by³ zerowy dla pojedynczej jednostki.
-        groupRadius = (Mathf.Max(sizeX, sizeZ) * 0.5f) + 1.0f;
-    }
-    // ---------------------------------------------------------------
-
-    // Renderowanie tego konkretnego oddzia³u
-    public void RenderGroup()
-    {
-        if (unitMesh == null || unitMaterial == null) return;
-        foreach (var batch in renderBatches)
-        {
-            Graphics.DrawMeshInstanced(unitMesh, 0, unitMaterial, batch);
-        }
+        foreach (var batch in batchBuffers) Graphics.DrawMeshInstanced(arrowMesh, 0, arrowMaterial, batch);
     }
 }
 
