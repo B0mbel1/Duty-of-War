@@ -2,24 +2,34 @@ using UnityEngine;
 
 public class MusicManager : MonoBehaviour
 {
-    // Statyczna zmienna, która będzie przechowywać odniesienie do jedynego działającego odtwarzacza
     public static MusicManager instance;
+    private AudioSource audioSource; // Prywatne odniesienie do głośnika
 
     void Awake()
     {
-        // Sprawdzamy, czy instancja już istnieje
         if (instance == null)
         {
-            // Jeśli nie, to ten obiekt staje się instancją
             instance = this;
-            // I mówimy Unity: "Nie niszcz tego obiektu przy ładowaniu nowej sceny"
             DontDestroyOnLoad(gameObject);
+            
+            // Pobieramy AudioSource, żeby móc nim sterować
+            audioSource = GetComponent<AudioSource>();
         }
         else
         {
-            // Jeśli instancja już istnieje (np. wróciliśmy do Menu i Unity stworzyło drugi taki sam obiekt),
-            // to niszczymy ten nowy, żeby muzyka się nie dublowała.
             Destroy(gameObject);
         }
+    }
+
+    // Nowa funkcja do zmiany muzyki
+    public void ChangeMusic(AudioClip newClip)
+    {
+        // 1. Jeśli nowa muzyka jest taka sama jak ta co gra, nie rób nic (żeby nie restartować utworu)
+        if (audioSource.clip == newClip) return;
+
+        // 2. Jeśli jest inna: Zatrzymaj, Podmień, Graj
+        audioSource.Stop();
+        audioSource.clip = newClip;
+        audioSource.Play();
     }
 }

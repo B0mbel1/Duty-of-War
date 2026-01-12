@@ -772,20 +772,87 @@ MonoBehaviour:
   moveSpeed: 10
   rotationSpeed: 8
   stopDistance: 2
-  groundLayer:
+  cavalrySpeedMultiplier: 1.5
+  waterLayerMask:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 0
+  waterSpeedPenalty: 0.5
+  swimmingDepth: 0.2
+  forestLayerName: Forest
+  forestCavalryPenalty: 0.7
+  forestInfantryPenalty: 0.9
+  slopeCheckDistance: 2
+  lightSlopeAngle: 10
+  steepSlopeAngle: 30
+  uphillLightMult: 0.8
+  uphillSteepMult: 0.4
+  downhillLightMult: 1.1
+  downhillSteepMult: 0.9
+  attackRangeMelee: 3.5
+  attackRangeArcher: 80
+  attackCooldown: 1
+  archerAttackCooldown: 2
   minX: 0
   maxX: 2000
   minZ: 0
   maxZ: 2000
-  waterTag: Water
-  swimmingDepth: 0.2
-  offsetInfantry: 0.5
-  offsetArcher: 0.5
-  offsetCavalry: 1
+  maxCombatChecksPerFrame: 2000
+  hpMax: 2
+  dmgInfantry: 1
+  dmgArcherMin: 0.5
+  dmgArcherMax: 1
+  dmgCavalryCharge: 2
+  dmgCavalryStatic: 0.8
   factionAGroups: []
   factionBGroups: []
+  terrainLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+--- !u!1 &1807403836
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1807403838}
+  - component: {fileID: 1807403837}
+  m_Layer: 0
+  m_Name: MusicManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1807403837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1807403836}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0245a240cf1b65c48afafabd6bd81232, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneMusic
+  musicForThisScene: {fileID: 8300000, guid: 19659dceb2e10934a93ec80b9b1b56e5, type: 3}
+--- !u!4 &1807403838
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1807403836}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 333.74182, y: 231.55707, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1922922037
 GameObject:
   m_ObjectHideFlags: 0
@@ -908,3 +975,4 @@ SceneRoots:
   - {fileID: 1763565837}
   - {fileID: 1805836860}
   - {fileID: 1387019332}
+  - {fileID: 1807403838}
