@@ -807,7 +807,9 @@ MonoBehaviour:
   downhillLightMult: 1.2
   downhillSteepMult: 0.7
   attackRangeMelee: 3.5
-  attackRangeArcher: 80
+  attackRangeArcher: 100
+  heightRangeBonus: 0.5
+  maxHeightDamageBonus: 1.5
   attackCooldown: 1
   archerAttackCooldown: 2
   minX: 0

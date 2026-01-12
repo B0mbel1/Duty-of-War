@@ -40,27 +40,31 @@ public class ArmyHierarchyManager : MonoBehaviour
     // --- NOWOŚĆ: PRZYWRÓCONY LAS ---
     [Header("Forest Settings")]
     [Tooltip("Dokładna nazwa warstwy terenu (Terrain Layer), która jest lasem.")]
-    public string forestLayerName = "Forest"; 
+    public string forestLayerName = "Forest";
     public float forestCavalryPenalty = 0.7f; // Kawaleria zwalnia mocniej
     public float forestInfantryPenalty = 0.9f; // Piechota radzi sobie lepiej
     private int forestLayerIndex = -1;
     // --------------------------------
 
     [Header("Slope Physics")]
-    public float slopeCheckDistance = 2.0f; 
+    public float slopeCheckDistance = 2.0f;
     public float lightSlopeAngle = 10f;
-    public float steepSlopeAngle = 30f; 
-    
+    public float steepSlopeAngle = 30f;
+
     [Header("Slope Multipliers")]
     public float uphillLightMult = 0.8f;
-    public float uphillSteepMult = 0.4f;   
+    public float uphillSteepMult = 0.4f;
     public float downhillLightMult = 1.1f;
-    public float downhillSteepMult = 0.9f; 
+    public float downhillSteepMult = 0.9f;
 
     [Header("Combat Settings")]
-    public float attackRangeMelee = 3.5f; 
-    public float attackRangeArcher = 80f; 
-    public float attackCooldown = 1.0f; 
+    public float attackRangeMelee = 3.5f;
+    public float attackRangeArcher = 80f;
+    [Tooltip("Ile metrów zasięgu zyskuje łucznik za każdy metr przewagi wysokości.")]
+    public float heightRangeBonus = 0.5f; // Np. 0.5 oznacza: będąc 10m wyżej, mam 5m więcej zasięgu.
+    [Tooltip("Maksymalna premia do obrażeń za wysokość.")]
+    public float maxHeightDamageBonus = 1.5f;
+    public float attackCooldown = 1.0f;
     public float archerAttackCooldown = 2.0f;
 
     [Header("Map Boundaries")]
@@ -68,7 +72,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     public float minZ = 0f; public float maxZ = 2000f;
 
     [Header("Performance")]
-    public int maxCombatChecksPerFrame = 2000; 
+    public int maxCombatChecksPerFrame = 2000;
 
     [Header("Base Stats")]
     public float hpMax = 2.0f;
@@ -93,7 +97,7 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     // --- SPATIAL GRID ---
     private Dictionary<int, List<UnitRef>> spatialGrid = new Dictionary<int, List<UnitRef>>();
-    private float cellSize = 10.0f; 
+    private float cellSize = 10.0f;
 
     // --- FAIR SCHEDULER ---
     private int nextGroupIdxA = 0;
@@ -242,12 +246,12 @@ public class ArmyHierarchyManager : MonoBehaviour
             foreach (var matrix in slice)
             {
                 newGroup.unitHealth.Add(hpMax);
-                newGroup.attackCooldowns.Add(Random.Range(0f, 1.0f)); 
+                newGroup.attackCooldowns.Add(Random.Range(0f, 1.0f));
                 newGroup.lastPositions.Add((Vector3)matrix.GetColumn(3));
             }
-            
+
             if (newGroup.unitMatrices.Count > 0) newGroup.RebuildBatchesFull();
-            
+
             targetCollection.Add(newGroup);
 
             if (createUI && uiContainer != null)
@@ -286,7 +290,7 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         Vector3 direction = (flatTarget - flatCenter).normalized;
         float baseSpeed = moveSpeed * group.speedMultiplier * Time.deltaTime;
-        
+
         Quaternion currentRot = group.unitMatrices[0].rotation;
         Quaternion targetRot = Quaternion.LookRotation(direction);
         Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
@@ -315,7 +319,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             RaycastHit hit;
             if (Physics.Raycast(currentPos + Vector3.up * 50f, Vector3.down, out hit, 100f, waterLayerMask))
             {
-                if (hit.point.y > terrainY - 0.1f) 
+                if (hit.point.y > terrainY - 0.1f)
                 {
                     inWater = true;
                     waterHeight = hit.point.y;
@@ -331,10 +335,10 @@ public class ArmyHierarchyManager : MonoBehaviour
                 float heightDiff = nextY - terrainY;
                 float angle = Mathf.Atan2(heightDiff, slopeCheckDistance) * Mathf.Rad2Deg;
 
-                if (angle > steepSlopeAngle) slopeMod = uphillSteepMult;       
-                else if (angle > lightSlopeAngle) slopeMod = uphillLightMult;  
-                else if (angle < -steepSlopeAngle) slopeMod = downhillSteepMult; 
-                else if (angle < -lightSlopeAngle) slopeMod = downhillLightMult; 
+                if (angle > steepSlopeAngle) slopeMod = uphillSteepMult;
+                else if (angle > lightSlopeAngle) slopeMod = uphillLightMult;
+                else if (angle < -steepSlopeAngle) slopeMod = downhillSteepMult;
+                else if (angle < -lightSlopeAngle) slopeMod = downhillLightMult;
             }
 
             // --- 3. LAS (ALPHAMAP CHECK) ---
@@ -372,8 +376,8 @@ public class ArmyHierarchyManager : MonoBehaviour
 
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
         }
-        
-        group.UpdateBatchData(); 
+
+        group.UpdateBatchData();
         group.RecalculateCenter();
     }
 
@@ -387,7 +391,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         foreach (var groupB in factionBGroups)
         {
             if (groupB.unitMatrices.Count == 0) continue;
-            for(int i=0; i<groupB.unitMatrices.Count; i++)
+            for (int i = 0; i < groupB.unitMatrices.Count; i++)
                 AddToGrid(groupB, i, (Vector3)groupB.unitMatrices[i].GetColumn(3));
         }
         ProcessFactionAttack(factionAGroups, factionBGroups, ref nextGroupIdxA, ref nextUnitIdxA, halfBudget);
@@ -397,7 +401,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         foreach (var groupA in factionAGroups)
         {
             if (groupA.unitMatrices.Count == 0) continue;
-            for(int i=0; i<groupA.unitMatrices.Count; i++)
+            for (int i = 0; i < groupA.unitMatrices.Count; i++)
                 AddToGrid(groupA, i, (Vector3)groupA.unitMatrices[i].GetColumn(3));
         }
         ProcessFactionAttack(factionBGroups, factionAGroups, ref nextGroupIdxB, ref nextUnitIdxB, halfBudget);
@@ -424,7 +428,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             {
                 ProcessSingleAttacker(attGroup, defenders, unitIdx);
                 unitIdx++;
-                budget--; 
+                budget--;
             }
 
             if (unitIdx >= attGroup.unitMatrices.Count)
@@ -453,7 +457,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         float cooldownTime = isArcher ? archerAttackCooldown : attackCooldown;
 
         Vector3 myPos = (Vector3)attackerGroup.unitMatrices[idx].GetColumn(3);
-        
+
         UnitRef target = new UnitRef { group = null };
 
         if (isArcher)
@@ -480,28 +484,56 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
     }
 
-    UnitRef FindTargetGlobal(Vector3 myPos, float range, float rangeSq, List<TacticalGroup> enemies)
+    UnitRef FindTargetGlobal(Vector3 myPos, float baseRange, float unusedRangeSq, List<TacticalGroup> enemies)
     {
         int startIdx = Random.Range(0, enemies.Count);
 
-        for(int i=0; i<enemies.Count; i++)
+        for (int i = 0; i < enemies.Count; i++)
         {
             int idx = (startIdx + i) % enemies.Count;
             var group = enemies[idx];
 
             if (group.unitMatrices.Count == 0) continue;
-
+            Vector3 centerDir = group.groupCenter - myPos;
+            float flatDistToGroup = new Vector2(centerDir.x, centerDir.z).magnitude;
             float distToGroup = Vector3.Distance(myPos, group.groupCenter);
-            if (distToGroup < range + group.groupRadius)
+            if (flatDistToGroup < baseRange + group.groupRadius + 50f)
             {
-                for(int k=0; k<3; k++)
+                // Sprawdzamy kilka losowych jednostek w oddziale (próbkowanie)
+                int attempts = 3;
+                for (int k = 0; k < attempts; k++)
                 {
                     int randIdx = Random.Range(0, group.unitMatrices.Count);
                     Vector3 enemyPos = (Vector3)group.unitMatrices[randIdx].GetColumn(3);
 
-                    if ((myPos - enemyPos).sqrMagnitude < rangeSq)
+                    // --- LOGIKA BALISTYKI I WYSOKOŚCI ---
+
+                    // A. Oblicz różnicę wysokości
+                    float heightDiff = myPos.y - enemyPos.y; // Dodatnie = strzelam w dół
+
+                    // B. Oblicz zmodyfikowany zasięg
+                    // Jeśli jesteś wyżej, zasięg rośnie. Jeśli niżej, maleje.
+                    float effectiveRange = baseRange + (heightDiff * heightRangeBonus);
+                    if (effectiveRange < 10f) effectiveRange = 10f; // Minimalny zasięg
+
+                    // C. Oblicz dystans płaski (XZ) do konkretnego wroga
+                    float dx = myPos.x - enemyPos.x;
+                    float dz = myPos.z - enemyPos.z;
+                    float distFlatSq = (dx * dx) + (dz * dz);
+
+                    // Sprawdź czy wróg jest w zasięgu (porównujemy kwadraty dla wydajności)
+                    if (distFlatSq < effectiveRange * effectiveRange)
                     {
-                        return new UnitRef { group = group, index = randIdx, position = enemyPos };
+                        // D. Raycast (Line of Sight) - Czy widzimy wroga?
+                        // Podnosimy punkt startu i końca o 1.5m (wysokość wzroku/głowy), żeby nie strzelać w podłogę pod nogami
+                        Vector3 originHead = myPos + Vector3.up * 1.5f;
+                        Vector3 targetHead = enemyPos + Vector3.up * 1.0f;
+
+                        // Sprawdzamy czy teren nie zasłania (używamy terrainLayerMask z Twojego skryptu)
+                        if (!Physics.Linecast(originHead, targetHead, terrainLayerMask))
+                        {
+                            return new UnitRef { group = group, index = randIdx, position = enemyPos };
+                        }
                     }
                 }
             }
@@ -520,7 +552,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         int x = Mathf.FloorToInt(pos.x / cellSize);
         int z = Mathf.FloorToInt(pos.z / cellSize);
-        return (x * 73856093) ^ (z * 19349663); 
+        return (x * 73856093) ^ (z * 19349663);
     }
 
     UnitRef FindTargetInGrid(Vector3 pos, float rangeSq)
@@ -540,7 +572,7 @@ public class ArmyHierarchyManager : MonoBehaviour
                 {
                     foreach (var u in list)
                     {
-                        if ((u.position - pos).sqrMagnitude < rangeSq) return u; 
+                        if ((u.position - pos).sqrMagnitude < rangeSq) return u;
                     }
                 }
             }
@@ -575,7 +607,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             {
                 if (uiElements[i].GetGroup() == group)
                 {
-                    Destroy(uiElements[i].gameObject); 
+                    Destroy(uiElements[i].gameObject);
                     uiElements.RemoveAt(i); break;
                 }
             }
@@ -612,16 +644,18 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     public void SelectGroup(TacticalGroup group)
     {
-        if (group.unitMatrices.Count == 0) return; 
+        if (group.unitMatrices.Count == 0) return;
         bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
         bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
         if (shift && lastSelectedGroup != null && lastSelectedGroup != group) HandleShiftSelection(group);
-        else if (ctrl) {
+        else if (ctrl)
+        {
             if (selectedGroups.Contains(group)) { SetGroupHighlight(group, false); selectedGroups.Remove(group); }
             else { selectedGroups.Add(group); SetGroupHighlight(group, true); lastSelectedGroup = group; }
         }
-        else {
+        else
+        {
             foreach (var g in selectedGroups) SetGroupHighlight(g, false);
             selectedGroups.Clear(); selectedGroups.Add(group); SetGroupHighlight(group, true); lastSelectedGroup = group;
         }
@@ -631,17 +665,21 @@ public class ArmyHierarchyManager : MonoBehaviour
     void HandleShiftSelection(TacticalGroup currentGroup)
     {
         int indexStart = -1, indexEnd = -1;
-        for (int i = 0; i < uiElements.Count; i++) {
+        for (int i = 0; i < uiElements.Count; i++)
+        {
             if (uiElements[i].GetGroup() == lastSelectedGroup) indexStart = i;
             if (uiElements[i].GetGroup() == currentGroup) indexEnd = i;
         }
-        if (indexStart != -1 && indexEnd != -1) {
+        if (indexStart != -1 && indexEnd != -1)
+        {
             int min = Mathf.Min(indexStart, indexEnd); int max = Mathf.Max(indexStart, indexEnd);
-            if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl)) {
+            if (!Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.RightControl))
+            {
                 foreach (var g in selectedGroups) SetGroupHighlight(g, false);
                 selectedGroups.Clear();
             }
-            for (int i = min; i <= max; i++) {
+            for (int i = min; i <= max; i++)
+            {
                 TacticalGroup g = uiElements[i].GetGroup();
                 if (!selectedGroups.Contains(g)) { selectedGroups.Add(g); SetGroupHighlight(g, true); }
             }
@@ -652,10 +690,12 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void HandleMouseInput()
     {
-        if (Input.GetMouseButtonDown(0) && selectedGroups.Count > 0) {
+        if (Input.GetMouseButtonDown(0) && selectedGroups.Count > 0)
+        {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 10000f, terrainLayerMask)) {
+            if (Physics.Raycast(ray, out hit, 10000f, terrainLayerMask))
+            {
                 foreach (var group in selectedGroups) if (group.unitMatrices.Count > 0) IssueMoveOrder(group, hit.point);
             }
         }
@@ -676,7 +716,8 @@ public class ArmyHierarchyManager : MonoBehaviour
         Vector3 size = new Vector3(maxX - minX, 100, maxZ - minZ);
         Gizmos.DrawWireCube(center, size);
 
-        if (factionAGroups.Count > 0 && factionAGroups[0].unitMatrices.Count > 0) {
+        if (factionAGroups.Count > 0 && factionAGroups[0].unitMatrices.Count > 0)
+        {
             Matrix4x4 mat = factionAGroups[0].unitMatrices[0];
             Vector3 pos = (Vector3)mat.GetColumn(3);
             Vector3 dir = (factionAGroups[0].currentDestination - factionAGroups[0].groupCenter).normalized;
