@@ -181,11 +181,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
       propertyPath: factionA_Army.infantryCount
-      value: 20000
+      value: 10000
       objectReference: {fileID: 0}
     - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
       propertyPath: factionB_Army.infantryCount
-      value: 15000
+      value: 8000
       objectReference: {fileID: 0}
     - target: {fileID: 5889732415969022792, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
       propertyPath: m_LocalPosition.x
