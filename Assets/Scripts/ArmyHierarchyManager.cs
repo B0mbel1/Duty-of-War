@@ -459,12 +459,15 @@ public class ArmyHierarchyManager : MonoBehaviour
             return;
         }
 
+        Matrix4x4 myMat = attackerGroup.unitMatrices[idx];
+        Vector3 myPos = (Vector3)myMat.GetColumn(3); // Pozycja
+        Vector3 myForward = (Vector3)myMat.GetColumn(2);
+
         bool isArcher = attackerGroup.type == UnitType.Archer;
         float range = isArcher ? attackRangeArcher : attackRangeMelee;
         float rangeSq = range * range;
         float cooldownTime = isArcher ? archerAttackCooldown : attackCooldown;
 
-        Vector3 myPos = (Vector3)attackerGroup.unitMatrices[idx].GetColumn(3);
 
         UnitRef target = new UnitRef { group = null };
 
@@ -480,6 +483,19 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (target.group != null)
         {
             if (target.index >= target.group.unitMatrices.Count) return;
+
+            Vector3 dirToTarget = (target.position - myPos).normalized;
+            // Dot Product: 1.0 = idealnie przodem, 0.0 = bokiem, -1.0 = idealnie tyłem
+            // Wartość 0.2f daje dość szeroki kąt z przodu (ok. 150 stopni pola widzenia)
+            float angleDot = Vector3.Dot(myForward, dirToTarget);
+
+            if (angleDot < 0.2f)
+            {
+                // Jeśli wróg jest za plecami lub mocno z boku -> nie atakuj w tej klatce
+                // (Opcjonalnie: można tu dodać logikę obracania się w stronę wroga)
+                return;
+            }
+            // -------------------------------------------------------------
 
             float dmg = CalculateDamage(attackerGroup, target.group, idx, target.index, myPos, target.position);
             target.group.unitHealth[target.index] -= dmg;

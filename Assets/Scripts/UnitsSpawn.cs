@@ -4,7 +4,7 @@ using TMPro;
 
 public class UnitsSpawn : MonoBehaviour
 {
-    // --- KONFIGURACJA SK£ADU ARMII ---
+    // --- KONFIGURACJA SKï¿½ADU ARMII ---
     [System.Serializable]
     public class ArmyComposition
     {
@@ -45,10 +45,10 @@ public class UnitsSpawn : MonoBehaviour
     [Range(0f, 1f)]
     public float randomness = 0.8f;
 
-    // --- NOWOŒÆ: USTAWIENIA WODY DLA SPAWNU ---
+    // --- NOWOï¿½ï¿½: USTAWIENIA WODY DLA SPAWNU ---
     [Header("Water Settings (Spawn Correction)")]
     public string waterTag = "Water";
-    public float swimmingDepth = 0.5f; // Musi byæ takie samo jak w Managerze
+    public float swimmingDepth = 0.5f; // Musi byï¿½ takie samo jak w Managerze
     // -------------------------------------------
 
     [Header("Camera Start Settings")]
@@ -90,7 +90,7 @@ public class UnitsSpawn : MonoBehaviour
         terrain = Terrain.activeTerrain;
         if (terrain == null) return;
 
-        // 1. Wykryj wodê PRZED spawnowaniem
+        // 1. Wykryj wodï¿½ PRZED spawnowaniem
         DetectWater();
 
         // 2. Spawnowanie
@@ -110,7 +110,7 @@ public class UnitsSpawn : MonoBehaviour
         GameObject waterObj = GameObject.FindGameObjectWithTag(waterTag);
         if (waterObj != null)
         {
-            // Zak³adamy p³ask¹ taflê wody (proste rozwi¹zanie dla spawnu)
+            // Zakï¿½adamy pï¿½askï¿½ taflï¿½ wody (proste rozwiï¿½zanie dla spawnu)
             waterSurfaceY = waterObj.transform.position.y + (waterObj.transform.localScale.y * 0.5f);
             waterFound = true;
         }
@@ -162,76 +162,83 @@ public class UnitsSpawn : MonoBehaviour
     {
         if (mainArea == null) return;
         mainArea.GetComponent<Renderer>().enabled = false;
-
         Collider colMain = mainArea.GetComponent<Collider>();
         if (colMain != null) colMain.enabled = false;
-
 
         if (secArea != null)
         {
             secArea.GetComponent<Renderer>().enabled = false;
-
-            // --- NOWOŒÆ dla drugiego obszaru ---
             Collider colSec = secArea.GetComponent<Collider>();
             if (colSec != null) colSec.enabled = false;
-            // -----------------------------------
         }
 
         System.Random rand = new System.Random();
 
+        // --- NOWOÅšÄ†: Ustalamy punkt, na ktÃ³ry majÄ… patrzeÄ‡ jednostki ---
+        // JeÅ›li jestem FrakcjÄ… A -> patrzÄ™ na Spawn B, i odwrotnie.
+        Vector3 enemyTargetPos = isFactionA ? spawnAreaB.transform.position : spawnAreaA.transform.position;
+        // --------------------------------------------------------------
+
         if (secArea == null)
         {
             Queue<Vector3> queue = GenerateSafeGrid(mainArea);
-            SpawnUnitGroup(UnitType.Infantry, army.infantryCount, queue, rand, isFactionA);
-            SpawnUnitGroup(UnitType.Archer, army.archerCount, queue, rand, isFactionA);
-            SpawnUnitGroup(UnitType.Cavalry, army.cavalryCount, queue, rand, isFactionA);
+            // Przekazujemy enemyTargetPos do funkcji spawnu
+            SpawnUnitGroup(UnitType.Infantry, army.infantryCount, queue, rand, isFactionA, enemyTargetPos);
+            SpawnUnitGroup(UnitType.Archer, army.archerCount, queue, rand, isFactionA, enemyTargetPos);
+            SpawnUnitGroup(UnitType.Cavalry, army.cavalryCount, queue, rand, isFactionA, enemyTargetPos);
         }
         else
         {
             Queue<Vector3> queueMain = GenerateSafeGrid(mainArea);
             Queue<Vector3> queueSec = GenerateSafeGrid(secArea);
-            SplitAndSpawn(UnitType.Infantry, army.infantryCount, queueMain, queueSec, rand, isFactionA);
-            SplitAndSpawn(UnitType.Archer, army.archerCount, queueMain, queueSec, rand, isFactionA);
-            SplitAndSpawn(UnitType.Cavalry, army.cavalryCount, queueMain, queueSec, rand, isFactionA);
+            SplitAndSpawn(UnitType.Infantry, army.infantryCount, queueMain, queueSec, rand, isFactionA, enemyTargetPos);
+            SplitAndSpawn(UnitType.Archer, army.archerCount, queueMain, queueSec, rand, isFactionA, enemyTargetPos);
+            SplitAndSpawn(UnitType.Cavalry, army.cavalryCount, queueMain, queueSec, rand, isFactionA, enemyTargetPos);
         }
     }
 
-    void SplitAndSpawn(UnitType type, int totalCount, Queue<Vector3> q1, Queue<Vector3> q2, System.Random rand, bool isFactionA)
+    void SplitAndSpawn(UnitType type, int totalCount, Queue<Vector3> q1, Queue<Vector3> q2, System.Random rand, bool isFactionA, Vector3 lookTarget)
     {
         int count1 = totalCount / 2;
         int count2 = totalCount - count1;
-        SpawnUnitGroup(type, count1, q1, rand, isFactionA);
-        SpawnUnitGroup(type, count2, q2, rand, isFactionA);
+        SpawnUnitGroup(type, count1, q1, rand, isFactionA, lookTarget);
+        SpawnUnitGroup(type, count2, q2, rand, isFactionA, lookTarget);
     }
 
-    void SpawnUnitGroup(UnitType type, int count, Queue<Vector3> positionQueue, System.Random rand, bool isFactionA)
+    void SpawnUnitGroup(UnitType type, int count, Queue<Vector3> positionQueue, System.Random rand, bool isFactionA, Vector3 lookTarget)
     {
         for (int i = 0; i < count; i++)
         {
             if (positionQueue.Count == 0) break;
             Vector3 rawPos = positionQueue.Dequeue();
 
-            // Pobieramy wysokoœæ terenu
             float terrainY = terrain.SampleHeight(rawPos) + terrain.transform.position.y;
+            float finalY = terrainY + (unitDiameter * 0.5f);
 
-            // Domyœlna pozycja (L¹d)
-            float finalY = terrainY + (unitDiameter * 0.5f); // + po³owa wysokoœci jednostki (¿eby sta³a na ziemi)
-
-            // --- KOREKTA WODNA ---
             if (waterFound)
             {
-                // Jeœli teren jest poni¿ej lustra wody -> ustaw na wodzie (minus zanurzenie)
                 if (terrainY < waterSurfaceY)
                 {
                     finalY = waterSurfaceY - swimmingDepth;
                 }
             }
-            // ---------------------
 
             Vector3 finalPos = new Vector3(rawPos.x, finalY, rawPos.z);
-            float rotY = (float)rand.NextDouble() * 360f;
-            Quaternion rotation = Quaternion.Euler(0, rotY, 0);
-            Matrix4x4 matrix = Matrix4x4.TRS(finalPos, rotation, Vector3.one * unitDiameter);
+
+            // --- NOWOÅšÄ†: Obliczanie rotacji w stronÄ™ wroga ---
+            Vector3 directionToEnemy = (lookTarget - finalPos).normalized;
+            directionToEnemy.y = 0; // Ignoruj wysokoÅ›Ä‡, Å¼eby nie pochylali siÄ™ w dÃ³Å‚/gÃ³rÄ™
+
+            if (directionToEnemy == Vector3.zero) directionToEnemy = Vector3.forward;
+
+            Quaternion baseRotation = Quaternion.LookRotation(directionToEnemy);
+            
+            // Dodajemy maÅ‚y losowy odchyÅ‚ (jitter), np. +/- 10 stopni, Å¼eby nie wyglÄ…dali jak roboty
+            float randomJitter = (float)(rand.NextDouble() * 20.0 - 10.0); 
+            Quaternion finalRotation = baseRotation * Quaternion.Euler(0, randomJitter, 0);
+            // -----------------------------------------------
+
+            Matrix4x4 matrix = Matrix4x4.TRS(finalPos, finalRotation, Vector3.one * unitDiameter);
 
             if (isFactionA)
             {
