@@ -459,15 +459,15 @@ public class ArmyHierarchyManager : MonoBehaviour
             return;
         }
 
+        // Pobranie pozycji i wektora przodu atakującego
         Matrix4x4 myMat = attackerGroup.unitMatrices[idx];
-        Vector3 myPos = (Vector3)myMat.GetColumn(3); // Pozycja
-        Vector3 myForward = (Vector3)myMat.GetColumn(2);
+        Vector3 myPos = (Vector3)myMat.GetColumn(3);
+        Vector3 myForward = (Vector3)myMat.GetColumn(2); // Gdzie patrzę?
 
         bool isArcher = attackerGroup.type == UnitType.Archer;
         float range = isArcher ? attackRangeArcher : attackRangeMelee;
         float rangeSq = range * range;
         float cooldownTime = isArcher ? archerAttackCooldown : attackCooldown;
-
 
         UnitRef target = new UnitRef { group = null };
 
@@ -484,20 +484,38 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             if (target.index >= target.group.unitMatrices.Count) return;
 
+            // 1. Sprawdzenie: Czy atakujący patrzy na wroga?
             Vector3 dirToTarget = (target.position - myPos).normalized;
-            // Dot Product: 1.0 = idealnie przodem, 0.0 = bokiem, -1.0 = idealnie tyłem
-            // Wartość 0.2f daje dość szeroki kąt z przodu (ok. 150 stopni pola widzenia)
             float angleDot = Vector3.Dot(myForward, dirToTarget);
 
-            if (angleDot < 0.2f)
+            if (angleDot < 0.2f) // Jeśli mam wroga z boku lub za plecami -> nie atakuję
             {
-                // Jeśli wróg jest za plecami lub mocno z boku -> nie atakuj w tej klatce
-                // (Opcjonalnie: można tu dodać logikę obracania się w stronę wroga)
                 return;
             }
-            // -------------------------------------------------------------
 
-            float dmg = CalculateDamage(attackerGroup, target.group, idx, target.index, myPos, target.position);
+            // 2. NOWOŚĆ: Sprawdzenie Ciosu w Plecy (Backstab)
+            Matrix4x4 targetMat = target.group.unitMatrices[target.index];
+            Vector3 targetForward = (Vector3)targetMat.GetColumn(2); // Gdzie patrzy ofiara?
+
+            // Jeśli iloczyn skalarny jest wysoki (np. > 0.5), oznacza to, że wektory są "zgodne".
+            // Czyli: Atakujący patrzy na ofiarę, a ofiara patrzy w tę samą stronę co atakujący (ucieka/stoi tyłem).
+            float orientationDot = Vector3.Dot(myForward, targetForward);
+            
+            bool isBackstab = (orientationDot > 0.5f); // Próg ok. 60 stopni z tyłu
+
+            float dmg = 0f;
+
+            if (isBackstab)
+            {
+                // INSTANT KILL: Zadajemy ogromne obrażenia
+                dmg = 10000f; 
+            }
+            else
+            {
+                // Normalna walka twarzą w twarz
+                dmg = CalculateDamage(attackerGroup, target.group, idx, target.index, myPos, target.position);
+            }
+
             target.group.unitHealth[target.index] -= dmg;
             attackerGroup.attackCooldowns[idx] = cooldownTime * Random.Range(0.8f, 1.2f);
 
