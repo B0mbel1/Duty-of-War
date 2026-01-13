@@ -716,6 +716,7 @@ MonoBehaviour:
   menuSceneName: MainMenu
   isDeploymentPhase: 1
   startBattleButton: {fileID: 199048897}
+  tacticalPauseIndicator: {fileID: 1450563634}
   highlightMaterial: {fileID: 2100000, guid: 2f5a5901c9d229748acd400c9bf58d52, type: 2}
   directionArrowMaterial: {fileID: 2100000, guid: 61d2d4f0016c8c04297999153128b13f, type: 2}
   indicatorMeshInfantry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
@@ -1028,6 +1029,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1450563634 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8940857613441110222, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1054960042}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1843646048 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2665959303989639437, guid: 49d326ed6d683cd42b1395750475b645, type: 3}

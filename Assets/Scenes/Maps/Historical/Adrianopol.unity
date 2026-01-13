@@ -304,6 +304,7 @@ MonoBehaviour:
   menuSceneName: MainMenu
   isDeploymentPhase: 1
   startBattleButton: {fileID: 239184282}
+  tacticalPauseIndicator: {fileID: 1429178029}
   highlightMaterial: {fileID: 2100000, guid: 2f5a5901c9d229748acd400c9bf58d52, type: 2}
   directionArrowMaterial: {fileID: 2100000, guid: 61d2d4f0016c8c04297999153128b13f, type: 2}
   indicatorMeshInfantry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
@@ -846,6 +847,11 @@ MonoBehaviour:
   panelPrawy: {fileID: 488601543}
   Flaga1: {fileID: 21300000, guid: 938ca062f0e91eb42847370bb33a6420, type: 3}
   Flaga2: {fileID: 21300000, guid: dd9e639fe27a8a14aac30b20af332a60, type: 3}
+--- !u!1 &1429178029 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8940857613441110222, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1435450068 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1584888051750262258, guid: 49d326ed6d683cd42b1395750475b645, type: 3}

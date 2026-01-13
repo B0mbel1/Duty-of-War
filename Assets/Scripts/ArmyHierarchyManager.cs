@@ -25,6 +25,10 @@ public class ArmyHierarchyManager : MonoBehaviour
     public bool isDeploymentPhase = true; // Domyślnie zaczynamy od fazy rozstawiania
     public GameObject startBattleButton;
 
+    [Header("Tactical Pause Settings")] // --- NOWOŚĆ ---
+    public GameObject tacticalPauseIndicator; // Tu przypiszemy tekst "||"
+    private bool isTacticalPause = false;
+
     [Header("Visuals")]
     public Material highlightMaterial;
     public Material directionArrowMaterial;
@@ -284,18 +288,30 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
 
-        // 1. Obsługa myszki (Działa zawsze - i w deployment, i w bitwie)
+        // --- NOWOŚĆ: Obsługa Spacji (Pauza Taktyczna) ---
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            ToggleTacticalPause();
+        }
+        // -------------------------------------------------
+
+        // 1. Obsługa myszki (Działa zawsze - deployment, pauza i bitwa)
         HandleMouseInput();
+
+        // --- WARUNEK ZATRZYMANIA GRY ---
+        // Gra stoi, jeśli trwa rozstawianie LUB włączono pauzę taktyczną
+        bool isGameFrozen = isDeploymentPhase || isTacticalPause;
+        // -------------------------------
 
         // 2. Renderowanie i Ruch
         foreach (var group in factionAGroups)
         {
             if (group.unitMatrices.Count > 0)
             {
-                // Ruch wykonujemy TYLKO jeśli to NIE jest faza rozstawiania
-                if (!isDeploymentPhase && group.isMoving) ProcessMovement(group);
+                // Wykonuj ruch tylko, jeśli gra NIE jest zamrożona
+                if (!isGameFrozen && group.isMoving) ProcessMovement(group);
 
-                // Renderujemy ZAWSZE
+                // Renderuj ZAWSZE (żeby jednostki nie znikały podczas pauzy)
                 group.RenderGroup();
                 group.RenderIndicators();
             }
@@ -305,15 +321,15 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             if (group.unitMatrices.Count > 0)
             {
-                if (!isDeploymentPhase && group.isMoving) ProcessMovement(group);
+                if (!isGameFrozen && group.isMoving) ProcessMovement(group);
 
                 group.RenderGroup();
                 group.RenderIndicators();
             }
         }
 
-        // 3. Walka (Działa TYLKO po rozpoczęciu bitwy)
-        if (!isDeploymentPhase)
+        // 3. Walka (Działa tylko, gdy gra NIE jest zamrożona)
+        if (!isGameFrozen)
         {
             ResolveCombatRoundRobin();
         }
@@ -876,5 +892,20 @@ public class ArmyHierarchyManager : MonoBehaviour
             startBattleButton.SetActive(false);
 
         Debug.Log("Faza rozstawiania zakończona. Bitwa rozpoczęta!");
+    }
+
+    void ToggleTacticalPause()
+    {
+        // Nie można pauzować w fazie rozstawiania (bo i tak wszystko stoi) 
+        // ani po końcu gry.
+        if (isDeploymentPhase || isBattleOver) return;
+
+        isTacticalPause = !isTacticalPause;
+
+        // Pokaż/Ukryj napis "||"
+        if (tacticalPauseIndicator != null)
+        {
+            tacticalPauseIndicator.SetActive(isTacticalPause);
+        }
     }
 }

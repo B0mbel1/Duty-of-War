@@ -461,6 +461,11 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &1122401782 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8940857613441110222, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1557650784}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1231769809 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5671425810074903445, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -989,6 +994,7 @@ MonoBehaviour:
   menuSceneName: MainMenu
   isDeploymentPhase: 1
   startBattleButton: {fileID: 1231769809}
+  tacticalPauseIndicator: {fileID: 1122401782}
   highlightMaterial: {fileID: 2100000, guid: 2f5a5901c9d229748acd400c9bf58d52, type: 2}
   directionArrowMaterial: {fileID: 2100000, guid: 61d2d4f0016c8c04297999153128b13f, type: 2}
   indicatorMeshInfantry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}

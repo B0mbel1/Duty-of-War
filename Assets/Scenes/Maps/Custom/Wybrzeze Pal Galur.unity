@@ -967,6 +967,10 @@ PrefabInstance:
       propertyPath: directionArrowMaterial
       value: 
       objectReference: {fileID: 2100000, guid: 61d2d4f0016c8c04297999153128b13f, type: 2}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: tacticalPauseIndicator
+      value: 
+      objectReference: {fileID: 1819422002}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1105,6 +1109,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+--- !u!1 &1819422002 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8940857613441110222, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 24725119}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1910783582 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2665959303989639437, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
