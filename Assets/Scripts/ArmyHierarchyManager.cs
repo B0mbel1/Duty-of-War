@@ -766,6 +766,14 @@ public class ArmyHierarchyManager : MonoBehaviour
         isBattleOver = true;
         Time.timeScale = 0f; // Zatrzymaj grę (fizykę i ruch)
 
+        // --- NOWOŚĆ: Wyłączamy możliwość pauzowania ---
+        PauseMenuController pauseCtrl = FindAnyObjectByType<PauseMenuController>();
+        if (pauseCtrl != null)
+        {
+            pauseCtrl.enabled = false; // Wyłącza Update() w skrypcie pauzy -> ESC przestaje działać
+        }
+        // ----------------------------------------------
+
         if (endGamePanel != null)
         {
             endGamePanel.SetActive(true);
