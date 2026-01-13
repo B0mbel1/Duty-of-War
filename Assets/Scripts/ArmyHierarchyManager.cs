@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
+using UnityEngine.SceneManagement; // <-- DODAJ TĘ LINIJKĘ
 
 public class ArmyHierarchyManager : MonoBehaviour
 {
@@ -13,6 +14,12 @@ public class ArmyHierarchyManager : MonoBehaviour
     public TextMeshProUGUI counterTextB;
     public GameObject groupUIPrefab;
     public Transform uiContainer;
+
+    [Header("End Game Settings")] // --- NOWOŚĆ ---
+    public GameObject endGamePanel;
+    public TextMeshProUGUI resultText;
+    public string menuSceneName = "MainMenu"; // Wpisz tu nazwę swojej sceny z menu
+    private bool isBattleOver = false;
 
     [Header("Visuals")]
     public Material highlightMaterial;
@@ -219,6 +226,7 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (customSpawner != null) customSpawner.enabled = false;
         if (historySpawner != null) historySpawner.enabled = false;
+
     }
 
     void CreateGroupsFromList(List<Matrix4x4> sourceList, Mesh mesh, Material mat, string baseName, List<TacticalGroup> targetCollection, bool createUI, UnitType type)
@@ -631,8 +639,12 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         int totalA = 0; foreach (var g in factionAGroups) totalA += g.unitMatrices.Count;
         int totalB = 0; foreach (var g in factionBGroups) totalB += g.unitMatrices.Count;
+
         if (counterTextA != null) counterTextA.text = totalA.ToString();
         if (counterTextB != null) counterTextB.text = totalB.ToString();
+
+        // --- NOWOŚĆ: Sprawdź czy koniec gry ---
+        CheckWinCondition(totalA, totalB);
     }
 
     void SetGroupHighlight(TacticalGroup group, bool highlight)
@@ -724,5 +736,58 @@ public class ArmyHierarchyManager : MonoBehaviour
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(pos, pos + dir * slopeCheckDistance);
         }
+    }
+
+    void CheckWinCondition(int countA, int countB)
+    {
+        if (isBattleOver) return;
+
+        // Pobieramy, którą stroną jest gracz (zapisane w PlayerPrefs w menu)
+        // Domyślnie zakładamy SideA, jeśli brakuje zapisu
+        string playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
+        bool playerIsSideA = (playerSide == "SideA");
+
+        if (countA <= 0)
+        {
+            // Strona A przegrała (wszyscy zginęli)
+            if (playerIsSideA) GameOver(false); // Gracz był A -> Porażka
+            else GameOver(true);                // Gracz był B -> Zwycięstwo
+        }
+        else if (countB <= 0)
+        {
+            // Strona B przegrała
+            if (!playerIsSideA) GameOver(false); // Gracz był B -> Porażka
+            else GameOver(true);                 // Gracz był A -> Zwycięstwo
+        }
+    }
+
+    void GameOver(bool isVictory)
+    {
+        isBattleOver = true;
+        Time.timeScale = 0f; // Zatrzymaj grę (fizykę i ruch)
+
+        if (endGamePanel != null)
+        {
+            endGamePanel.SetActive(true);
+
+            if (resultText != null)
+            {
+                if (isVictory)
+                {
+                    resultText.text = "WIELKIE ZWYCIĘSTWO!";
+                    resultText.color = Color.green;
+                }
+                else
+                {
+                    resultText.text = "HANIEBNA PORAŻKA...";
+                    resultText.color = Color.red;
+                }
+            }
+        }
+    }
+    public void ReturnToMenu()
+    {
+        Time.timeScale = 1f; // Odblokuj czas przed zmianą sceny!
+        SceneManager.LoadScene(menuSceneName);
     }
 }

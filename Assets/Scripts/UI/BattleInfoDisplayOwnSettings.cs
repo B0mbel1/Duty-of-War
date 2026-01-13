@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class BattleInfoDisplayOwnSettings : MonoBehaviour
 {
-    // --- DANE STATYCZNE (Liczebnoœæ armii) ---
+    // --- DANE STATYCZNE (Liczebnoï¿½ï¿½ armii) ---
     public static int redInfantryCount = 0;
     public static int redRangeCount = 0;
     public static int redCavalryCount = 0;
@@ -56,7 +56,7 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
         if (playButton != null)
         {
             playButton.onClick.AddListener(PlaySelectedMap);
-            // Przycisk nieaktywny dopóki nie wybierzesz mapy
+            // Przycisk nieaktywny dopï¿½ki nie wybierzesz mapy
             playButton.interactable = false;
         }
 
@@ -65,7 +65,7 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
 
     private void SetDefaultValues()
     {
-        // Domyœlne wartoœci wpisane w pola
+        // Domyï¿½lne wartoï¿½ci wpisane w pola
         if (inputRedInfantry) inputRedInfantry.text = "0";
         if (inputRedRange) inputRedRange.text = "0";
         if (inputRedCavalry) inputRedCavalry.text = "0";
@@ -76,25 +76,25 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
     }
 
     // -----------------------------
-    // WYBÓR MAPY
+    // WYBï¿½R MAPY
     // -----------------------------
 
     public void SelectWybrzezePalGalur()
     {
         SelectMap(WybrzezePalGalur, WybrzezePalGalurButton);
-        if (terrainDescription) terrainDescription.text = "<color=#663300>Wzniesienia terenu</color> | <color=#6d6d6d>Teren górzysty</color> | <color=#3399ff>Przeprawa przez wodê</color>";
+        if (terrainDescription) terrainDescription.text = "<color=#663300>Wzniesienia terenu</color> | <color=#6d6d6d>Teren gï¿½rzysty</color> | <color=#3399ff>Przeprawa przez wodï¿½</color>";
     }
 
     public void SelectWzgorzaZamieci()
     {
         SelectMap(WzgorzaZamieci, WzgorzaZamieciButton);
-        if (terrainDescription) terrainDescription.text = "<color=#663300>Wzniesienia terenu</color> | <color=#6d6d6d>Teren górzysty</color> | <color=#009933>Teren zalesiony</color>";
+        if (terrainDescription) terrainDescription.text = "<color=#663300>Wzniesienia terenu</color> | <color=#6d6d6d>Teren gï¿½rzysty</color> | <color=#009933>Teren zalesiony</color>";
     }
 
     public void SelectOrleGniazdo()
     {
         SelectMap(OrleGniazdo, OrleGniazdoButton);
-        if (terrainDescription) terrainDescription.text = "<color=#663300>Du¿e wzniesienie terenu</color>";
+        if (terrainDescription) terrainDescription.text = "<color=#663300>Duï¿½e wzniesienie terenu</color>";
     }
 
     private void SelectMap(Sprite map, Button btn)
@@ -109,31 +109,31 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
         selectedButton = btn;
         SetButtonColor(selectedButton, selectedColor);
 
-        // Po wybraniu mapy od razu mo¿na graæ
+        // Po wybraniu mapy od razu moï¿½na graï¿½
         if (playButton != null)
             playButton.interactable = true;
     }
 
     // -----------------------------
-    // ROZPOCZÊCIE GRY
+    // ROZPOCZï¿½CIE GRY
     // -----------------------------
 
     private void PlaySelectedMap()
     {
         if (selectedMap == null) return;
 
-        // 1. Zapisz liczebnoœæ armii
+        // 1. Zapisz liczebnoï¿½ï¿½ armii
         SaveUnitSettings();
 
         // 2. WYMUSZENIE STRONY NIEBIESKIEJ (SideB)
-        // Gracz zawsze steruje stron¹ B
-        PlayerPrefs.SetString("PlayerSide", "SideB");
+        // Gracz zawsze steruje stronï¿½ B
+        PlayerPrefs.SetString("PlayerSide", "SideA");
         PlayerPrefs.Save();
 
-        // 3. Za³aduj scenê
+        // 3. Zaï¿½aduj scenï¿½
         string sceneName = "";
-        if (selectedMap == WybrzezePalGalur) sceneName = "Wybrze¿e Pal Galur";
-        else if (selectedMap == WzgorzaZamieci) sceneName = "Wzgórza Zamieci";
+        if (selectedMap == WybrzezePalGalur) sceneName = "Wybrzeze Pal Galur";
+        else if (selectedMap == WzgorzaZamieci) sceneName = "Wzgorza Zamieci";
         else if (selectedMap == OrleGniazdo) sceneName = "Orle Gniazdo";
 
         if (!string.IsNullOrEmpty(sceneName))

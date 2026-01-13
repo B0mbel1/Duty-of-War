@@ -282,6 +282,34 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6692583503085565247, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6692583503085565247, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6692583503085565247, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1690024227}
+    - target: {fileID: 6692583503085565247, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6692583503085565247, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: ReturnToMenu
+      objectReference: {fileID: 0}
+    - target: {fileID: 6692583503085565247, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: ArmyHierarchyManager, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6692583503085565247, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -871,6 +899,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1551231980 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2665959303989639437, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 60639561}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!1 &1551231981 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6580949417892322216, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 60639561}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1690024225
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -972,6 +1016,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: resultText
+      value: 
+      objectReference: {fileID: 1551231980}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: uiContainer
       value: 
       objectReference: {fileID: 60639564}
@@ -983,6 +1031,14 @@ PrefabInstance:
       propertyPath: counterTextB
       value: 
       objectReference: {fileID: 60639562}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: endGamePanel
+      value: 
+      objectReference: {fileID: 1551231981}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: menuSceneName
+      value: MainMenu
+      objectReference: {fileID: 0}
     - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: directionArrowMesh
       value: 
@@ -1007,6 +1063,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60b55f041e59f214fb9da10e3abc6688, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitsSpawnCustom
+--- !u!114 &1690024227 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+  m_PrefabInstance: {fileID: 1690024225}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6f5ab8a55f1c6b4fa5dc021eb85ece1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArmyHierarchyManager
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
