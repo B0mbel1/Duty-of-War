@@ -116,7 +116,7 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
         {
             // BŁĄD!
             ShowErrorNotification("NIEDOZWOLONY FORMAT!");
-            
+
             // Resetujemy pole do bezpiecznej wartości (np. 0 lub poprawionej liczby)
             // Jeśli to było "05", naprawiamy na "5". Jeśli "x5", zerujemy.
             if (isNumber && hasLeadingZeros)
@@ -135,7 +135,7 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
             if (txt != null) txt.text = message;
 
             errorTextObject.SetActive(true);
-            
+
             // Zatrzymaj poprzednie odliczanie (jeśli ktoś szybko klika błędy)
             StopAllCoroutines();
             // Uruchom nowe odliczanie do zniknięcia
@@ -198,15 +198,31 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
     {
         if (selectedMap == null) return;
 
-        // 1. Zapisz liczebno�� armii
+        // 1. Najpierw parsujemy wpisane teksty na liczby
         SaveUnitSettings();
 
-        // 2. WYMUSZENIE STRONY NIEBIESKIEJ (SideB)
-        // Gracz zawsze steruje stron� B
+        // 2. NOWOŚĆ: Sprawdzamy czy armie nie są puste
+        int totalRed = redInfantryCount + redRangeCount + redCavalryCount;
+        int totalBlue = blueInfantryCount + blueRangeCount + blueCavalryCount;
+
+        if (totalBlue <= 0)
+        {
+            ShowErrorNotification("GRACZ MUSI MIEĆ WOJSKO!");
+            return; // Przerywamy, nie ładujemy sceny
+        }
+
+        if (totalRed <= 0)
+        {
+            ShowErrorNotification("PRZECIWNIK MUSI MIEĆ WOJSKO!");
+            return; // Przerywamy
+        }
+        // ---------------------------------------------
+
+        // 3. Ustawiamy stronę gracza
         PlayerPrefs.SetString("PlayerSide", "SideA");
         PlayerPrefs.Save();
 
-        // 3. Za�aduj scen�
+        // 4. Ładujemy scenę
         string sceneName = "";
         if (selectedMap == WybrzezePalGalur) sceneName = "Wybrzeze Pal Galur";
         else if (selectedMap == WzgorzaZamieci) sceneName = "Wzgorza Zamieci";
