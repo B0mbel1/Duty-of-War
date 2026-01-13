@@ -283,6 +283,34 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1592101268}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: StartBattle
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: ArmyHierarchyManager, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 593653411506970220, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_Name
       value: UI w grze
@@ -662,6 +690,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &830860672 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5671425810074903445, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 424989800}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1592101266
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -812,6 +845,8 @@ MonoBehaviour:
   endGamePanel: {fileID: 1818270257}
   resultText: {fileID: 1818270256}
   menuSceneName: MainMenu
+  isDeploymentPhase: 1
+  startBattleButton: {fileID: 830860672}
   highlightMaterial: {fileID: 2100000, guid: 2f5a5901c9d229748acd400c9bf58d52, type: 2}
   directionArrowMaterial: {fileID: 2100000, guid: 61d2d4f0016c8c04297999153128b13f, type: 2}
   indicatorMeshInfantry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}

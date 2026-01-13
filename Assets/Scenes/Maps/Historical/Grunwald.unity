@@ -127,6 +127,34 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1805836863}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: StartBattle
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: ArmyHierarchyManager, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 407669573922827637, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 593653411506970220, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_Name
       value: UI w grze
@@ -526,6 +554,11 @@ MonoBehaviour:
   panelPrawy: {fileID: 253803140}
   Flaga1: {fileID: 21300000, guid: 62590f53e17d6404a8933fce0856a85f, type: 3}
   Flaga2: {fileID: 21300000, guid: 62d1ca31b7931c94888aa1f900baa121, type: 3}
+--- !u!1 &1576713693 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5671425810074903445, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 253803138}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1577666029 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1584888051750262258, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -810,6 +843,8 @@ MonoBehaviour:
   endGamePanel: {fileID: 253803143}
   resultText: {fileID: 253803142}
   menuSceneName: MainMenu
+  isDeploymentPhase: 1
+  startBattleButton: {fileID: 1576713693}
   highlightMaterial: {fileID: 2100000, guid: 2f5a5901c9d229748acd400c9bf58d52, type: 2}
   directionArrowMaterial: {fileID: 2100000, guid: 61d2d4f0016c8c04297999153128b13f, type: 2}
   indicatorMeshInfantry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}

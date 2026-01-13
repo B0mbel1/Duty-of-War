@@ -21,6 +21,10 @@ public class ArmyHierarchyManager : MonoBehaviour
     public string menuSceneName = "MainMenu"; // Wpisz tu nazwę swojej sceny z menu
     private bool isBattleOver = false;
 
+    [Header("Battle Phase Settings")] // --- NOWOŚĆ ---
+    public bool isDeploymentPhase = true; // Domyślnie zaczynamy od fazy rozstawiania
+    public GameObject startBattleButton;
+
     [Header("Visuals")]
     public Material highlightMaterial;
     public Material directionArrowMaterial;
@@ -275,14 +279,44 @@ public class ArmyHierarchyManager : MonoBehaviour
     void Update()
     {
         if (!groupsInitialized) return;
+
+        // Debug inputs
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
 
-        foreach (var group in factionAGroups) { if (group.unitMatrices.Count > 0) { if (group.isMoving) ProcessMovement(group); group.RenderGroup(); group.RenderIndicators(); } }
-        foreach (var group in factionBGroups) { if (group.unitMatrices.Count > 0) { if (group.isMoving) ProcessMovement(group); group.RenderGroup(); group.RenderIndicators(); } }
-
+        // 1. Obsługa myszki (Działa zawsze - i w deployment, i w bitwie)
         HandleMouseInput();
-        ResolveCombatRoundRobin();
+
+        // 2. Renderowanie i Ruch
+        foreach (var group in factionAGroups)
+        {
+            if (group.unitMatrices.Count > 0)
+            {
+                // Ruch wykonujemy TYLKO jeśli to NIE jest faza rozstawiania
+                if (!isDeploymentPhase && group.isMoving) ProcessMovement(group);
+
+                // Renderujemy ZAWSZE
+                group.RenderGroup();
+                group.RenderIndicators();
+            }
+        }
+
+        foreach (var group in factionBGroups)
+        {
+            if (group.unitMatrices.Count > 0)
+            {
+                if (!isDeploymentPhase && group.isMoving) ProcessMovement(group);
+
+                group.RenderGroup();
+                group.RenderIndicators();
+            }
+        }
+
+        // 3. Walka (Działa TYLKO po rozpoczęciu bitwy)
+        if (!isDeploymentPhase)
+        {
+            ResolveCombatRoundRobin();
+        }
     }
 
     void ProcessMovement(TacticalGroup group)
@@ -500,7 +534,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             // Jeśli iloczyn skalarny jest wysoki (np. > 0.5), oznacza to, że wektory są "zgodne".
             // Czyli: Atakujący patrzy na ofiarę, a ofiara patrzy w tę samą stronę co atakujący (ucieka/stoi tyłem).
             float orientationDot = Vector3.Dot(myForward, targetForward);
-            
+
             bool isBackstab = (orientationDot > 0.5f); // Próg ok. 60 stopni z tyłu
 
             float dmg = 0f;
@@ -508,7 +542,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (isBackstab)
             {
                 // INSTANT KILL: Zadajemy ogromne obrażenia
-                dmg = 10000f; 
+                dmg = 10000f;
             }
             else
             {
@@ -831,5 +865,16 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         Time.timeScale = 1f; // Odblokuj czas przed zmianą sceny!
         SceneManager.LoadScene(menuSceneName);
+    }
+
+    public void StartBattle()
+    {
+        isDeploymentPhase = false; // Koniec fazy rozstawiania
+
+        // Ukrywamy przycisk, bo już nie jest potrzebny
+        if (startBattleButton != null)
+            startBattleButton.SetActive(false);
+
+        Debug.Log("Faza rozstawiania zakończona. Bitwa rozpoczęta!");
     }
 }
