@@ -1,9 +1,13 @@
 using UnityEngine;
+using UnityEngine.Audio; // 1. DODANO: Aby móc sterować mikserem
 
 public class MusicManager : MonoBehaviour
 {
     public static MusicManager instance;
-    private AudioSource audioSource; // Prywatne odniesienie do głośnika
+
+    public AudioMixer audioMixer; // 2. DODANO: Musisz tu przypisać swój AudioMixer w Inspektorze!
+
+    private AudioSource audioSource;
 
     void Awake()
     {
@@ -11,8 +15,7 @@ public class MusicManager : MonoBehaviour
         {
             instance = this;
             DontDestroyOnLoad(gameObject);
-            
-            // Pobieramy AudioSource, żeby móc nim sterować
+
             audioSource = GetComponent<AudioSource>();
         }
         else
@@ -21,13 +24,24 @@ public class MusicManager : MonoBehaviour
         }
     }
 
-    // Nowa funkcja do zmiany muzyki
+    // 3. DODANO: Ta funkcja wykona się automatycznie na samym starcie gry
+    void Start()
+    {
+        // Pobieramy zapisaną głośność (domyślnie 1, czyli 100%)
+        float savedVolume = PlayerPrefs.GetFloat("savedVolume", 1f);
+
+        // Aplikujemy ją do AudioMixera (to samo wyliczenie co w SettingsScript)
+        if (audioMixer != null)
+        {
+            float dbVolume = (savedVolume <= 0.0001f) ? -80f : Mathf.Log10(savedVolume) * 20;
+            audioMixer.SetFloat("MasterVolume", dbVolume);
+        }
+    }
+
     public void ChangeMusic(AudioClip newClip)
     {
-        // 1. Jeśli nowa muzyka jest taka sama jak ta co gra, nie rób nic (żeby nie restartować utworu)
         if (audioSource.clip == newClip) return;
 
-        // 2. Jeśli jest inna: Zatrzymaj, Podmień, Graj
         audioSource.Stop();
         audioSource.clip = newClip;
         audioSource.Play();

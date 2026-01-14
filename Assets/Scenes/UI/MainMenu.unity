@@ -954,6 +954,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb6127ae248aa2840a22dc0565ebf425, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MusicManager
+  audioMixer: {fileID: 24100000, guid: 61f8db8c58664be4189024f265f1562e, type: 2}
 --- !u!1 &999776186
 GameObject:
   m_ObjectHideFlags: 0

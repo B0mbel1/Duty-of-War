@@ -9,12 +9,15 @@ public class SettingsScript : MonoBehaviour
     public Slider volumeSlider;
     public TMP_Dropdown qualityDropdown; // Pamiętaj, żeby przypisać to w Inspectorze!
 
-    void Start()
+    void OnEnable()
     {
         // --- WCZYTYWANIE GŁOŚNOŚCI ---
         float savedVolume = PlayerPrefs.GetFloat("savedVolume", 1f);
-        volumeSlider.value = savedVolume; 
-        SetVolume(savedVolume); 
+        if (volumeSlider != null)
+        {
+            volumeSlider.value = savedVolume;
+        }
+        SetVolume(savedVolume);
 
         // --- WCZYTYWANIE JAKOŚCI GRAFIKI ---
         // 1. Pobieramy zapisaną liczbę (0, 1 lub 2). 
@@ -56,7 +59,7 @@ public class SettingsScript : MonoBehaviour
         // --- ZAPISYWANIE JAKOŚCI ---
         // Zapamiętujemy wybraną liczbę (np. 0 dla Niskiej, 2 dla Wysokiej)
         PlayerPrefs.SetInt("qualityIndex", qualityIndex);
-        
+
         // Zmuszamy dysk do zapisu
         PlayerPrefs.Save();
     }
