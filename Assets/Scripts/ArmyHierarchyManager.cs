@@ -321,7 +321,10 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (!isGameFrozen) ResolveCombatRoundRobin();
 
-        if (Input.GetKeyDown(KeyCode.M) && selectedGroups.Count > 1) OpenNamingPanel();
+        if (Input.GetKeyDown(KeyCode.M) && selectedGroups.Count > 1 && !namingPanel.activeSelf)
+        {
+            OpenNamingPanel();
+        }
     }
 
     void OpenNamingPanel()
