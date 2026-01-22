@@ -8,11 +8,10 @@ public class GeminiNetwork : MonoBehaviour
 {
     [Header("API Settings")]
     // Pamiętaj, aby wkleić tu swój klucz z Google AI Studio
-    [SerializeField] private string apiKey = "WPISZ_SWOJ_KLUCZ_API"; 
-    
-    // Używamy modelu Flash (szybki i tani/darmowy)
-    private string apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    [SerializeField] private string apiKey = "WPISZ_SWOJ_KLUCZ_API";
 
+    // Używamy modelu Flash (szybki i tani/darmowy)
+    private string apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
     // Event, który odpali się, gdy przyjdzie odpowiedź
     public event Action<string> OnResponseReceived;
 
@@ -26,7 +25,7 @@ public class GeminiNetwork : MonoBehaviour
         // 1. Budujemy JSON zapytania ręcznie (najbezpieczniejsza metoda bez zewnętrznych bibliotek)
         // EscapeJson zabezpiecza przed cudzysłowami w tekście gracza
         string escapedText = EscapeJson(promptText);
-        
+
         string jsonPayload = "{ \"contents\": [{ \"parts\": [{ \"text\": \"" + escapedText + "\" }] }], \"generationConfig\": { \"responseMimeType\": \"application/json\" } }";
 
         using (UnityWebRequest webRequest = new UnityWebRequest($"{apiUrl}?key={apiKey}", "POST"))
@@ -47,7 +46,7 @@ public class GeminiNetwork : MonoBehaviour
             {
                 // Sukces! Parsujemy odpowiedź
                 string responseText = ParseGeminiResponse(webRequest.downloadHandler.text);
-                
+
                 if (!string.IsNullOrEmpty(responseText))
                 {
                     OnResponseReceived?.Invoke(responseText);
@@ -66,17 +65,17 @@ public class GeminiNetwork : MonoBehaviour
     string ParseGeminiResponse(string rawJson)
     {
         // Używamy Unity JsonUtility i naszych wrapperów (zdefiniowanych na dole pliku)
-        try 
+        try
         {
             GeminiResponseWrapper wrapper = JsonUtility.FromJson<GeminiResponseWrapper>(rawJson);
-            
+
             if (wrapper != null && wrapper.candidates != null && wrapper.candidates.Length > 0)
             {
                 return wrapper.candidates[0].content.parts[0].text;
             }
             return null;
-        } 
-        catch (Exception e) 
+        }
+        catch (Exception e)
         {
             Debug.LogError("Błąd parsowania JSON z Google: " + e.Message);
             return null;

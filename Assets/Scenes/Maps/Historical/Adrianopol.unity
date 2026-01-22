@@ -372,6 +372,19 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 5671425810074903445, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
   m_PrefabInstance: {fileID: 488601541}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &239184287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 239184282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ced82ac6c8fe73c4a992ece42ce0ff4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ModelChecker
+  apiKey: WPISZ_SWOJ_KLUCZ_API
 --- !u!114 &469172324 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2226589469722660093, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -551,6 +564,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1629857489819836119, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2112024925}
+    - targetCorrespondingSourceObject: {fileID: 5671425810074903445, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 239184287}
   m_SourcePrefab: {fileID: 100100000, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
 --- !u!224 &488601542 stripped
 RectTransform:

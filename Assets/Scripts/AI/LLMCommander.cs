@@ -85,6 +85,29 @@ public class LLMCommander : MonoBehaviour
         }
     }
 
+    string GetCustomUnitNames()
+    {
+        List<string> customNames = new List<string>();
+
+        // Sprawdzamy, którą stroną gramy
+        var myUnits = (playerSide == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
+
+        foreach (var group in myUnits)
+        {
+            // Jeśli grupa ma customName (i nie jest pusty), dodajemy go do listy
+            if (!string.IsNullOrEmpty(group.customName))
+            {
+                // Dodajemy w cudzysłowach, np. 'Armia 1'
+                customNames.Add($"'{group.customName}'");
+            }
+        }
+
+        if (customNames.Count == 0) return "";
+
+        // Zwracamy stringa: , 'Armia 1', 'Zakon', 'Straż'
+        return ", " + string.Join(", ", customNames);
+    }
+
     void ProcessSingleCommand(AICommand cmd)
     {
         // 1. Znajdź nasze jednostki
@@ -197,24 +220,26 @@ public class LLMCommander : MonoBehaviour
 
     string ConstructSystemPrompt()
     {
-        return @"Jesteś dowódcą w grze RTS. Tłumaczysz komendy gracza na format JSON.
+        // Pobieramy nazwy dynamicznie
+        string dynamicNames = GetCustomUnitNames();
+
+        return $@"Jesteś dowódcą w grze RTS. Tłumaczysz komendy gracza na format JSON.
 ZASADY:
 1. Odpowiadaj TYLKO w formacie JSON.
-2. unit_tags: 'Infantry', 'Archer', 'Cavalry', 'All'.
+2. unit_tags: 'Infantry', 'Archer', 'Cavalry', 'All'{dynamicNames}.
 3. target_location: 'Center', 'Enemy_Army', 'My_Base', 'Left_Flank', 'Right_Flank'.
 4. action: 'MOVE' lub 'ATTACK'.
 
 PRZYKŁAD:
-User: Atakuj piechotą!
+User: Armia 1 do ataku!
 JSON:
-{
+{{
   ""commands"": [
-    { ""unit_tags"": [""Infantry""], ""action"": ""ATTACK"", ""target_location"": ""Enemy_Army"" }
+    {{ ""unit_tags"": [""Armia 1""], ""action"": ""ATTACK"", ""target_location"": ""Enemy_Army"" }}
   ],
-  ""ai_thought"": ""Wysyłam piechotę do ataku na pozycje wroga.""
-}";
+  ""ai_thought"": ""Wysyłam zgrupowanie Armia 1 do ataku.""
+}}";
     }
-
     string GetMapContextInfo()
     {
         // Tutaj możemy dodać informacje dla AI o stanie bitwy (opcjonalne, ale pomocne)
