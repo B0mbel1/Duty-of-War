@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
-using UnityEngine.SceneManagement; // <-- DODAJ TĘ LINIJKĘ
+using UnityEngine.SceneManagement;
 
 public class ArmyHierarchyManager : MonoBehaviour
 {
@@ -57,21 +57,16 @@ public class ArmyHierarchyManager : MonoBehaviour
     public float waterSpeedPenalty = 0.5f;
     public float swimmingDepth = 0.5f;
 
-    // --- NOWOŚĆ: PRZYWRÓCONY LAS ---
     [Header("Forest Settings")]
-    [Tooltip("Dokładna nazwa warstwy terenu (Terrain Layer), która jest lasem.")]
     public string forestLayerName = "Forest";
-    public float forestCavalryPenalty = 0.7f; // Kawaleria zwalnia mocniej
-    public float forestInfantryPenalty = 0.9f; // Piechota radzi sobie lepiej
+    public float forestCavalryPenalty = 0.7f;
+    public float forestInfantryPenalty = 0.9f;
     private int forestLayerIndex = -1;
-    // --------------------------------
 
     [Header("Slope Physics")]
     public float slopeCheckDistance = 2.0f;
     public float lightSlopeAngle = 10f;
     public float steepSlopeAngle = 30f;
-
-    [Header("Slope Multipliers")]
     public float uphillLightMult = 0.8f;
     public float uphillSteepMult = 0.4f;
     public float downhillLightMult = 1.1f;
@@ -80,9 +75,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     [Header("Combat Settings")]
     public float attackRangeMelee = 3.5f;
     public float attackRangeArcher = 80f;
-    [Tooltip("Ile metrów zasięgu zyskuje łucznik za każdy metr przewagi wysokości.")]
-    public float heightRangeBonus = 0.5f; // Np. 0.5 oznacza: będąc 10m wyżej, mam 5m więcej zasięgu.
-    [Tooltip("Maksymalna premia do obrażeń za wysokość.")]
+    public float heightRangeBonus = 0.5f;
     public float maxHeightDamageBonus = 1.5f;
     public float attackCooldown = 1.0f;
     public float archerAttackCooldown = 2.0f;
@@ -109,11 +102,10 @@ public class ArmyHierarchyManager : MonoBehaviour
     private List<ArmyGroupUI> uiElements = new List<ArmyGroupUI>();
     private List<TacticalGroup> selectedGroups = new List<TacticalGroup>();
     private TacticalGroup lastSelectedGroup = null;
-    private Dictionary<TacticalGroup, Material> originalMaterials = new Dictionary<TacticalGroup, Material>();
 
     private bool groupsInitialized = false;
     private Terrain terrain;
-    private TerrainData terrainData; // Cache danych terenu
+    private TerrainData terrainData;
 
     // --- SPATIAL GRID ---
     private Dictionary<int, List<UnitRef>> spatialGrid = new Dictionary<int, List<UnitRef>>();
@@ -144,8 +136,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 tSize = terrainData.size;
             minX = tPos.x; minZ = tPos.z;
             maxX = tPos.x + tSize.x; maxZ = tPos.z + tSize.z;
-
-            // Znajdź indeks warstwy lasu
             FindForestLayerIndex();
         }
 
@@ -153,10 +143,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         Invoke(nameof(InitializeGroups), 0.5f);
 
         if (namingPanel != null) namingPanel.SetActive(false);
-        if (confirmNameButton != null)
-        {
-            confirmNameButton.onClick.AddListener(OnMergeConfirmed);
-        }
+        if (confirmNameButton != null) confirmNameButton.onClick.AddListener(OnMergeConfirmed);
     }
 
     void FindForestLayerIndex()
@@ -167,11 +154,9 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (terrainData.terrainLayers[i].name == forestLayerName)
             {
                 forestLayerIndex = i;
-                Debug.Log($"[ArmyManager] Las znaleziony na indeksie warstwy: {i}");
                 return;
             }
         }
-        Debug.LogWarning($"[ArmyManager] Nie znaleziono warstwy lasu o nazwie: {forestLayerName}");
     }
 
     void PrepareIndicatorMeshes()
@@ -207,7 +192,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         else { if (counterTextA == null) counterTextA = historySpawner.factionAText; if (counterTextB == null) counterTextB = historySpawner.factionBText; }
 
         if (uiContainer != null) { for (int i = uiContainer.childCount - 1; i >= 0; i--) Destroy(uiContainer.GetChild(i).gameObject); }
-        uiElements.Clear(); originalMaterials.Clear(); factionAGroups.Clear(); factionBGroups.Clear();
+        uiElements.Clear(); factionAGroups.Clear(); factionBGroups.Clear();
 
         bool isPlayerA = useCustom ? true : (PlayerPrefs.GetString("PlayerSide", "SideA") == "SideA");
         bool isPlayerB = !isPlayerA;
@@ -245,7 +230,6 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (customSpawner != null) customSpawner.enabled = false;
         if (historySpawner != null) historySpawner.enabled = false;
-
     }
 
     void CreateGroupsFromList(List<Matrix4x4> sourceList, Mesh mesh, Material mat, string baseName, List<TacticalGroup> targetCollection, bool createUI, UnitType type)
@@ -258,23 +242,34 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             int count = Mathf.Min(sizePerGroup, totalUnits - i);
             TacticalGroup newGroup = new TacticalGroup($"{baseName}_{groupIndex}", mesh, mat, groupSize, type);
+            var arch = newGroup.archetypes[0];
 
+            // Konfiguracja wyglądu strzałki i prędkości w zależności od typu
             switch (type)
             {
-                case UnitType.Archer: newGroup.arrowMesh = cachedArcherMesh ?? cachedInfantryMesh; newGroup.speedMultiplier = 1.0f; break;
-                case UnitType.Cavalry: newGroup.arrowMesh = cachedCavalryMesh ?? cachedInfantryMesh; newGroup.speedMultiplier = cavalrySpeedMultiplier; break;
-                default: newGroup.arrowMesh = cachedInfantryMesh; newGroup.speedMultiplier = 1.0f; break;
+                case UnitType.Archer:
+                    arch.arrowMesh = cachedArcherMesh ?? cachedInfantryMesh;
+                    arch.speedMultiplier = 1.0f;
+                    break;
+                case UnitType.Cavalry:
+                    arch.arrowMesh = cachedCavalryMesh ?? cachedInfantryMesh;
+                    arch.speedMultiplier = cavalrySpeedMultiplier;
+                    break;
+                default:
+                    arch.arrowMesh = cachedInfantryMesh;
+                    arch.speedMultiplier = 1.0f;
+                    break;
             }
-            newGroup.arrowMaterial = directionArrowMaterial;
-            if (!originalMaterials.ContainsKey(newGroup)) originalMaterials.Add(newGroup, mat);
+            // Ważne: przypisujemy materiał strzałek do archetypu
+            arch.arrowMaterial = directionArrowMaterial;
+
+            newGroup.RecalculateStats();
 
             List<Matrix4x4> slice = sourceList.GetRange(i, count);
-            newGroup.unitMatrices = slice;
             foreach (var matrix in slice)
             {
-                newGroup.unitHealth.Add(hpMax);
-                newGroup.attackCooldowns.Add(Random.Range(0f, 1.0f));
-                newGroup.lastPositions.Add((Vector3)matrix.GetColumn(3));
+                newGroup.AddUnit(matrix, hpMax, 0);
+                newGroup.attackCooldowns[newGroup.attackCooldowns.Count - 1] = Random.Range(0f, 1.0f);
             }
 
             if (newGroup.unitMatrices.Count > 0) newGroup.RebuildBatchesFull();
@@ -295,34 +290,20 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (!groupsInitialized) return;
 
-        // Debug inputs
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
 
-        // --- NOWOŚĆ: Obsługa Spacji (Pauza Taktyczna) ---
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            ToggleTacticalPause();
-        }
-        // -------------------------------------------------
+        if (Input.GetKeyDown(KeyCode.Space)) ToggleTacticalPause();
 
-        // 1. Obsługa myszki (Działa zawsze - deployment, pauza i bitwa)
         HandleMouseInput();
 
-        // --- WARUNEK ZATRZYMANIA GRY ---
-        // Gra stoi, jeśli trwa rozstawianie LUB włączono pauzę taktyczną
         bool isGameFrozen = isDeploymentPhase || isTacticalPause;
-        // -------------------------------
 
-        // 2. Renderowanie i Ruch
         foreach (var group in factionAGroups)
         {
             if (group.unitMatrices.Count > 0)
             {
-                // Wykonuj ruch tylko, jeśli gra NIE jest zamrożona
                 if (!isGameFrozen && group.isMoving) ProcessMovement(group);
-
-                // Renderuj ZAWSZE (żeby jednostki nie znikały podczas pauzy)
                 group.RenderGroup();
                 group.RenderIndicators();
             }
@@ -333,33 +314,23 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (group.unitMatrices.Count > 0)
             {
                 if (!isGameFrozen && group.isMoving) ProcessMovement(group);
-
                 group.RenderGroup();
                 group.RenderIndicators();
             }
         }
 
-        // 3. Walka (Działa tylko, gdy gra NIE jest zamrożona)
-        if (!isGameFrozen)
-        {
-            ResolveCombatRoundRobin();
-        }
-        if (Input.GetKeyDown(KeyCode.M) && selectedGroups.Count > 1)
-        {
-            OpenNamingPanel();
-        }
+        if (!isGameFrozen) ResolveCombatRoundRobin();
+
+        if (Input.GetKeyDown(KeyCode.M) && selectedGroups.Count > 1) OpenNamingPanel();
     }
 
     void OpenNamingPanel()
     {
-        // Pauzujemy grę, żeby gracz mógł spokojnie wpisać nazwę (opcjonalne)
-        // Time.timeScale = 0f; 
-
         if (namingPanel != null)
         {
             namingPanel.SetActive(true);
             nameInput.text = "";
-            nameInput.Select(); // Auto-focus na pole tekstowe
+            nameInput.Select();
             nameInput.ActivateInputField();
         }
     }
@@ -367,95 +338,88 @@ public class ArmyHierarchyManager : MonoBehaviour
     public void OnMergeConfirmed()
     {
         string newName = nameInput.text;
-        if (!string.IsNullOrEmpty(newName))
-        {
-            MergeSelectedGroups(newName);
-        }
-
+        if (!string.IsNullOrEmpty(newName)) MergeSelectedGroups(newName);
         if (namingPanel != null) namingPanel.SetActive(false);
-        // Time.timeScale = 1f; // Odpauzuj
     }
 
     void MergeSelectedGroups(string customName)
     {
         if (selectedGroups.Count < 2) return;
 
-        TacticalGroup firstGroup = selectedGroups[0];
-        Material mat = firstGroup.unitMaterial;
-        Mesh mesh = firstGroup.unitMesh;
-        UnitType type = firstGroup.type;
-
-
-        if (originalMaterials.ContainsKey(firstGroup))
-        {
-            mat = originalMaterials[firstGroup];
-        }
+        // --- POPRAWKA: Pobieramy dane z pierwszego archetypu pierwszej grupy ---
+        var firstGroupArch = selectedGroups[0].archetypes[0];
 
         TacticalGroup superGroup = new TacticalGroup(
             "Merged_" + customName,
-            mesh,
-            mat,
-            HierarchyRank.Brigade, // Dajemy wyższą rangę
-            type
+            firstGroupArch.unitMesh,
+            firstGroupArch.unitMaterial,
+            HierarchyRank.Brigade,
+            firstGroupArch.type
         );
 
+        superGroup.archetypes.Clear();
         superGroup.customName = customName;
         superGroup.isMergedGroup = true;
-        superGroup.arrowMesh = firstGroup.arrowMesh;
-        superGroup.arrowMaterial = firstGroup.arrowMaterial;
-        superGroup.speedMultiplier = firstGroup.speedMultiplier;
+        // Uwaga: arrowMaterial nie przypisujemy już do grupy, tylko do archetypów niżej
 
-        // Dodajemy do słownika materiałów
-        if (!originalMaterials.ContainsKey(superGroup)) originalMaterials.Add(superGroup, mat);
+        Dictionary<string, int> shapeToArchetypeMap = new Dictionary<string, int>();
 
-        // 2. Przenoszenie żołnierzy
         foreach (var oldGroup in selectedGroups)
         {
-            // Kopiujemy dane żołnierzy do nowej grupy
-            superGroup.unitMatrices.AddRange(oldGroup.unitMatrices);
-            superGroup.unitHealth.AddRange(oldGroup.unitHealth);
-            superGroup.attackCooldowns.AddRange(oldGroup.attackCooldowns);
-            superGroup.lastPositions.AddRange(oldGroup.lastPositions);
+            for (int k = 0; k < oldGroup.archetypes.Count; k++)
+            {
+                var oldArch = oldGroup.archetypes[k];
+                string uniqueKey = oldArch.unitMesh.name + "_" + oldArch.type.ToString();
 
-            // Czyścimy stare grupy (fizycznie żołnierze już są w nowej)
+                int targetArchetypeIndex = -1;
+
+                if (!shapeToArchetypeMap.TryGetValue(uniqueKey, out targetArchetypeIndex))
+                {
+                    UnitArchetype newArch = new UnitArchetype();
+                    newArch.type = oldArch.type;
+                    newArch.unitMesh = oldArch.unitMesh;
+                    newArch.unitMaterial = oldArch.unitMaterial;
+                    newArch.originalMaterial = oldArch.originalMaterial; // Przenosimy oryginalny kolor
+                    newArch.arrowMesh = oldArch.arrowMesh;
+                    newArch.arrowMaterial = oldArch.arrowMaterial;
+                    newArch.speedMultiplier = oldArch.speedMultiplier;
+
+                    superGroup.archetypes.Add(newArch);
+                    targetArchetypeIndex = superGroup.archetypes.Count - 1;
+                    shapeToArchetypeMap.Add(uniqueKey, targetArchetypeIndex);
+                }
+
+                for (int i = 0; i < oldGroup.unitMatrices.Count; i++)
+                {
+                    if (oldGroup.unitArchetypeIndices[i] == k)
+                    {
+                        superGroup.AddUnit(oldGroup.unitMatrices[i], oldGroup.unitHealth[i], targetArchetypeIndex);
+                        superGroup.attackCooldowns[superGroup.attackCooldowns.Count - 1] = oldGroup.attackCooldowns[i];
+                    }
+                }
+            }
+
             oldGroup.unitMatrices.Clear();
-
-            // Usuwamy stare UI
             var uiToRemove = uiElements.Find(x => x.GetGroup() == oldGroup);
             if (uiToRemove != null)
             {
                 uiElements.Remove(uiToRemove);
                 Destroy(uiToRemove.gameObject);
             }
-
-            // Usuwamy stare grupy z listy Frakcji (zakładamy, że gracz to Frakcja A)
             if (factionAGroups.Contains(oldGroup)) factionAGroups.Remove(oldGroup);
-            // Jeśli grasz Frakcją B, dodaj analogiczny warunek
         }
 
-        // 3. Finalizacja nowej grupy
-        superGroup.RebuildBatchesFull(); // Budujemy bufory renderowania
-        superGroup.RecalculateCenter();  // Wyliczamy nowy środek tej dużej chmary
+        superGroup.RebuildBatchesFull();
+        superGroup.RecalculateStats();
+        factionAGroups.Add(superGroup);
 
-        // Dodajemy do listy armii
-        factionAGroups.Add(superGroup); // Zakładam Frakcję A
-
-        // Tworzymy nowe UI
         GameObject newUIObj = Instantiate(groupUIPrefab, uiContainer);
         ArmyGroupUI newUI = newUIObj.GetComponent<ArmyGroupUI>();
         newUI.Setup(superGroup, this);
         uiElements.Add(newUI);
 
-        // Aktualizujemy zaznaczenie - teraz zaznaczona jest tylko nowa grupa
         selectedGroups.Clear();
-
-        // Odświeżamy wygląd UI (żeby przyciski przestały się świecić)
         UpdateUISelectionVisuals();
-
-        // Upewniamy się, że nowa grupa ma oryginalny materiał (niebieski znika)
-        superGroup.unitMaterial = mat;
-
-        Debug.Log($"Utworzono grupę: {customName}. Zaznaczenie zdjęte.");
     }
 
     void ProcessMovement(TacticalGroup group)
@@ -463,6 +427,9 @@ public class ArmyHierarchyManager : MonoBehaviour
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
+        // Sprawdzamy dystans - tutaj uwaga: jeśli kawaleria dojedzie pierwsza, 
+        // środek grupy przesunie się do celu i grupa może się zatrzymać, zanim piechota dojdzie.
+        // W prostym systemie RTS to akceptowalne.
         if (Vector3.SqrMagnitude(flatTarget - flatCenter) < stopDistance * stopDistance)
         {
             group.isMoving = false;
@@ -470,44 +437,42 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         Vector3 direction = (flatTarget - flatCenter).normalized;
-        float baseSpeed = moveSpeed * group.speedMultiplier * Time.deltaTime;
+
+        // --- ZMIANA 1: Bierzemy "czystą" prędkość bazową bez mnożnika grupy ---
+        // Wcześniej było: moveSpeed * group.minGroupSpeedMultiplier * Time.deltaTime;
+        float globalBaseSpeed = moveSpeed * Time.deltaTime;
 
         Quaternion currentRot = group.unitMatrices[0].rotation;
         Quaternion targetRot = Quaternion.LookRotation(direction);
         Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
-
         Vector3 scaleVec = group.unitMatrices[0].lossyScale;
 
-        // Cache danych terenu (dla lasu)
         int alphaWidth = 0, alphaHeight = 0;
-        if (terrainData != null)
-        {
-            alphaWidth = terrainData.alphamapWidth;
-            alphaHeight = terrainData.alphamapHeight;
-        }
+        if (terrainData != null) { alphaWidth = terrainData.alphamapWidth; alphaHeight = terrainData.alphamapHeight; }
 
         for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             Matrix4x4 mat = group.unitMatrices[i];
             Vector3 currentPos = mat.GetColumn(3);
 
+            // --- ZMIANA 2: Pobieramy archetyp jednostki na początku pętli ---
+            UnitArchetype arch = group.GetUnitArchetype(i);
+
+            // --- ZMIANA 3: Obliczamy prędkość INDYWIDUALNĄ dla tego żołnierza ---
+            float mySpeedMultiplier = (arch != null) ? arch.speedMultiplier : 1.0f;
+            float myBaseSpeed = globalBaseSpeed * mySpeedMultiplier;
+
             float terrainY = currentPos.y;
             if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
 
-            // 1. WODA (Raycast)
             bool inWater = false;
             float waterHeight = -1000f;
             RaycastHit hit;
             if (Physics.Raycast(currentPos + Vector3.up * 50f, Vector3.down, out hit, 100f, waterLayerMask))
             {
-                if (hit.point.y > terrainY - 0.1f)
-                {
-                    inWater = true;
-                    waterHeight = hit.point.y;
-                }
+                if (hit.point.y > terrainY - 0.1f) { inWater = true; waterHeight = hit.point.y; }
             }
 
-            // 2. POCHYŁOŚĆ
             float slopeMod = 1.0f;
             if (terrain != null && !inWater)
             {
@@ -522,31 +487,29 @@ public class ArmyHierarchyManager : MonoBehaviour
                 else if (angle < -lightSlopeAngle) slopeMod = downhillLightMult;
             }
 
-            // --- 3. LAS (ALPHAMAP CHECK) ---
             float forestMod = 1.0f;
             if (forestLayerIndex != -1 && !inWater && terrainData != null)
             {
-                // Obliczamy współrzędne na splatmapie
                 int mapX = Mathf.RoundToInt(((currentPos.x - terrain.transform.position.x) / terrainData.size.x) * alphaWidth);
                 int mapZ = Mathf.RoundToInt(((currentPos.z - terrain.transform.position.z) / terrainData.size.z) * alphaHeight);
 
-                // Sprawdzamy czy jednostka jest w granicach
                 if (mapX >= 0 && mapX < alphaWidth && mapZ >= 0 && mapZ < alphaHeight)
                 {
-                    // Pobieramy wartość tekstury lasu w tym punkcie
                     float[,,] splat = terrainData.GetAlphamaps(mapX, mapZ, 1, 1);
-                    if (splat[0, 0, forestLayerIndex] > 0.5f) // Jeśli tekstura lasu > 50%
+                    if (splat[0, 0, forestLayerIndex] > 0.5f)
                     {
-                        forestMod = (group.type == UnitType.Cavalry) ? forestCavalryPenalty : forestInfantryPenalty;
+                        // Używamy pobranego wcześniej 'arch'
+                        if (arch != null)
+                            forestMod = (arch.type == UnitType.Cavalry) ? forestCavalryPenalty : forestInfantryPenalty;
                     }
                 }
             }
-            // --------------------------------
 
             float finalMod = slopeMod * forestMod;
             if (inWater) finalMod *= waterSpeedPenalty;
 
-            Vector3 newPos = currentPos + (direction * baseSpeed * finalMod);
+            // --- ZMIANA 4: Używamy myBaseSpeed zamiast baseSpeed ---
+            Vector3 newPos = currentPos + (direction * myBaseSpeed * finalMod);
 
             newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
@@ -557,7 +520,6 @@ public class ArmyHierarchyManager : MonoBehaviour
 
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
         }
-
         group.UpdateBatchData();
         group.RecalculateCenter();
     }
@@ -567,23 +529,19 @@ public class ArmyHierarchyManager : MonoBehaviour
         int totalBudget = maxCombatChecksPerFrame;
         int halfBudget = totalBudget / 2;
 
-        // Faza 1: A atakuje B
         spatialGrid.Clear();
         foreach (var groupB in factionBGroups)
         {
             if (groupB.unitMatrices.Count == 0) continue;
-            for (int i = 0; i < groupB.unitMatrices.Count; i++)
-                AddToGrid(groupB, i, (Vector3)groupB.unitMatrices[i].GetColumn(3));
+            for (int i = 0; i < groupB.unitMatrices.Count; i++) AddToGrid(groupB, i, (Vector3)groupB.unitMatrices[i].GetColumn(3));
         }
         ProcessFactionAttack(factionAGroups, factionBGroups, ref nextGroupIdxA, ref nextUnitIdxA, halfBudget);
 
-        // Faza 2: B atakuje A
         spatialGrid.Clear();
         foreach (var groupA in factionAGroups)
         {
             if (groupA.unitMatrices.Count == 0) continue;
-            for (int i = 0; i < groupA.unitMatrices.Count; i++)
-                AddToGrid(groupA, i, (Vector3)groupA.unitMatrices[i].GetColumn(3));
+            for (int i = 0; i < groupA.unitMatrices.Count; i++) AddToGrid(groupA, i, (Vector3)groupA.unitMatrices[i].GetColumn(3));
         }
         ProcessFactionAttack(factionBGroups, factionAGroups, ref nextGroupIdxB, ref nextUnitIdxB, halfBudget);
     }
@@ -594,29 +552,23 @@ public class ArmyHierarchyManager : MonoBehaviour
         while (budget > 0 && groupsChecked < attackers.Count)
         {
             if (groupIdx >= attackers.Count) { groupIdx = 0; unitIdx = 0; }
-
             var attGroup = attackers[groupIdx];
 
             if (attGroup.unitMatrices.Count == 0)
             {
-                groupIdx++;
-                unitIdx = 0;
-                groupsChecked++;
+                groupIdx++; unitIdx = 0; groupsChecked++;
                 continue;
             }
 
             while (unitIdx < attGroup.unitMatrices.Count && budget > 0)
             {
                 ProcessSingleAttacker(attGroup, defenders, unitIdx);
-                unitIdx++;
-                budget--;
+                unitIdx++; budget--;
             }
 
             if (unitIdx >= attGroup.unitMatrices.Count)
             {
-                groupIdx++;
-                unitIdx = 0;
-                groupsChecked++;
+                groupIdx++; unitIdx = 0; groupsChecked++;
             }
         }
     }
@@ -626,129 +578,80 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (idx >= attackerGroup.attackCooldowns.Count || idx >= attackerGroup.unitMatrices.Count) return;
 
         float dt = Time.deltaTime;
-        if (attackerGroup.attackCooldowns[idx] > 0)
-        {
-            attackerGroup.attackCooldowns[idx] -= dt;
-            return;
-        }
+        if (attackerGroup.attackCooldowns[idx] > 0) { attackerGroup.attackCooldowns[idx] -= dt; return; }
 
-        // Pobranie pozycji i wektora przodu atakującego
         Matrix4x4 myMat = attackerGroup.unitMatrices[idx];
         Vector3 myPos = (Vector3)myMat.GetColumn(3);
-        Vector3 myForward = (Vector3)myMat.GetColumn(2); // Gdzie patrzę?
+        Vector3 myForward = (Vector3)myMat.GetColumn(2);
 
-        bool isArcher = attackerGroup.type == UnitType.Archer;
+        // --- POPRAWKA: Pobieramy typ z archetypu jednostki ---
+        UnitArchetype attackerStats = attackerGroup.GetUnitArchetype(idx);
+        if (attackerStats == null) return;
+
+        bool isArcher = attackerStats.type == UnitType.Archer;
         float range = isArcher ? attackRangeArcher : attackRangeMelee;
         float rangeSq = range * range;
         float cooldownTime = isArcher ? archerAttackCooldown : attackCooldown;
 
         UnitRef target = new UnitRef { group = null };
-
-        if (isArcher)
-        {
-            target = FindTargetGlobal(myPos, range, rangeSq, enemyFaction);
-        }
-        else
-        {
-            target = FindTargetInGrid(myPos, rangeSq);
-        }
+        if (isArcher) target = FindTargetGlobal(myPos, range, rangeSq, enemyFaction);
+        else target = FindTargetInGrid(myPos, rangeSq);
 
         if (target.group != null)
         {
             if (target.index >= target.group.unitMatrices.Count) return;
 
-            // 1. Sprawdzenie: Czy atakujący patrzy na wroga?
             Vector3 dirToTarget = (target.position - myPos).normalized;
             float angleDot = Vector3.Dot(myForward, dirToTarget);
+            if (angleDot < 0.2f) return;
 
-            if (angleDot < 0.2f) // Jeśli mam wroga z boku lub za plecami -> nie atakuję
-            {
-                return;
-            }
-
-            // 2. NOWOŚĆ: Sprawdzenie Ciosu w Plecy (Backstab)
             Matrix4x4 targetMat = target.group.unitMatrices[target.index];
-            Vector3 targetForward = (Vector3)targetMat.GetColumn(2); // Gdzie patrzy ofiara?
-
-            // Jeśli iloczyn skalarny jest wysoki (np. > 0.5), oznacza to, że wektory są "zgodne".
-            // Czyli: Atakujący patrzy na ofiarę, a ofiara patrzy w tę samą stronę co atakujący (ucieka/stoi tyłem).
+            Vector3 targetForward = (Vector3)targetMat.GetColumn(2);
             float orientationDot = Vector3.Dot(myForward, targetForward);
-
-            bool isBackstab = (orientationDot > 0.5f); // Próg ok. 60 stopni z tyłu
+            bool isBackstab = (orientationDot > 0.5f);
 
             float dmg = 0f;
-
-            if (isBackstab)
-            {
-                // INSTANT KILL: Zadajemy ogromne obrażenia
-                dmg = 10000f;
-            }
-            else
-            {
-                // Normalna walka twarzą w twarz
-                dmg = CalculateDamage(attackerGroup, target.group, idx, target.index, myPos, target.position);
-            }
+            if (isBackstab) dmg = 10000f;
+            else dmg = CalculateDamage(attackerGroup, target.group, idx, target.index, myPos, target.position);
 
             target.group.unitHealth[target.index] -= dmg;
             attackerGroup.attackCooldowns[idx] = cooldownTime * Random.Range(0.8f, 1.2f);
 
-            if (target.group.unitHealth[target.index] <= 0)
-            {
-                KillUnit(target.group, target.index);
-            }
+            if (target.group.unitHealth[target.index] <= 0) KillUnit(target.group, target.index);
         }
     }
 
     UnitRef FindTargetGlobal(Vector3 myPos, float baseRange, float unusedRangeSq, List<TacticalGroup> enemies)
     {
         int startIdx = Random.Range(0, enemies.Count);
-
         for (int i = 0; i < enemies.Count; i++)
         {
             int idx = (startIdx + i) % enemies.Count;
             var group = enemies[idx];
-
             if (group.unitMatrices.Count == 0) continue;
             Vector3 centerDir = group.groupCenter - myPos;
             float flatDistToGroup = new Vector2(centerDir.x, centerDir.z).magnitude;
-            float distToGroup = Vector3.Distance(myPos, group.groupCenter);
             if (flatDistToGroup < baseRange + group.groupRadius + 50f)
             {
-                // Sprawdzamy kilka losowych jednostek w oddziale (próbkowanie)
                 int attempts = 3;
                 for (int k = 0; k < attempts; k++)
                 {
                     int randIdx = Random.Range(0, group.unitMatrices.Count);
                     Vector3 enemyPos = (Vector3)group.unitMatrices[randIdx].GetColumn(3);
-
-                    // --- LOGIKA BALISTYKI I WYSOKOŚCI ---
-
-                    // A. Oblicz różnicę wysokości
-                    float heightDiff = myPos.y - enemyPos.y; // Dodatnie = strzelam w dół
-
-                    // B. Oblicz zmodyfikowany zasięg
-                    // Jeśli jesteś wyżej, zasięg rośnie. Jeśli niżej, maleje.
+                    float heightDiff = myPos.y - enemyPos.y;
                     float effectiveRange = baseRange + (heightDiff * heightRangeBonus);
-                    if (effectiveRange < 10f) effectiveRange = 10f; // Minimalny zasięg
+                    if (effectiveRange < 10f) effectiveRange = 10f;
 
-                    // C. Oblicz dystans płaski (XZ) do konkretnego wroga
                     float dx = myPos.x - enemyPos.x;
                     float dz = myPos.z - enemyPos.z;
                     float distFlatSq = (dx * dx) + (dz * dz);
 
-                    // Sprawdź czy wróg jest w zasięgu (porównujemy kwadraty dla wydajności)
                     if (distFlatSq < effectiveRange * effectiveRange)
                     {
-                        // D. Raycast (Line of Sight) - Czy widzimy wroga?
-                        // Podnosimy punkt startu i końca o 1.5m (wysokość wzroku/głowy), żeby nie strzelać w podłogę pod nogami
                         Vector3 originHead = myPos + Vector3.up * 1.5f;
                         Vector3 targetHead = enemyPos + Vector3.up * 1.0f;
-
-                        // Sprawdzamy czy teren nie zasłania (używamy terrainLayerMask z Twojego skryptu)
                         if (!Physics.Linecast(originHead, targetHead, terrainLayerMask))
-                        {
                             return new UnitRef { group = group, index = randIdx, position = enemyPos };
-                        }
                     }
                 }
             }
@@ -774,21 +677,15 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         int cx = Mathf.FloorToInt(pos.x / cellSize);
         int cz = Mathf.FloorToInt(pos.z / cellSize);
-
         for (int x = -1; x <= 1; x++)
         {
             for (int z = -1; z <= 1; z++)
             {
-                int nx = cx + x;
-                int nz = cz + z;
-                int key = (nx * 73856093) ^ (nz * 19349663);
-
+                int key = ((cx + x) * 73856093) ^ ((cz + z) * 19349663);
                 if (spatialGrid.TryGetValue(key, out List<UnitRef> list))
                 {
                     foreach (var u in list)
-                    {
                         if ((u.position - pos).sqrMagnitude < rangeSq) return u;
-                    }
                 }
             }
         }
@@ -797,17 +694,21 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     float CalculateDamage(TacticalGroup attGroup, TacticalGroup defGroup, int attIdx, int defIdx, Vector3 attPos, Vector3 defPos)
     {
+        UnitArchetype attackerStats = attGroup.GetUnitArchetype(attIdx);
+        if (attackerStats == null) return 1.0f;
+
         float finalDamage = 0f;
-        switch (attGroup.type)
+        switch (attackerStats.type)
         {
             case UnitType.Infantry: finalDamage = dmgInfantry; break;
             case UnitType.Archer: finalDamage = Random.Range(dmgArcherMin, dmgArcherMax); break;
-            case UnitType.Cavalry: finalDamage = attGroup.isMoving ? dmgCavalryCharge : dmgCavalryStatic; break;
+            case UnitType.Cavalry:
+                finalDamage = attGroup.isMoving ? dmgCavalryCharge : dmgCavalryStatic;
+                break;
         }
 
         if (attPos.y > defPos.y + 1.0f) finalDamage *= 1.25f;
         else if (attPos.y < defPos.y - 1.0f) finalDamage *= 0.75f;
-
         return finalDamage;
     }
 
@@ -849,16 +750,21 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (counterTextA != null) counterTextA.text = totalA.ToString();
         if (counterTextB != null) counterTextB.text = totalB.ToString();
-
-        // --- NOWOŚĆ: Sprawdź czy koniec gry ---
         CheckWinCondition(totalA, totalB);
     }
 
     void SetGroupHighlight(TacticalGroup group, bool highlight)
     {
         if (group == null || group.unitMatrices.Count == 0) return;
-        if (highlight && highlightMaterial != null) group.unitMaterial = highlightMaterial;
-        else if (originalMaterials.ContainsKey(group)) group.unitMaterial = originalMaterials[group];
+
+        // --- POPRAWKA: Pętla po wszystkich archetypach ---
+        foreach (var arch in group.archetypes)
+        {
+            if (highlight && highlightMaterial != null)
+                arch.unitMaterial = highlightMaterial;
+            else
+                arch.unitMaterial = arch.originalMaterial; // Przywracamy oryginał
+        }
     }
 
     public void SelectGroup(TacticalGroup group)
@@ -948,87 +854,56 @@ public class ArmyHierarchyManager : MonoBehaviour
     void CheckWinCondition(int countA, int countB)
     {
         if (isBattleOver) return;
-
-        // Pobieramy, którą stroną jest gracz (zapisane w PlayerPrefs w menu)
-        // Domyślnie zakładamy SideA, jeśli brakuje zapisu
         string playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
         bool playerIsSideA = (playerSide == "SideA");
 
         if (countA <= 0)
         {
-            // Strona A przegrała (wszyscy zginęli)
-            if (playerIsSideA) GameOver(false); // Gracz był A -> Porażka
-            else GameOver(true);                // Gracz był B -> Zwycięstwo
+            if (playerIsSideA) GameOver(false);
+            else GameOver(true);
         }
         else if (countB <= 0)
         {
-            // Strona B przegrała
-            if (!playerIsSideA) GameOver(false); // Gracz był B -> Porażka
-            else GameOver(true);                 // Gracz był A -> Zwycięstwo
+            if (!playerIsSideA) GameOver(false);
+            else GameOver(true);
         }
     }
 
     void GameOver(bool isVictory)
     {
         isBattleOver = true;
-        Time.timeScale = 0f; // Zatrzymaj grę (fizykę i ruch)
+        Time.timeScale = 0f;
 
-        // --- NOWOŚĆ: Wyłączamy możliwość pauzowania ---
         PauseMenuController pauseCtrl = FindAnyObjectByType<PauseMenuController>();
-        if (pauseCtrl != null)
-        {
-            pauseCtrl.enabled = false; // Wyłącza Update() w skrypcie pauzy -> ESC przestaje działać
-        }
-        // ----------------------------------------------
+        if (pauseCtrl != null) pauseCtrl.enabled = false;
 
         if (endGamePanel != null)
         {
             endGamePanel.SetActive(true);
-
             if (resultText != null)
             {
-                if (isVictory)
-                {
-                    resultText.text = "WIELKIE ZWYCIĘSTWO!";
-                    resultText.color = Color.green;
-                }
-                else
-                {
-                    resultText.text = "HANIEBNA PORAŻKA...";
-                    resultText.color = Color.red;
-                }
+                if (isVictory) { resultText.text = "WIELKIE ZWYCIĘSTWO!"; resultText.color = Color.green; }
+                else { resultText.text = "HANIEBNA PORAŻKA..."; resultText.color = Color.red; }
             }
         }
     }
     public void ReturnToMenu()
     {
-        Time.timeScale = 1f; // Odblokuj czas przed zmianą sceny!
+        Time.timeScale = 1f;
         SceneManager.LoadScene(menuSceneName);
     }
 
     public void StartBattle()
     {
-        isDeploymentPhase = false; // Koniec fazy rozstawiania
-
-        // Ukrywamy przycisk, bo już nie jest potrzebny
-        if (startBattleButton != null)
-            startBattleButton.SetActive(false);
-
+        isDeploymentPhase = false;
+        if (startBattleButton != null) startBattleButton.SetActive(false);
         Debug.Log("Faza rozstawiania zakończona. Bitwa rozpoczęta!");
     }
 
     void ToggleTacticalPause()
     {
-        // Nie można pauzować w fazie rozstawiania (bo i tak wszystko stoi) 
-        // ani po końcu gry.
         if (isDeploymentPhase || isBattleOver) return;
-
         isTacticalPause = !isTacticalPause;
-
-        // Pokaż/Ukryj napis "||"
-        if (tacticalPauseIndicator != null)
-        {
-            tacticalPauseIndicator.SetActive(isTacticalPause);
-        }
+        if (tacticalPauseIndicator != null) tacticalPauseIndicator.SetActive(isTacticalPause);
     }
 }
