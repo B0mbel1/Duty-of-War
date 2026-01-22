@@ -700,9 +700,9 @@ GameObject:
   m_Component:
   - component: {fileID: 3864296184176124361}
   - component: {fileID: 3538309735310386983}
-  - component: {fileID: 3318211242045764330}
   - component: {fileID: 2767636062752704480}
   - component: {fileID: 7824513812173860371}
+  - component: {fileID: 8899770588080954688}
   m_Layer: 5
   m_Name: Unit Panel
   m_TagString: Untagged
@@ -720,14 +720,14 @@ RectTransform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 3683700961543772252}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 80}
-  m_SizeDelta: {x: 642.4867, y: 0}
+  m_AnchoredPosition: {x: 13, y: 250}
+  m_SizeDelta: {x: 900, y: 0}
   m_Pivot: {x: 0, y: 0}
 --- !u!223 &3538309735310386983
 Canvas:
@@ -752,30 +752,6 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
---- !u!114 &3318211242045764330
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1629857489819836119}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8a8695521f0d02e499659fee002a26c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GridLayoutGroup
-  m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
-  m_ChildAlignment: 0
-  m_StartCorner: 0
-  m_StartAxis: 0
-  m_CellSize: {x: 50, y: 40}
-  m_Spacing: {x: 0, y: 0}
-  m_Constraint: 0
-  m_ConstraintCount: 2
 --- !u!114 &2767636062752704480
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -807,6 +783,28 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &8899770588080954688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1629857489819836119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c83e7c1a20b4bd4e827a9e04a4d3aad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlowLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 0
+  SpacingX: 1
+  SpacingY: 1
+  ChildForceExpandWidth: 0
+  ChildForceExpandHeight: 0
 --- !u!1 &1896818413194815019
 GameObject:
   m_ObjectHideFlags: 0
@@ -841,7 +839,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 300, y: 48}
+  m_AnchoredPosition: {x: 101, y: 310}
   m_SizeDelta: {x: 173.4549, y: 43.5819}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1591084310832906967

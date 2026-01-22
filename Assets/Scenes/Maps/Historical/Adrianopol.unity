@@ -419,6 +419,42 @@ PrefabInstance:
       propertyPath: m_Name
       value: ZmianaNazwyOddzialu
       objectReference: {fileID: 0}
+    - target: {fileID: 2767636062752704480, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_VerticalFit
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2767636062752704480, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_HorizontalFit
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 700
+      objectReference: {fileID: 0}
+    - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 250
+      objectReference: {fileID: 0}
+    - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4098271730710563613, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_LocalPosition.x
       value: 427.43268
@@ -495,10 +531,14 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 3318211242045764330, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1629857489819836119, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2112024925}
   m_SourcePrefab: {fileID: 100100000, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
 --- !u!224 &488601542 stripped
 RectTransform:
@@ -1266,6 +1306,33 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &2112024920 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1629857489819836119, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2112024925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2112024920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c83e7c1a20b4bd4e827a9e04a4d3aad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FlowLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 0
+  SpacingX: 1
+  SpacingY: 1
+  ChildForceExpandWidth: 0
+  ChildForceExpandHeight: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

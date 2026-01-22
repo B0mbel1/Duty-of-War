@@ -638,6 +638,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: UI w grze
       objectReference: {fileID: 0}
+    - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 250
+      objectReference: {fileID: 0}
     - target: {fileID: 4098271730710563613, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_LocalPosition.x
       value: 351.19742

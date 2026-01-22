@@ -23,55 +23,62 @@ public class ArmyGroupUI : MonoBehaviour
         myGroup = group;
         manager = mgr;
 
+        // 1. Dodajemy/Pobieramy LayoutElement - to on mówi "Horizontal Layout Group" ile miejsca potrzebujemy
         LayoutElement layout = GetComponent<LayoutElement>();
         if (layout == null) layout = gameObject.AddComponent<LayoutElement>();
 
+        // 2. Logika rozmiaru
+        if (group.isMergedGroup)
+        {
+            // --- DLA CUSTOMOWYCH (DUŻYCH) ---
+            // Ustawiamy szerszy element (np. 100 pikseli zamiast 50)
+            layout.minWidth = 100f;
+            layout.preferredWidth = 100f;
+
+            layout.minHeight = 40f;  // Wysokość taka sama jak reszty (żeby pasowało do paska)
+            layout.preferredHeight = 40f;
+        }
+        else
+        {
+            // --- DLA ZWYKŁYCH (STANDARDOWE 50x40) ---
+            // To odpowiada Twojemu staremu Cell Size
+            layout.minWidth = 50f;
+            layout.preferredWidth = 50f;
+
+            layout.minHeight = 40f;
+            layout.preferredHeight = 40f;
+        }
+
+        // 3. Reszta logiki (obrazki i tekst) bez zmian
         if (backgroundImage != null)
         {
             backgroundImage.preserveAspect = false;
 
-            // --- ZMIANA LOGIKI WYGLĄDU ---
             if (group.isMergedGroup)
             {
-                // Jeśli to grupa gracza (złączona) -> Prostokąt i wyświetl nazwę
-                layout.preferredWidth = 250f; // Szeroki prostokąt
-                layout.preferredHeight = 60f;
-
-                // Jeśli masz Sprite prostokąta, przypisz go tutaj, 
-                // jeśli nie - Unity użyje domyślnego kwadratu rozciągniętego na prostokąt.
-                // backgroundImage.sprite = null; // Opcjonalnie reset do domyślnego UI
+                // Tutaj np. brak obrazka lub specjalna ramka dla połączonych
+                // backgroundImage.sprite = null; 
             }
             else
             {
-                // Stara logika dla zwykłych oddziałów
-                layout.preferredWidth = 80f;
-                layout.preferredHeight = 80f;
-
-                if (group.groupName.Contains("Infantry") && shapeInfantry != null) backgroundImage.sprite = shapeInfantry;
-                else if (group.groupName.Contains("Archer") && shapeArcher != null) backgroundImage.sprite = shapeArcher;
+                if (group.groupName.Contains("Infantry") && shapeInfantry != null)
+                    backgroundImage.sprite = shapeInfantry;
+                else if (group.groupName.Contains("Archer") && shapeArcher != null)
+                    backgroundImage.sprite = shapeArcher;
                 else if (group.groupName.Contains("Cavalry") && shapeCavalry != null)
                 {
                     backgroundImage.sprite = shapeCavalry;
                     backgroundImage.preserveAspect = true;
-                    layout.preferredWidth = 140f;
-                    layout.preferredHeight = 60f;
                 }
             }
         }
 
-        // --- TEKST ---
         if (groupNameText != null)
         {
-            // Jeśli grupa ma własną nazwę, wyświetl ją. Jeśli nie - pokaż liczbę jednostek.
             if (!string.IsNullOrEmpty(group.customName))
-            {
                 groupNameText.text = group.customName + "\n(" + group.unitMatrices.Count + ")";
-                groupNameText.fontSize = 14; // Trochę mniejsza czcionka dla dłuższej nazwy
-            }
             else
-            {
                 groupNameText.text = group.unitMatrices.Count.ToString();
-            }
         }
 
         backgroundImage.color = Color.white;
