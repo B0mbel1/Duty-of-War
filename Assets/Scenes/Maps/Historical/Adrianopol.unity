@@ -302,6 +302,7 @@ MonoBehaviour:
   namingPanel: {fileID: 980290155}
   nameInput: {fileID: 1589083236}
   confirmNameButton: {fileID: 679844722}
+  warningText: {fileID: 469172324}
   endGamePanel: {fileID: 488601546}
   resultText: {fileID: 488601545}
   menuSceneName: MainMenu
@@ -371,6 +372,17 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 5671425810074903445, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
   m_PrefabInstance: {fileID: 488601541}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &469172324 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2226589469722660093, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1001 &488601541
 PrefabInstance:
   m_ObjectHideFlags: 0

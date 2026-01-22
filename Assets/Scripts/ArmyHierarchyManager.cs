@@ -19,6 +19,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     public GameObject namingPanel;
     public TMP_InputField nameInput;
     public UnityEngine.UI.Button confirmNameButton;
+    public TextMeshProUGUI warningText;
 
     [Header("End Game Settings")]
     public GameObject endGamePanel;
@@ -333,6 +334,10 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             namingPanel.SetActive(true);
             nameInput.text = "";
+
+            // Czyścimy ostrzeżenie przy otwarciu
+            if (warningText != null) warningText.text = "";
+
             nameInput.Select();
             nameInput.ActivateInputField();
         }
@@ -341,7 +346,30 @@ public class ArmyHierarchyManager : MonoBehaviour
     public void OnMergeConfirmed()
     {
         string newName = nameInput.text;
-        if (!string.IsNullOrEmpty(newName)) MergeSelectedGroups(newName);
+
+        // 1. Sprawdzenie czy nazwa nie jest pusta
+        if (string.IsNullOrEmpty(newName))
+        {
+            if (warningText != null) warningText.text = "Nazwa nie może być pusta!";
+            return;
+        }
+
+        // 2. Sprawdzenie czy nazwa już istnieje (NOWE ZABEZPIECZENIE)
+        if (IsNameTaken(newName))
+        {
+            if (warningText != null)
+            {
+                warningText.text = "Nazwa już istnieje!";
+                // Opcjonalnie: Zresetuj input field lub zaznacz tekst, by łatwiej poprawić
+                nameInput.Select();
+            }
+            return; // PRZERYWAMY - nie łączymy grup!
+        }
+
+        // Jeśli przeszło testy -> Łączymy
+        if (warningText != null) warningText.text = ""; // Czyścimy błędy
+        MergeSelectedGroups(newName);
+
         if (namingPanel != null) namingPanel.SetActive(false);
     }
 
@@ -349,7 +377,14 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (selectedGroups.Count < 2) return;
 
-        // --- POPRAWKA: Pobieramy dane z pierwszego archetypu pierwszej grupy ---
+        // KROK 1: Sprawdźmy, do której frakcji należą te jednostki
+        // Sprawdzamy pierwszą zaznaczoną grupę
+        bool belongsToFactionA = factionAGroups.Contains(selectedGroups[0]);
+        bool belongsToFactionB = factionBGroups.Contains(selectedGroups[0]);
+
+        // Zabezpieczenie: jeśli z jakiegoś powodu grupy nie ma na żadnej liście
+        if (!belongsToFactionA && !belongsToFactionB) return;
+
         var firstGroupArch = selectedGroups[0].archetypes[0];
 
         TacticalGroup superGroup = new TacticalGroup(
@@ -363,7 +398,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         superGroup.archetypes.Clear();
         superGroup.customName = customName;
         superGroup.isMergedGroup = true;
-        // Uwaga: arrowMaterial nie przypisujemy już do grupy, tylko do archetypów niżej
 
         Dictionary<string, int> shapeToArchetypeMap = new Dictionary<string, int>();
 
@@ -382,7 +416,7 @@ public class ArmyHierarchyManager : MonoBehaviour
                     newArch.type = oldArch.type;
                     newArch.unitMesh = oldArch.unitMesh;
                     newArch.unitMaterial = oldArch.unitMaterial;
-                    newArch.originalMaterial = oldArch.originalMaterial; // Przenosimy oryginalny kolor
+                    newArch.originalMaterial = oldArch.originalMaterial;
                     newArch.arrowMesh = oldArch.arrowMesh;
                     newArch.arrowMaterial = oldArch.arrowMaterial;
                     newArch.speedMultiplier = oldArch.speedMultiplier;
@@ -409,12 +443,30 @@ public class ArmyHierarchyManager : MonoBehaviour
                 uiElements.Remove(uiToRemove);
                 Destroy(uiToRemove.gameObject);
             }
-            if (factionAGroups.Contains(oldGroup)) factionAGroups.Remove(oldGroup);
+
+            // KROK 2: Usuwanie ze właściwej listy (A lub B)
+            if (belongsToFactionA)
+            {
+                if (factionAGroups.Contains(oldGroup)) factionAGroups.Remove(oldGroup);
+            }
+            else
+            {
+                if (factionBGroups.Contains(oldGroup)) factionBGroups.Remove(oldGroup);
+            }
         }
 
         superGroup.RebuildBatchesFull();
         superGroup.RecalculateStats();
-        factionAGroups.Add(superGroup);
+
+        // KROK 3: Dodawanie do właściwej listy (A lub B)
+        if (belongsToFactionA)
+        {
+            factionAGroups.Add(superGroup);
+        }
+        else
+        {
+            factionBGroups.Add(superGroup);
+        }
 
         GameObject newUIObj = Instantiate(groupUIPrefab, uiContainer);
         ArmyGroupUI newUI = newUIObj.GetComponent<ArmyGroupUI>();
@@ -908,5 +960,26 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (isDeploymentPhase || isBattleOver) return;
         isTacticalPause = !isTacticalPause;
         if (tacticalPauseIndicator != null) tacticalPauseIndicator.SetActive(isTacticalPause);
+    }
+
+    bool IsNameTaken(string nameToCheck)
+    {
+        // Sprawdzamy Frakcję A
+        foreach (var group in factionAGroups)
+        {
+            // Sprawdzamy customName (nazwę nadaną przez gracza)
+            if (group.customName == nameToCheck) return true;
+            // Opcjonalnie: sprawdzamy też systemową nazwę, żeby uniknąć duplikatów systemowych
+            if (group.groupName == nameToCheck) return true;
+        }
+
+        // Sprawdzamy Frakcję B (żeby wróg też nie miał takiej samej nazwy, dla porządku)
+        foreach (var group in factionBGroups)
+        {
+            if (group.customName == nameToCheck) return true;
+            if (group.groupName == nameToCheck) return true;
+        }
+
+        return false;
     }
 }

@@ -758,6 +758,17 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 6580949417892322216, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
   m_PrefabInstance: {fileID: 1557650784}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1760834304 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2226589469722660093, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1557650784}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!114 &1778068678 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8558128190605741031, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -1023,6 +1034,7 @@ MonoBehaviour:
   namingPanel: {fileID: 1199614656}
   nameInput: {fileID: 1199614655}
   confirmNameButton: {fileID: 1778068678}
+  warningText: {fileID: 1760834304}
   endGamePanel: {fileID: 1557650789}
   resultText: {fileID: 1557650788}
   menuSceneName: MainMenu
