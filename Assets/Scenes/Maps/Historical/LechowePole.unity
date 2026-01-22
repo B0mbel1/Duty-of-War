@@ -368,6 +368,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1085439453}
     - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
+      propertyPath: unitSpacing
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
       propertyPath: factionAText
       value: 
       objectReference: {fileID: 1600939415}
@@ -509,19 +513,19 @@ MonoBehaviour:
   forestLayerName: Forest
   forestCavalryPenalty: 0.7
   forestInfantryPenalty: 0.9
-  slopeCheckDistance: 1
+  slopeCheckDistance: 2
   lightSlopeAngle: 10
   steepSlopeAngle: 30
-  uphillLightMult: 0.5
-  uphillSteepMult: 0.2
-  downhillLightMult: 1.2
-  downhillSteepMult: 0.7
-  attackRangeMelee: 3.5
+  uphillLightMult: 0.8
+  uphillSteepMult: 0.4
+  downhillLightMult: 1.1
+  downhillSteepMult: 0.9
+  attackRangeMelee: 1.5
   attackRangeArcher: 100
   heightRangeBonus: 0.5
   maxHeightDamageBonus: 1.5
-  attackCooldown: 1
-  archerAttackCooldown: 2
+  attackCooldown: 1.5
+  archerAttackCooldown: 3
   minX: 0
   maxX: 2000
   minZ: 0
@@ -529,8 +533,8 @@ MonoBehaviour:
   maxCombatChecksPerFrame: 2000
   hpMax: 2
   dmgInfantry: 1
-  dmgArcherMin: 0.5
-  dmgArcherMax: 1
+  dmgArcherMin: 0.4
+  dmgArcherMax: 0.8
   dmgCavalryCharge: 2
   dmgCavalryStatic: 0.8
   factionAGroups: []

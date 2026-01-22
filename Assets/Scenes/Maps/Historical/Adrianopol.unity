@@ -338,7 +338,7 @@ MonoBehaviour:
   heightRangeBonus: 0.5
   maxHeightDamageBonus: 1.5
   attackCooldown: 1.5
-  archerAttackCooldown: 1.5
+  archerAttackCooldown: 3
   minX: 0
   maxX: 2000
   minZ: 0

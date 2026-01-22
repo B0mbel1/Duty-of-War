@@ -1036,6 +1036,10 @@ PrefabInstance:
       value: 45
       objectReference: {fileID: 0}
     - target: {fileID: 6990999978236238867, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: unitSpacing
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6990999978236238867, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: cameraHeight
       value: 100
       objectReference: {fileID: 0}
@@ -1100,12 +1104,28 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 60639562}
     - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: dmgArcherMax
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: dmgArcherMin
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: endGamePanel
       value: 
       objectReference: {fileID: 1551231981}
     - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: menuSceneName
       value: MainMenu
+      objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: attackCooldown
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: attackRangeMelee
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: confirmNameButton

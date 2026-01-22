@@ -975,6 +975,14 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 24725120}
     - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: dmgArcherMax
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: dmgArcherMin
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: endGamePanel
       value: 
       objectReference: {fileID: 1910783583}
@@ -986,6 +994,14 @@ PrefabInstance:
       propertyPath: groupUIPrefab
       value: 
       objectReference: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: attackCooldown
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: attackRangeMelee
+      value: 1.5
+      objectReference: {fileID: 0}
     - target: {fileID: 9207094476730273397, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: confirmNameButton
       value: 
