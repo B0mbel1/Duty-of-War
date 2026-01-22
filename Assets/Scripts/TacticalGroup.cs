@@ -7,6 +7,8 @@ public enum UnitType { Infantry, Archer, Cavalry }
 public class TacticalGroup
 {
     public string groupName;
+    public string customName = "";
+    public bool isMergedGroup = false;
     public UnitType type;
     public int unitID;
     public HierarchyRank rank;

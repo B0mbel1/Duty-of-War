@@ -15,18 +15,23 @@ public class ArmyHierarchyManager : MonoBehaviour
     public GameObject groupUIPrefab;
     public Transform uiContainer;
 
-    [Header("End Game Settings")] // --- NOWOŚĆ ---
+    [Header("Merging UI")]
+    public GameObject namingPanel;
+    public TMP_InputField nameInput;
+    public UnityEngine.UI.Button confirmNameButton;
+
+    [Header("End Game Settings")]
     public GameObject endGamePanel;
     public TextMeshProUGUI resultText;
-    public string menuSceneName = "MainMenu"; // Wpisz tu nazwę swojej sceny z menu
+    public string menuSceneName = "MainMenu";
     private bool isBattleOver = false;
 
-    [Header("Battle Phase Settings")] // --- NOWOŚĆ ---
-    public bool isDeploymentPhase = true; // Domyślnie zaczynamy od fazy rozstawiania
+    [Header("Battle Phase Settings")]
+    public bool isDeploymentPhase = true;
     public GameObject startBattleButton;
 
-    [Header("Tactical Pause Settings")] // --- NOWOŚĆ ---
-    public GameObject tacticalPauseIndicator; // Tu przypiszemy tekst "||"
+    [Header("Tactical Pause Settings")]
+    public GameObject tacticalPauseIndicator;
     private bool isTacticalPause = false;
 
     [Header("Visuals")]
@@ -146,6 +151,12 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         PrepareIndicatorMeshes();
         Invoke(nameof(InitializeGroups), 0.5f);
+
+        if (namingPanel != null) namingPanel.SetActive(false);
+        if (confirmNameButton != null)
+        {
+            confirmNameButton.onClick.AddListener(OnMergeConfirmed);
+        }
     }
 
     void FindForestLayerIndex()
@@ -333,6 +344,118 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             ResolveCombatRoundRobin();
         }
+        if (Input.GetKeyDown(KeyCode.M) && selectedGroups.Count > 1)
+        {
+            OpenNamingPanel();
+        }
+    }
+
+    void OpenNamingPanel()
+    {
+        // Pauzujemy grę, żeby gracz mógł spokojnie wpisać nazwę (opcjonalne)
+        // Time.timeScale = 0f; 
+
+        if (namingPanel != null)
+        {
+            namingPanel.SetActive(true);
+            nameInput.text = "";
+            nameInput.Select(); // Auto-focus na pole tekstowe
+            nameInput.ActivateInputField();
+        }
+    }
+
+    public void OnMergeConfirmed()
+    {
+        string newName = nameInput.text;
+        if (!string.IsNullOrEmpty(newName))
+        {
+            MergeSelectedGroups(newName);
+        }
+
+        if (namingPanel != null) namingPanel.SetActive(false);
+        // Time.timeScale = 1f; // Odpauzuj
+    }
+
+    void MergeSelectedGroups(string customName)
+    {
+        if (selectedGroups.Count < 2) return;
+
+        TacticalGroup firstGroup = selectedGroups[0];
+        Material mat = firstGroup.unitMaterial;
+        Mesh mesh = firstGroup.unitMesh;
+        UnitType type = firstGroup.type;
+
+
+        if (originalMaterials.ContainsKey(firstGroup))
+        {
+            mat = originalMaterials[firstGroup];
+        }
+
+        TacticalGroup superGroup = new TacticalGroup(
+            "Merged_" + customName,
+            mesh,
+            mat,
+            HierarchyRank.Brigade, // Dajemy wyższą rangę
+            type
+        );
+
+        superGroup.customName = customName;
+        superGroup.isMergedGroup = true;
+        superGroup.arrowMesh = firstGroup.arrowMesh;
+        superGroup.arrowMaterial = firstGroup.arrowMaterial;
+        superGroup.speedMultiplier = firstGroup.speedMultiplier;
+
+        // Dodajemy do słownika materiałów
+        if (!originalMaterials.ContainsKey(superGroup)) originalMaterials.Add(superGroup, mat);
+
+        // 2. Przenoszenie żołnierzy
+        foreach (var oldGroup in selectedGroups)
+        {
+            // Kopiujemy dane żołnierzy do nowej grupy
+            superGroup.unitMatrices.AddRange(oldGroup.unitMatrices);
+            superGroup.unitHealth.AddRange(oldGroup.unitHealth);
+            superGroup.attackCooldowns.AddRange(oldGroup.attackCooldowns);
+            superGroup.lastPositions.AddRange(oldGroup.lastPositions);
+
+            // Czyścimy stare grupy (fizycznie żołnierze już są w nowej)
+            oldGroup.unitMatrices.Clear();
+
+            // Usuwamy stare UI
+            var uiToRemove = uiElements.Find(x => x.GetGroup() == oldGroup);
+            if (uiToRemove != null)
+            {
+                uiElements.Remove(uiToRemove);
+                Destroy(uiToRemove.gameObject);
+            }
+
+            // Usuwamy stare grupy z listy Frakcji (zakładamy, że gracz to Frakcja A)
+            if (factionAGroups.Contains(oldGroup)) factionAGroups.Remove(oldGroup);
+            // Jeśli grasz Frakcją B, dodaj analogiczny warunek
+        }
+
+        // 3. Finalizacja nowej grupy
+        superGroup.RebuildBatchesFull(); // Budujemy bufory renderowania
+        superGroup.RecalculateCenter();  // Wyliczamy nowy środek tej dużej chmary
+
+        // Dodajemy do listy armii
+        factionAGroups.Add(superGroup); // Zakładam Frakcję A
+
+        // Tworzymy nowe UI
+        GameObject newUIObj = Instantiate(groupUIPrefab, uiContainer);
+        ArmyGroupUI newUI = newUIObj.GetComponent<ArmyGroupUI>();
+        newUI.Setup(superGroup, this);
+        uiElements.Add(newUI);
+
+        // Aktualizujemy zaznaczenie - teraz zaznaczona jest tylko nowa grupa
+        selectedGroups.Clear();
+
+        // Odświeżamy wygląd UI (żeby przyciski przestały się świecić)
+        UpdateUISelectionVisuals();
+
+        // Upewniamy się, że nowa grupa ma oryginalny materiał (niebieski znika)
+        superGroup.unitMaterial = mat;
+
+        Debug.Log($"Utworzono grupę: {customName}. Zaznaczenie zdjęte.");
     }
 
     void ProcessMovement(TacticalGroup group)

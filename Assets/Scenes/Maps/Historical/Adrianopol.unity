@@ -299,6 +299,9 @@ MonoBehaviour:
   counterTextB: {fileID: 1435450068}
   groupUIPrefab: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
   uiContainer: {fileID: 488601542}
+  namingPanel: {fileID: 980290155}
+  nameInput: {fileID: 1589083236}
+  confirmNameButton: {fileID: 679844722}
   endGamePanel: {fileID: 488601546}
   resultText: {fileID: 488601545}
   menuSceneName: MainMenu
@@ -407,6 +410,14 @@ PrefabInstance:
     - target: {fileID: 593653411506970220, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_Name
       value: UI w grze
+      objectReference: {fileID: 0}
+    - target: {fileID: 630090636091126542, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_Name
+      value: ZatwierdzZmianeNazwy
+      objectReference: {fileID: 0}
+    - target: {fileID: 2698833465357795530, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: m_Name
+      value: ZmianaNazwyOddzialu
       objectReference: {fileID: 0}
     - target: {fileID: 4098271730710563613, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_LocalPosition.x
@@ -532,6 +543,17 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 6580949417892322216, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
   m_PrefabInstance: {fileID: 488601541}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &679844722 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8558128190605741031, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &758079941
 GameObject:
   m_ObjectHideFlags: 0
@@ -643,6 +665,11 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 758079941}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &980290155 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 935478258473247211, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1114083741
 GameObject:
   m_ObjectHideFlags: 0
@@ -997,6 +1024,17 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 10, y: 0.000000004656613, z: 9.999999}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1589083236 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1154929726677486279, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_InputField
 --- !u!114 &1601358728 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5559644271591075576, guid: 49d326ed6d683cd42b1395750475b645, type: 3}

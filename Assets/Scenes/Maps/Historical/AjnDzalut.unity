@@ -466,6 +466,22 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 8940857613441110222, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
   m_PrefabInstance: {fileID: 1557650784}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1199614655 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1154929726677486279, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1557650784}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_InputField
+--- !u!1 &1199614656 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 935478258473247211, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1557650784}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1231769809 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5671425810074903445, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -738,6 +754,17 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 6580949417892322216, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
   m_PrefabInstance: {fileID: 1557650784}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1778068678 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8558128190605741031, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1557650784}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &1925801567 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5559644271591075576, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -989,6 +1016,9 @@ MonoBehaviour:
   counterTextB: {fileID: 456348918}
   groupUIPrefab: {fileID: 3540043369245276212, guid: b9555f526eea849458752314c6cab45c, type: 3}
   uiContainer: {fileID: 1557650785}
+  namingPanel: {fileID: 1199614656}
+  nameInput: {fileID: 1199614655}
+  confirmNameButton: {fileID: 1778068678}
   endGamePanel: {fileID: 1557650789}
   resultText: {fileID: 1557650788}
   menuSceneName: MainMenu
