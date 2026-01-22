@@ -17,19 +17,32 @@ public class LLMCommander : MonoBehaviour
 
     void Start()
     {
-        // Automatyczne wykrywanie strony (jeśli używasz wyboru w menu)
+        // --- NOWOŚĆ: Auto-wykrywanie Managera ---
+        // Jeśli pole jest puste (bo jesteśmy w prefabie), znajdź Managera na scenie automatycznie
+        if (armyManager == null)
+        {
+            armyManager = FindAnyObjectByType<ArmyHierarchyManager>();
+
+            if (armyManager == null)
+            {
+                Debug.LogError("BŁĄD KRYTYCZNY: LLMCommander nie znalazł ArmyHierarchyManager na tej mapie!");
+                return; // Wyłączamy skrypt, żeby nie sypał błędami
+            }
+        }
+        // ----------------------------------------
+
+        // Automatyczne wykrywanie strony
         playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
 
         if (geminiNetwork != null)
             geminiNetwork.OnResponseReceived += ExecuteAICommands;
 
-        // Obsługa ENTERA
         if (commandInput != null)
         {
             commandInput.onSubmit.AddListener(val =>
             {
                 OnSendButtonClicked();
-                commandInput.DeactivateInputField(); // Przywraca sterowanie grą
+                commandInput.DeactivateInputField();
             });
         }
     }
