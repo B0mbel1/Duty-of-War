@@ -1,24 +1,23 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro; // Potrzebne do obsługi Input Fielda
+using TMPro;
 using System.Collections.Generic;
 
 public class LLMCommander : MonoBehaviour
 {
     [Header("Dependencies")]
-    public ArmyHierarchyManager armyManager; // Twój główny skrypt (przeciągnij w Inspectorze)
-    public GeminiNetwork geminiNetwork;      // Skrypt sieciowy (przeciągnij w Inspectorze)
+    public ArmyHierarchyManager armyManager;
+    public GeminiNetwork geminiNetwork;
 
     [Header("UI")]
-    public TMP_InputField commandInput;      // Przeciągnij tutaj swoje pole tekstowe z gry
+    public TMP_InputField commandInput;
 
     [Header("Player Settings")]
     public string playerSide = "SideA";
 
     void Start()
     {
-        // --- NOWOŚĆ: Auto-wykrywanie Managera ---
-        // Jeśli pole jest puste (bo jesteśmy w prefabie), znajdź Managera na scenie automatycznie
+        // --- Auto-wykrywanie Managera ---
         if (armyManager == null)
         {
             armyManager = FindAnyObjectByType<ArmyHierarchyManager>();
@@ -26,10 +25,9 @@ public class LLMCommander : MonoBehaviour
             if (armyManager == null)
             {
                 Debug.LogError("BŁĄD KRYTYCZNY: LLMCommander nie znalazł ArmyHierarchyManager na tej mapie!");
-                return; // Wyłączamy skrypt, żeby nie sypał błędami
+                return;
             }
         }
-        // ----------------------------------------
 
         // Automatyczne wykrywanie strony
         playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
@@ -47,13 +45,12 @@ public class LLMCommander : MonoBehaviour
         }
     }
 
-    // --- TO JEST FUNKCJA DLA PRZYCISKU (Zastępuje GeminiManager) ---
     public void OnSendButtonClicked()
     {
         if (commandInput != null && !string.IsNullOrEmpty(commandInput.text))
         {
             string textToSend = commandInput.text;
-            commandInput.text = ""; // Czyścimy pole po wysłaniu
+            commandInput.text = "";
             SendOrderToAI(textToSend);
         }
         else
@@ -61,12 +58,10 @@ public class LLMCommander : MonoBehaviour
             Debug.LogWarning("Puste pole rozkazu!");
         }
     }
-    // ---------------------------------------------------------------
 
     void SendOrderToAI(string playerText)
     {
         string systemPrompt = ConstructSystemPrompt();
-        // Dodajemy kontekst mapy (gdzie jest środek, gdzie wróg)
         string contextInfo = GetMapContextInfo();
 
         string finalPrompt = systemPrompt + "\nCONTEXT:\n" + contextInfo + "\n\nUSER COMMAND: " + playerText;
@@ -81,7 +76,6 @@ public class LLMCommander : MonoBehaviour
 
         try
         {
-            // Parsujemy JSON na obiekt
             AICommandResponse response = JsonUtility.FromJson<AICommandResponse>(jsonResponse);
 
             if (!string.IsNullOrEmpty(response.ai_thought))
@@ -98,36 +92,31 @@ public class LLMCommander : MonoBehaviour
         }
     }
 
+    // --- LOGIKA JEDNOSTEK ---
+
     string GetCustomUnitNames()
     {
         List<string> customNames = new List<string>();
-
-        // Sprawdzamy, którą stroną gramy
         var myUnits = (playerSide == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
 
         foreach (var group in myUnits)
         {
-            // Jeśli grupa ma customName (i nie jest pusty), dodajemy go do listy
             if (!string.IsNullOrEmpty(group.customName))
             {
-                // Dodajemy w cudzysłowach, np. 'Armia 1'
                 customNames.Add($"'{group.customName}'");
             }
         }
 
         if (customNames.Count == 0) return "";
-
-        // Zwracamy stringa: , 'Armia 1', 'Zakon', 'Straż'
         return ", " + string.Join(", ", customNames);
     }
 
     void ProcessSingleCommand(AICommand cmd)
     {
-        // 1. Znajdź nasze jednostki
+        // 1. Znajdź jednostki
         List<TacticalGroup> myUnits = (playerSide == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
         List<TacticalGroup> selectedUnits = new List<TacticalGroup>();
 
-        // Proste filtrowanie po tagach
         foreach (string tag in cmd.unit_tags)
         {
             string lowerTag = tag.ToLower();
@@ -139,7 +128,6 @@ public class LLMCommander : MonoBehaviour
 
             foreach (var group in myUnits)
             {
-                // Sprawdzamy nazwę systemową (np. A_Archers) i nazwę gracza (jeśli nadał)
                 if (group.groupName.ToLower().Contains(lowerTag) || group.customName.ToLower().Contains(lowerTag))
                 {
                     if (!selectedUnits.Contains(group)) selectedUnits.Add(group);
@@ -149,20 +137,15 @@ public class LLMCommander : MonoBehaviour
 
         if (selectedUnits.Count == 0) return;
 
-        // 2. Podświetl je w UI (używając twojej metody SelectGroup)
-        // Czyścimy obecne zaznaczenie (opcjonalnie)
-        // foreach(var g in selectedUnits) armyManager.SelectGroup(g); 
-
-        // 3. Oblicz cel ruchu
+        // 2. Oblicz cel ruchu
         Vector3 targetPosition = Vector3.zero;
         bool positionFound = CalculateTargetPosition(cmd.target_location, out targetPosition);
 
-        // 4. Wykonaj rozkaz
+        // 3. Wykonaj rozkaz
         if (positionFound)
         {
             foreach (var group in selectedUnits)
             {
-                // To jest logika skopiowana z twojego IssueMoveOrder, żeby działała bez klikania myszką
                 float clampedX = Mathf.Clamp(targetPosition.x, armyManager.minX, armyManager.maxX);
                 float clampedZ = Mathf.Clamp(targetPosition.z, armyManager.minZ, armyManager.maxZ);
 
@@ -171,6 +154,8 @@ public class LLMCommander : MonoBehaviour
             }
         }
     }
+
+    // --- LOGIKA CELÓW I MAPY ---
 
     bool CalculateTargetPosition(string locationName, out Vector3 position)
     {
@@ -181,6 +166,7 @@ public class LLMCommander : MonoBehaviour
         float centerZ = (armyManager.minZ + armyManager.maxZ) / 2;
         Vector3 enemyAvgPos = GetEnemyArmyCenter();
 
+        // 1. Sprawdź komendy standardowe
         if (loc.Contains("center"))
         {
             position = new Vector3(centerX, 0, centerZ);
@@ -193,24 +179,59 @@ public class LLMCommander : MonoBehaviour
         }
         if (loc.Contains("base") || loc.Contains("retreat"))
         {
-            // Baza to krawędź startowa
             float baseZ = (playerSide == "SideA") ? armyManager.minZ + 100 : armyManager.maxZ - 100;
-            // Dla pewności bierzemy pozycję spawnu A lub B jeśli są dostępne w Managerze (tu upraszczamy)
             position = new Vector3(centerX, 0, baseZ);
             return true;
         }
-        if (loc.Contains("left")) // Lewa flanka (patrząc od dołu mapy)
+        if (loc.Contains("left"))
         {
             position = new Vector3(armyManager.minX + 200, 0, centerZ);
             return true;
         }
-        if (loc.Contains("right")) // Prawa flanka
+        if (loc.Contains("right"))
         {
             position = new Vector3(armyManager.maxX - 200, 0, centerZ);
             return true;
         }
 
+        // 2. NOWOŚĆ: Szukanie po featureName w komponentach TerrainFeature
+        // Zamiast szukać po nazwie obiektu, szukamy po nazwie, którą daliśmy dla AI
+        TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
+
+        foreach (var feature in allFeatures)
+        {
+            // Porównujemy nazwę zwróconą przez AI z nazwą w Twoim skrypcie TerrainFeature
+            if (feature.featureName.ToLower() == loc)
+            {
+                position = feature.transform.position;
+                return true;
+            }
+        }
+
+        // Fallback: Jeśli nic nie znalazł w skryptach, spróbuj znaleźć po nazwie obiektu (stary sposób)
+        GameObject featureObj = GameObject.Find(locationName);
+        if (featureObj != null)
+        {
+            position = featureObj.transform.position;
+            return true;
+        }
+
         return false;
+    }
+
+    string GetMapFeaturesInfo()
+    {
+        TerrainFeature[] features = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
+        if (features.Length == 0) return "Brak";
+
+        List<string> descriptions = new List<string>();
+        foreach (var f in features)
+        {
+            // Dodajemy nazwę w cudzysłowie, żeby AI wiedziało, że to dokładny string
+            descriptions.Add($"'{f.featureName}'");
+        }
+
+        return string.Join(", ", descriptions);
     }
 
     Vector3 GetEnemyArmyCenter()
@@ -233,29 +254,33 @@ public class LLMCommander : MonoBehaviour
 
     string ConstructSystemPrompt()
     {
-        // Pobieramy nazwy dynamicznie
         string dynamicNames = GetCustomUnitNames();
+        string mapLocations = GetMapFeaturesInfo(); // Teraz pobieramy listę z mapy
 
+        // Wstawiamy {mapLocations} do promptu w sekcji DOSTĘPNE LOKACJE
         return $@"Jesteś dowódcą w grze RTS. Tłumaczysz komendy gracza na format JSON.
 ZASADY:
 1. Odpowiadaj TYLKO w formacie JSON.
 2. unit_tags: 'Infantry', 'Archer', 'Cavalry', 'All'{dynamicNames}.
-3. target_location: 'Center', 'Enemy_Army', 'My_Base', 'Left_Flank', 'Right_Flank'.
+3. target_location:
+   - STAŁE: 'Center', 'Enemy_Army', 'My_Base', 'Left_Flank', 'Right_Flank'.
+   - TERENOWE (Na tej mapie): {mapLocations}.
 4. action: 'MOVE' lub 'ATTACK'.
 
 PRZYKŁAD:
-User: Armia 1 do ataku!
+User: Piechota do lasu!
+(Jeśli na liście TERENOWE jest 'Forest_North')
 JSON:
 {{
   ""commands"": [
-    {{ ""unit_tags"": [""Armia 1""], ""action"": ""ATTACK"", ""target_location"": ""Enemy_Army"" }}
+    {{ ""unit_tags"": [""Infantry""], ""action"": ""MOVE"", ""target_location"": ""Forest_North"" }}
   ],
-  ""ai_thought"": ""Wysyłam zgrupowanie Armia 1 do ataku.""
+  ""ai_thought"": ""Wysyłam piechotę do lasu północnego.""
 }}";
     }
+
     string GetMapContextInfo()
     {
-        // Tutaj możemy dodać informacje dla AI o stanie bitwy (opcjonalne, ale pomocne)
         int myCount = 0;
         var myUnits = (playerSide == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
         foreach (var g in myUnits) myCount += g.unitMatrices.Count;
