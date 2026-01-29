@@ -212,6 +212,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &450784531 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4237397274064910678, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1600939413}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_InputField
 --- !u!1 &716981139
 GameObject:
   m_ObjectHideFlags: 0
@@ -864,6 +875,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: UI w grze
       objectReference: {fileID: 0}
+    - target: {fileID: 1810902427376789677, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: armyManager
+      value: 
+      objectReference: {fileID: 952466750}
+    - target: {fileID: 1810902427376789677, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: commandInput
+      value: 
+      objectReference: {fileID: 450784531}
     - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 250

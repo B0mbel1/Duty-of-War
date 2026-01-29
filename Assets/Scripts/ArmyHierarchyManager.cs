@@ -477,52 +477,73 @@ public class ArmyHierarchyManager : MonoBehaviour
         UpdateUISelectionVisuals();
     }
 
+    // Wklej to do ArmyHierarchyManager.cs
     void ProcessMovement(TacticalGroup group)
     {
+        // 1. Obliczamy gdzie jest środek grupy, a gdzie cel
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
-        // Sprawdzamy dystans - tutaj uwaga: jeśli kawaleria dojedzie pierwsza, 
-        // środek grupy przesunie się do celu i grupa może się zatrzymać, zanim piechota dojdzie.
-        // W prostym systemie RTS to akceptowalne.
-        if (Vector3.SqrMagnitude(flatTarget - flatCenter) < stopDistance * stopDistance)
+        float distToTargetSq = Vector3.SqrMagnitude(flatTarget - flatCenter);
+
+        // --- POPRAWKA 1: MIĘKKIE ZATRZYMANIE ---
+        // Zatrzymujemy logikę tylko jeśli jesteśmy idealnie w punkcie (0.5m błędu).
+        // Pozwala to jednostkom z tyłu nadal iść, nawet jeśli środek grupy jest już blisko celu.
+        if (distToTargetSq < 0.5f)
         {
             group.isMoving = false;
             return;
         }
 
-        Vector3 direction = (flatTarget - flatCenter).normalized;
-
-        // --- ZMIANA 1: Bierzemy "czystą" prędkość bazową bez mnożnika grupy ---
-        // Wcześniej było: moveSpeed * group.minGroupSpeedMultiplier * Time.deltaTime;
+        Vector3 groupDirection = (flatTarget - flatCenter).normalized;
         float globalBaseSpeed = moveSpeed * Time.deltaTime;
 
+        // Płynny obrót całej formacji
         Quaternion currentRot = group.unitMatrices[0].rotation;
-        Quaternion targetRot = Quaternion.LookRotation(direction);
+        Quaternion targetRot = Quaternion.LookRotation(groupDirection);
         Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
         Vector3 scaleVec = group.unitMatrices[0].lossyScale;
 
         int alphaWidth = 0, alphaHeight = 0;
         if (terrainData != null) { alphaWidth = terrainData.alphamapWidth; alphaHeight = terrainData.alphamapHeight; }
 
+        // Pętla po każdej jednostce w grupie
         for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             Matrix4x4 mat = group.unitMatrices[i];
             Vector3 currentPos = mat.GetColumn(3);
-
-            // --- ZMIANA 2: Pobieramy archetyp jednostki na początku pętli ---
             UnitArchetype arch = group.GetUnitArchetype(i);
 
-            // --- ZMIANA 3: Obliczamy prędkość INDYWIDUALNĄ dla tego żołnierza ---
-            float mySpeedMultiplier = (arch != null) ? arch.speedMultiplier : 1.0f;
-            float myBaseSpeed = globalBaseSpeed * mySpeedMultiplier;
+            // --- POPRAWKA 2: LOGIKA "GUMKI RECEPTURKI" (CATCH-UP) ---
+            // Obliczamy pozycję jednostki względem środka grupy
+            Vector3 offsetFromCenter = currentPos - group.groupCenter;
+            // Rzutujemy na kierunek ruchu: dodatnie = z przodu, ujemne = z tyłu
+            float projectedDist = Vector3.Dot(offsetFromCenter, groupDirection);
 
+            float catchUpMultiplier = 1.0f;
+
+            // Jeśli jestem z tyłu (np. 5m za liderem, bo utknąłem w rzece) -> Przyspieszam o 40%
+            if (projectedDist < -5.0f)
+            {
+                catchUpMultiplier = 1.4f;
+            }
+            // Jeśli jestem z przodu, a grupa już prawie dojechała (w zasięgu stopDistance) -> Zwalniam
+            else if (distToTargetSq < (stopDistance * stopDistance) && projectedDist > 0)
+            {
+                catchUpMultiplier = 0.3f; // Czekam na resztę
+            }
+
+            float mySpeedMultiplier = (arch != null) ? arch.speedMultiplier : 1.0f;
+            float myBaseSpeed = globalBaseSpeed * mySpeedMultiplier * catchUpMultiplier;
+
+            // --- Logika Terenu (Woda/Górki/Las) ---
             float terrainY = currentPos.y;
             if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
 
             bool inWater = false;
             float waterHeight = -1000f;
             RaycastHit hit;
+            // Raycast z góry, żeby wykryć wodę
             if (Physics.Raycast(currentPos + Vector3.up * 50f, Vector3.down, out hit, 100f, waterLayerMask))
             {
                 if (hit.point.y > terrainY - 0.1f) { inWater = true; waterHeight = hit.point.y; }
@@ -531,10 +552,9 @@ public class ArmyHierarchyManager : MonoBehaviour
             float slopeMod = 1.0f;
             if (terrain != null && !inWater)
             {
-                Vector3 probePos = currentPos + (direction * slopeCheckDistance);
+                Vector3 probePos = currentPos + (groupDirection * slopeCheckDistance);
                 float nextY = terrain.SampleHeight(probePos) + terrain.transform.position.y;
-                float heightDiff = nextY - terrainY;
-                float angle = Mathf.Atan2(heightDiff, slopeCheckDistance) * Mathf.Rad2Deg;
+                float angle = Mathf.Atan2(nextY - terrainY, slopeCheckDistance) * Mathf.Rad2Deg;
 
                 if (angle > steepSlopeAngle) slopeMod = uphillSteepMult;
                 else if (angle > lightSlopeAngle) slopeMod = uphillLightMult;
@@ -553,7 +573,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                     float[,,] splat = terrainData.GetAlphamaps(mapX, mapZ, 1, 1);
                     if (splat[0, 0, forestLayerIndex] > 0.5f)
                     {
-                        // Używamy pobranego wcześniej 'arch'
                         if (arch != null)
                             forestMod = (arch.type == UnitType.Cavalry) ? forestCavalryPenalty : forestInfantryPenalty;
                     }
@@ -561,20 +580,25 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
 
             float finalMod = slopeMod * forestMod;
-            if (inWater) finalMod *= waterSpeedPenalty;
+            if (inWater) finalMod *= waterSpeedPenalty; // Woda spowalnia
 
-            // --- ZMIANA 4: Używamy myBaseSpeed zamiast baseSpeed ---
-            Vector3 newPos = currentPos + (direction * myBaseSpeed * finalMod);
+            // Obliczenie nowej pozycji
+            Vector3 newPos = currentPos + (groupDirection * myBaseSpeed * finalMod);
 
+            // Korygowanie granic mapy
             newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
+            // Ustawienie wysokości
             if (inWater) newPos.y = waterHeight - swimmingDepth;
             else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y;
             else newPos.y = terrainY;
 
+            // Zapisz nową macierz
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
         }
+
+        // Ważne: Aktualizujemy bufory graficzne i przeliczamy środek grupy (to wpływa na logikę ruchu w kolejnej klatce)
         group.UpdateBatchData();
         group.RecalculateCenter();
     }

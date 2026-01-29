@@ -315,6 +315,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: UI w grze
       objectReference: {fileID: 0}
+    - target: {fileID: 1810902427376789677, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: armyManager
+      value: 
+      objectReference: {fileID: 1592101268}
+    - target: {fileID: 1810902427376789677, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: commandInput
+      value: 
+      objectReference: {fileID: 1965354082}
     - target: {fileID: 3864296184176124361, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 250
@@ -512,6 +520,7 @@ GameObject:
   - component: {fileID: 560465410}
   - component: {fileID: 560465409}
   - component: {fileID: 560465408}
+  - component: {fileID: 560465412}
   m_Layer: 4
   m_Name: River
   m_TagString: Water
@@ -612,6 +621,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &560465412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 560465407}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 223aeebcdca464f44b83b04762bb649a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TerrainFeature
+  featureName: Rzeka
+  description: "Rzeka, przez kt\xF3r\u0105 mo\u017Cna przej\u015B\u0107."
+  debugColor: {r: 0, g: 1, b: 0, a: 1}
+  radius: 5
 --- !u!1 &686491987
 GameObject:
   m_ObjectHideFlags: 0
@@ -1104,6 +1129,17 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!114 &1965354082 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4237397274064910678, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 424989800}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_InputField
 --- !u!1 &2106914712
 GameObject:
   m_ObjectHideFlags: 0

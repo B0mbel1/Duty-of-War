@@ -119,6 +119,17 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!114 &37784452 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4237397274064910678, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 1491759399}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TMP_InputField
 --- !u!1 &232736343 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5671425810074903445, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -766,6 +777,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: UI w grze
       objectReference: {fileID: 0}
+    - target: {fileID: 1810902427376789677, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: armyManager
+      value: 
+      objectReference: {fileID: 378080801}
+    - target: {fileID: 1810902427376789677, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: commandInput
+      value: 
+      objectReference: {fileID: 37784452}
     - target: {fileID: 4098271730710563613, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: m_LocalPosition.x
       value: 351.19742

@@ -29,8 +29,9 @@ public class LLMCommander : MonoBehaviour
             }
         }
 
-        // Automatyczne wykrywanie strony
+        // Automatyczne wykrywanie strony (SideA = Rzym/Dół, SideB = Goci/Góra)
         playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
+        Debug.Log($"LLMCommander: Dowodzę stroną {playerSide}.");
 
         if (geminiNetwork != null)
             geminiNetwork.OnResponseReceived += ExecuteAICommands;
@@ -151,11 +152,12 @@ public class LLMCommander : MonoBehaviour
 
                 group.currentDestination = new Vector3(clampedX, targetPosition.y, clampedZ);
                 group.isMoving = true;
+                Debug.Log($"Grupa {group.groupName} rusza do {group.currentDestination}");
             }
         }
     }
 
-    // --- LOGIKA CELÓW I MAPY ---
+    // --- LOGIKA CELÓW I MAPY (POPRAWIONA PERSPEKTYWA) ---
 
     bool CalculateTargetPosition(string locationName, out Vector3 position)
     {
@@ -164,9 +166,15 @@ public class LLMCommander : MonoBehaviour
 
         float centerX = (armyManager.minX + armyManager.maxX) / 2;
         float centerZ = (armyManager.minZ + armyManager.maxZ) / 2;
-        Vector3 enemyAvgPos = GetEnemyArmyCenter();
 
-        // 1. Sprawdź komendy standardowe
+        // --- KLUCZOWE: Wykrywanie bazy gracza ---
+        // SideA (Rzym) ma bazę na dole (MinZ). SideB (Goci) na górze (MaxZ).
+        bool isSideA = (playerSide == "SideA");
+
+        // Baza gracza - punkt odniesienia do komend "przed rzeką", "wróć do bazy"
+        Vector3 myBasePos = isSideA ? new Vector3(centerX, 0, armyManager.minZ) : new Vector3(centerX, 0, armyManager.maxZ);
+
+        // 1. Komendy Standardowe (Zależne od perspektywy)
         if (loc.Contains("center"))
         {
             position = new Vector3(centerX, 0, centerZ);
@@ -174,45 +182,61 @@ public class LLMCommander : MonoBehaviour
         }
         if (loc.Contains("enemy") || loc.Contains("attack"))
         {
-            position = enemyAvgPos;
+            position = GetEnemyArmyCenter();
             return true;
         }
         if (loc.Contains("base") || loc.Contains("retreat"))
         {
-            float baseZ = (playerSide == "SideA") ? armyManager.minZ + 100 : armyManager.maxZ - 100;
-            position = new Vector3(centerX, 0, baseZ);
+            // Cofnij się w stronę swojej krawędzi (z marginesem 150m)
+            float retreatZ = isSideA ? (armyManager.minZ + 150) : (armyManager.maxZ - 150);
+            position = new Vector3(centerX, 0, retreatZ);
             return true;
         }
+
+        // Logika Flank: "Lewa" zależy od tego, w którą stronę patrzysz!
         if (loc.Contains("left"))
         {
-            position = new Vector3(armyManager.minX + 200, 0, centerZ);
+            // Dla SideA (patrzy w górę Z+): Lewa to MinX
+            // Dla SideB (patrzy w dół Z-): Lewa to MaxX
+            float xPos = isSideA ? (armyManager.minX + 250) : (armyManager.maxX - 250);
+            position = new Vector3(xPos, 0, centerZ);
             return true;
         }
         if (loc.Contains("right"))
         {
-            position = new Vector3(armyManager.maxX - 200, 0, centerZ);
+            // Dla SideA: Prawa to MaxX
+            // Dla SideB: Prawa to MinX
+            float xPos = isSideA ? (armyManager.maxX - 250) : (armyManager.minX + 250);
+            position = new Vector3(xPos, 0, centerZ);
             return true;
         }
 
-        // 2. NOWOŚĆ: Szukanie po featureName w komponentach TerrainFeature
-        // Zamiast szukać po nazwie obiektu, szukamy po nazwie, którą daliśmy dla AI
+        // 2. Obiekty Terenowe (LASY, RZEKI - Smart Positioning)
         TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
-
         foreach (var feature in allFeatures)
         {
-            // Porównujemy nazwę zwróconą przez AI z nazwą w Twoim skrypcie TerrainFeature
             if (feature.featureName.ToLower() == loc)
             {
-                position = feature.transform.position;
+                // Znaleziono obiekt (np. "Rzeka")
+                Vector3 featurePos = feature.transform.position;
+
+                // Obliczamy wektor: Od Obiektu -> Do Naszej Bazy
+                Vector3 directionToMe = (myBasePos - featurePos).normalized;
+
+                // Przesuwamy cel o 45 metrów w naszą stronę.
+                // Dzięki temu "Rzeka" oznacza "Brzeg od naszej strony".
+                position = featurePos + (directionToMe * 45.0f);
                 return true;
             }
         }
 
-        // Fallback: Jeśli nic nie znalazł w skryptach, spróbuj znaleźć po nazwie obiektu (stary sposób)
+        // Fallback dla zwykłych obiektów (bez skryptu TerrainFeature)
         GameObject featureObj = GameObject.Find(locationName);
         if (featureObj != null)
         {
-            position = featureObj.transform.position;
+            Vector3 objPos = featureObj.transform.position;
+            Vector3 directionToMe = (myBasePos - objPos).normalized;
+            position = objPos + (directionToMe * 45.0f);
             return true;
         }
 
@@ -227,7 +251,6 @@ public class LLMCommander : MonoBehaviour
         List<string> descriptions = new List<string>();
         foreach (var f in features)
         {
-            // Dodajemy nazwę w cudzysłowie, żeby AI wiedziało, że to dokładny string
             descriptions.Add($"'{f.featureName}'");
         }
 

@@ -440,6 +440,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1810902427376789677, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: armyManager
+      value: 
+      objectReference: {fileID: 13856382}
+    - target: {fileID: 1810902427376789677, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: commandInput
       value: 
       objectReference: {fileID: 1772441703}
