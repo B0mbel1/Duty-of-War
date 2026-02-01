@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 
 public class ArmyHierarchyManager : MonoBehaviour
 {
@@ -294,7 +295,26 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
 
-        if (Input.GetKeyDown(KeyCode.Space)) ToggleTacticalPause();
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            // Sprawdzamy, czy kursor jest w jakimkolwiek polu tekstowym (Input Field)
+            bool isTyping = false;
+            if (EventSystem.current != null)
+            {
+                GameObject selectedObj = EventSystem.current.currentSelectedGameObject;
+                // Sprawdzamy czy wybrany obiekt to pole tekstowe (TMP)
+                if (selectedObj != null && selectedObj.GetComponent<TMP_InputField>() != null)
+                {
+                    isTyping = true;
+                }
+            }
+
+            // Pauzujemy tylko jeśli NIE piszemy
+            if (!isTyping)
+            {
+                ToggleTacticalPause();
+            }
+        }
 
         HandleMouseInput();
 
