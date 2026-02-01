@@ -114,7 +114,6 @@ public class LLMCommander : MonoBehaviour
 
     void ProcessSingleCommand(AICommand cmd)
     {
-        // 1. Znajdź jednostki
         List<TacticalGroup> myUnits = (playerSide == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
         List<TacticalGroup> selectedUnits = new List<TacticalGroup>();
 
@@ -138,11 +137,9 @@ public class LLMCommander : MonoBehaviour
 
         if (selectedUnits.Count == 0) return;
 
-        // 2. Oblicz cel ruchu
         Vector3 targetPosition = Vector3.zero;
         bool positionFound = CalculateTargetPosition(cmd.target_location, out targetPosition);
 
-        // 3. Wykonaj rozkaz
         if (positionFound)
         {
             foreach (var group in selectedUnits)
@@ -157,7 +154,7 @@ public class LLMCommander : MonoBehaviour
         }
     }
 
-    // --- LOGIKA CELÓW I MAPY (POPRAWIONA PERSPEKTYWA) ---
+    // --- NOWA LOGIKA CELÓW (STRONY ŚWIATA + OBIEKTY) ---
 
     bool CalculateTargetPosition(string locationName, out Vector3 position)
     {
@@ -167,70 +164,88 @@ public class LLMCommander : MonoBehaviour
         float centerX = (armyManager.minX + armyManager.maxX) / 2;
         float centerZ = (armyManager.minZ + armyManager.maxZ) / 2;
 
-        // --- KLUCZOWE: Wykrywanie bazy gracza ---
-        // SideA (Rzym) ma bazę na dole (MinZ). SideB (Goci) na górze (MaxZ).
         bool isSideA = (playerSide == "SideA");
-
-        // Baza gracza - punkt odniesienia do komend "przed rzeką", "wróć do bazy"
+        // Baza gracza
         Vector3 myBasePos = isSideA ? new Vector3(centerX, 0, armyManager.minZ) : new Vector3(centerX, 0, armyManager.maxZ);
 
-        // 1. Komendy Standardowe (Zależne od perspektywy)
-        if (loc.Contains("center"))
-        {
-            position = new Vector3(centerX, 0, centerZ);
-            return true;
-        }
-        if (loc.Contains("enemy") || loc.Contains("attack"))
-        {
-            position = GetEnemyArmyCenter();
-            return true;
-        }
-        if (loc.Contains("base") || loc.Contains("retreat"))
-        {
-            // Cofnij się w stronę swojej krawędzi (z marginesem 150m)
-            float retreatZ = isSideA ? (armyManager.minZ + 150) : (armyManager.maxZ - 150);
-            position = new Vector3(centerX, 0, retreatZ);
-            return true;
-        }
-
-        // Logika Flank: "Lewa" zależy od tego, w którą stronę patrzysz!
-        if (loc.Contains("left"))
-        {
-            // Dla SideA (patrzy w górę Z+): Lewa to MinX
-            // Dla SideB (patrzy w dół Z-): Lewa to MaxX
-            float xPos = isSideA ? (armyManager.minX + 250) : (armyManager.maxX - 250);
-            position = new Vector3(xPos, 0, centerZ);
-            return true;
-        }
-        if (loc.Contains("right"))
-        {
-            // Dla SideA: Prawa to MaxX
-            // Dla SideB: Prawa to MinX
-            float xPos = isSideA ? (armyManager.maxX - 250) : (armyManager.minX + 250);
-            position = new Vector3(xPos, 0, centerZ);
-            return true;
-        }
-
-        // 2. Obiekty Terenowe (LASY, RZEKI - Smart Positioning)
+        // --- 1. SPRAWDZANIE DOKŁADNYCH NAZW Z MAPY (PRIORYTET) ---
+        // Jeśli AI powie "Forest_1_North", to szukamy tego konkretnego znacznika.
         TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
         foreach (var feature in allFeatures)
         {
             if (feature.featureName.ToLower() == loc)
             {
-                // Znaleziono obiekt (np. "Rzeka")
-                Vector3 featurePos = feature.transform.position;
-
-                // Obliczamy wektor: Od Obiektu -> Do Naszej Bazy
-                Vector3 directionToMe = (myBasePos - featurePos).normalized;
-
-                // Przesuwamy cel o 45 metrów w naszą stronę.
-                // Dzięki temu "Rzeka" oznacza "Brzeg od naszej strony".
-                position = featurePos + (directionToMe * 45.0f);
+                // Znaleziono konkretny punkt (np. "Forest_1_SouthEast")
+                position = feature.transform.position;
                 return true;
             }
         }
 
-        // Fallback dla zwykłych obiektów (bez skryptu TerrainFeature)
+        // --- 2. KOMENDY OGÓLNE (Relatywne i Globalne) ---
+
+        // A. Komendy Relatywne (Zależne od gracza)
+        if (loc.Contains("center")) { position = new Vector3(centerX, 0, centerZ); return true; }
+        if (loc.Contains("enemy") || loc.Contains("attack")) { position = GetEnemyArmyCenter(); return true; }
+        if (loc.Contains("base") || loc.Contains("retreat"))
+        {
+            float retreatZ = isSideA ? (armyManager.minZ + 150) : (armyManager.maxZ - 150);
+            position = new Vector3(centerX, 0, retreatZ);
+            return true;
+        }
+
+        // B. Flanki (Lewa/Prawa - Zależne od tego, w którą stronę patrzymy)
+        if (loc == "left flank" || loc == "left")
+        {
+            // SideA (patrzy Z+): Lewa to MinX. SideB (patrzy Z-): Lewa to MaxX.
+            float xPos = isSideA ? (armyManager.minX + 250) : (armyManager.maxX - 250);
+            position = new Vector3(xPos, 0, centerZ);
+            return true;
+        }
+        if (loc == "right flank" || loc == "right")
+        {
+            float xPos = isSideA ? (armyManager.maxX - 250) : (armyManager.minX + 250);
+            position = new Vector3(xPos, 0, centerZ);
+            return true;
+        }
+
+        // C. GLOBALNE STRONY ŚWIATA (Niezależne od frakcji)
+        // North = Max Z, South = Min Z, East = Max X, West = Min X
+        float mapMargin = 200f; // Margines od krawędzi
+
+        if (loc.Contains("north")) // Północ (Góra mapy)
+        {
+            float targetX = centerX;
+            if (loc.Contains("east")) targetX = armyManager.maxX - mapMargin; // Północny Wschód
+            else if (loc.Contains("west")) targetX = armyManager.minX + mapMargin; // Północny Zachód
+
+            position = new Vector3(targetX, 0, armyManager.maxZ - mapMargin);
+            return true;
+        }
+
+        if (loc.Contains("south")) // Południe (Dół mapy)
+        {
+            float targetX = centerX;
+            if (loc.Contains("east")) targetX = armyManager.maxX - mapMargin;
+            else if (loc.Contains("west")) targetX = armyManager.minX + mapMargin;
+
+            position = new Vector3(targetX, 0, armyManager.minZ + mapMargin);
+            return true;
+        }
+
+        if (loc.Contains("east")) // Wschód (Prawo mapy)
+        {
+            position = new Vector3(armyManager.maxX - mapMargin, 0, centerZ);
+            return true;
+        }
+
+        if (loc.Contains("west")) // Zachód (Lewo mapy)
+        {
+            position = new Vector3(armyManager.minX + mapMargin, 0, centerZ);
+            return true;
+        }
+
+        // --- 3. FALLBACK DLA OBIEKTÓW ---
+        // Jeśli AI podało "River" zamiast "River_1", szukamy obiektu i stajemy PRZED nim.
         GameObject featureObj = GameObject.Find(locationName);
         if (featureObj != null)
         {
@@ -278,27 +293,37 @@ public class LLMCommander : MonoBehaviour
     string ConstructSystemPrompt()
     {
         string dynamicNames = GetCustomUnitNames();
-        string mapLocations = GetMapFeaturesInfo(); // Teraz pobieramy listę z mapy
+        string mapLocations = GetMapFeaturesInfo();
 
-        // Wstawiamy {mapLocations} do promptu w sekcji DOSTĘPNE LOKACJE
         return $@"Jesteś dowódcą w grze RTS. Tłumaczysz komendy gracza na format JSON.
 ZASADY:
 1. Odpowiadaj TYLKO w formacie JSON.
 2. unit_tags: 'Infantry', 'Archer', 'Cavalry', 'All'{dynamicNames}.
 3. target_location:
-   - STAŁE: 'Center', 'Enemy_Army', 'My_Base', 'Left_Flank', 'Right_Flank'.
-   - TERENOWE (Na tej mapie): {mapLocations}.
+   - KIERUNKI: 'North' (Góra), 'South' (Dół), 'East' (Prawo), 'West' (Lewo).
+   - RELATYWNE: 'Left_Flank', 'Right_Flank', 'Center', 'Enemy_Army', 'My_Base'.
+   - TERENOWE (Preferowane): {mapLocations}.
 4. action: 'MOVE' lub 'ATTACK'.
 
-PRZYKŁAD:
-User: Piechota do lasu!
-(Jeśli na liście TERENOWE jest 'Forest_North')
-JSON:
+PRZYKŁADY (Zawsze używaj tablicy 'commands'!):
+
+User: Piechota do lasu na północy!
+AI:
 {{
   ""commands"": [
-    {{ ""unit_tags"": [""Infantry""], ""action"": ""MOVE"", ""target_location"": ""Forest_North"" }}
+    {{ ""unit_tags"": [""Infantry""], ""action"": ""MOVE"", ""target_location"": ""Forest_1_North"" }}
   ],
-  ""ai_thought"": ""Wysyłam piechotę do lasu północnego.""
+  ""ai_thought"": ""Wysyłam piechotę na północny skraj lasu.""
+}}
+
+User: Jazda na wschodnią flankę, a łucznicy na środek!
+AI:
+{{
+  ""commands"": [
+    {{ ""unit_tags"": [""Cavalry""], ""action"": ""MOVE"", ""target_location"": ""Right_Flank"" }},
+    {{ ""unit_tags"": [""Archer""], ""action"": ""MOVE"", ""target_location"": ""Center"" }}
+  ],
+  ""ai_thought"": ""Rozdzielam siły: jazda na flankę, łucznicy centralnie.""
 }}";
     }
 

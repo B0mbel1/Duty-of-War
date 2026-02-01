@@ -246,7 +246,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             TacticalGroup newGroup = new TacticalGroup($"{baseName}_{groupIndex}", mesh, mat, groupSize, type);
             var arch = newGroup.archetypes[0];
 
-            // Konfiguracja wyglądu strzałki i prędkości w zależności od typu
             switch (type)
             {
                 case UnitType.Archer:
@@ -262,7 +261,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                     arch.speedMultiplier = 1.0f;
                     break;
             }
-            // Ważne: przypisujemy materiał strzałek do archetypu
             arch.arrowMaterial = directionArrowMaterial;
 
             newGroup.RecalculateStats();
@@ -297,26 +295,23 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            // Sprawdzamy, czy kursor jest w jakimkolwiek polu tekstowym (Input Field)
             bool isTyping = false;
             if (EventSystem.current != null)
             {
                 GameObject selectedObj = EventSystem.current.currentSelectedGameObject;
-                // Sprawdzamy czy wybrany obiekt to pole tekstowe (TMP)
                 if (selectedObj != null && selectedObj.GetComponent<TMP_InputField>() != null)
                 {
                     isTyping = true;
                 }
             }
 
-            // Pauzujemy tylko jeśli NIE piszemy
             if (!isTyping)
             {
                 ToggleTacticalPause();
             }
         }
 
-        HandleMouseInput();
+        // USUNIĘTO OBSŁUGĘ MYSZKI DLA ROZKAZÓW (HandleMouseInput)
 
         bool isGameFrozen = isDeploymentPhase || isTacticalPause;
 
@@ -354,10 +349,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             namingPanel.SetActive(true);
             nameInput.text = "";
-
-            // Czyścimy ostrzeżenie przy otwarciu
             if (warningText != null) warningText.text = "";
-
             nameInput.Select();
             nameInput.ActivateInputField();
         }
@@ -367,27 +359,23 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         string newName = nameInput.text;
 
-        // 1. Sprawdzenie czy nazwa nie jest pusta
         if (string.IsNullOrEmpty(newName))
         {
             if (warningText != null) warningText.text = "Nazwa nie może być pusta!";
             return;
         }
 
-        // 2. Sprawdzenie czy nazwa już istnieje (NOWE ZABEZPIECZENIE)
         if (IsNameTaken(newName))
         {
             if (warningText != null)
             {
                 warningText.text = "Nazwa już istnieje!";
-                // Opcjonalnie: Zresetuj input field lub zaznacz tekst, by łatwiej poprawić
                 nameInput.Select();
             }
-            return; // PRZERYWAMY - nie łączymy grup!
+            return; 
         }
 
-        // Jeśli przeszło testy -> Łączymy
-        if (warningText != null) warningText.text = ""; // Czyścimy błędy
+        if (warningText != null) warningText.text = ""; 
         MergeSelectedGroups(newName);
 
         if (namingPanel != null) namingPanel.SetActive(false);
@@ -397,12 +385,9 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (selectedGroups.Count < 2) return;
 
-        // KROK 1: Sprawdźmy, do której frakcji należą te jednostki
-        // Sprawdzamy pierwszą zaznaczoną grupę
         bool belongsToFactionA = factionAGroups.Contains(selectedGroups[0]);
         bool belongsToFactionB = factionBGroups.Contains(selectedGroups[0]);
 
-        // Zabezpieczenie: jeśli z jakiegoś powodu grupy nie ma na żadnej liście
         if (!belongsToFactionA && !belongsToFactionB) return;
 
         var firstGroupArch = selectedGroups[0].archetypes[0];
@@ -464,7 +449,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                 Destroy(uiToRemove.gameObject);
             }
 
-            // KROK 2: Usuwanie ze właściwej listy (A lub B)
             if (belongsToFactionA)
             {
                 if (factionAGroups.Contains(oldGroup)) factionAGroups.Remove(oldGroup);
@@ -478,15 +462,8 @@ public class ArmyHierarchyManager : MonoBehaviour
         superGroup.RebuildBatchesFull();
         superGroup.RecalculateStats();
 
-        // KROK 3: Dodawanie do właściwej listy (A lub B)
-        if (belongsToFactionA)
-        {
-            factionAGroups.Add(superGroup);
-        }
-        else
-        {
-            factionBGroups.Add(superGroup);
-        }
+        if (belongsToFactionA) factionAGroups.Add(superGroup);
+        else factionBGroups.Add(superGroup);
 
         GameObject newUIObj = Instantiate(groupUIPrefab, uiContainer);
         ArmyGroupUI newUI = newUIObj.GetComponent<ArmyGroupUI>();
@@ -497,18 +474,13 @@ public class ArmyHierarchyManager : MonoBehaviour
         UpdateUISelectionVisuals();
     }
 
-    // Wklej to do ArmyHierarchyManager.cs
     void ProcessMovement(TacticalGroup group)
     {
-        // 1. Obliczamy gdzie jest środek grupy, a gdzie cel
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
         float distToTargetSq = Vector3.SqrMagnitude(flatTarget - flatCenter);
 
-        // --- POPRAWKA 1: MIĘKKIE ZATRZYMANIE ---
-        // Zatrzymujemy logikę tylko jeśli jesteśmy idealnie w punkcie (0.5m błędu).
-        // Pozwala to jednostkom z tyłu nadal iść, nawet jeśli środek grupy jest już blisko celu.
         if (distToTargetSq < 0.5f)
         {
             group.isMoving = false;
@@ -518,7 +490,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         Vector3 groupDirection = (flatTarget - flatCenter).normalized;
         float globalBaseSpeed = moveSpeed * Time.deltaTime;
 
-        // Płynny obrót całej formacji
         Quaternion currentRot = group.unitMatrices[0].rotation;
         Quaternion targetRot = Quaternion.LookRotation(groupDirection);
         Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
@@ -527,43 +498,35 @@ public class ArmyHierarchyManager : MonoBehaviour
         int alphaWidth = 0, alphaHeight = 0;
         if (terrainData != null) { alphaWidth = terrainData.alphamapWidth; alphaHeight = terrainData.alphamapHeight; }
 
-        // Pętla po każdej jednostce w grupie
         for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             Matrix4x4 mat = group.unitMatrices[i];
             Vector3 currentPos = mat.GetColumn(3);
             UnitArchetype arch = group.GetUnitArchetype(i);
 
-            // --- POPRAWKA 2: LOGIKA "GUMKI RECEPTURKI" (CATCH-UP) ---
-            // Obliczamy pozycję jednostki względem środka grupy
             Vector3 offsetFromCenter = currentPos - group.groupCenter;
-            // Rzutujemy na kierunek ruchu: dodatnie = z przodu, ujemne = z tyłu
             float projectedDist = Vector3.Dot(offsetFromCenter, groupDirection);
 
             float catchUpMultiplier = 1.0f;
 
-            // Jeśli jestem z tyłu (np. 5m za liderem, bo utknąłem w rzece) -> Przyspieszam o 40%
             if (projectedDist < -5.0f)
             {
                 catchUpMultiplier = 1.4f;
             }
-            // Jeśli jestem z przodu, a grupa już prawie dojechała (w zasięgu stopDistance) -> Zwalniam
             else if (distToTargetSq < (stopDistance * stopDistance) && projectedDist > 0)
             {
-                catchUpMultiplier = 0.3f; // Czekam na resztę
+                catchUpMultiplier = 0.3f;
             }
 
             float mySpeedMultiplier = (arch != null) ? arch.speedMultiplier : 1.0f;
             float myBaseSpeed = globalBaseSpeed * mySpeedMultiplier * catchUpMultiplier;
 
-            // --- Logika Terenu (Woda/Górki/Las) ---
             float terrainY = currentPos.y;
             if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
 
             bool inWater = false;
             float waterHeight = -1000f;
             RaycastHit hit;
-            // Raycast z góry, żeby wykryć wodę
             if (Physics.Raycast(currentPos + Vector3.up * 50f, Vector3.down, out hit, 100f, waterLayerMask))
             {
                 if (hit.point.y > terrainY - 0.1f) { inWater = true; waterHeight = hit.point.y; }
@@ -600,25 +563,20 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
 
             float finalMod = slopeMod * forestMod;
-            if (inWater) finalMod *= waterSpeedPenalty; // Woda spowalnia
+            if (inWater) finalMod *= waterSpeedPenalty; 
 
-            // Obliczenie nowej pozycji
             Vector3 newPos = currentPos + (groupDirection * myBaseSpeed * finalMod);
 
-            // Korygowanie granic mapy
             newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
-            // Ustawienie wysokości
             if (inWater) newPos.y = waterHeight - swimmingDepth;
             else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y;
             else newPos.y = terrainY;
 
-            // Zapisz nową macierz
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
         }
 
-        // Ważne: Aktualizujemy bufory graficzne i przeliczamy środek grupy (to wpływa na logikę ruchu w kolejnej klatce)
         group.UpdateBatchData();
         group.RecalculateCenter();
     }
@@ -683,7 +641,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         Vector3 myPos = (Vector3)myMat.GetColumn(3);
         Vector3 myForward = (Vector3)myMat.GetColumn(2);
 
-        // --- POPRAWKA: Pobieramy typ z archetypu jednostki ---
         UnitArchetype attackerStats = attackerGroup.GetUnitArchetype(idx);
         if (attackerStats == null) return;
 
@@ -856,13 +813,12 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (group == null || group.unitMatrices.Count == 0) return;
 
-        // --- POPRAWKA: Pętla po wszystkich archetypach ---
         foreach (var arch in group.archetypes)
         {
             if (highlight && highlightMaterial != null)
                 arch.unitMaterial = highlightMaterial;
             else
-                arch.unitMaterial = arch.originalMaterial; // Przywracamy oryginał
+                arch.unitMaterial = arch.originalMaterial;
         }
     }
 
@@ -912,27 +868,6 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void UpdateUISelectionVisuals() { foreach (var ui in uiElements) ui.SetSelectionState(selectedGroups.Contains(ui.GetGroup())); }
 
-    void HandleMouseInput()
-    {
-        if (Input.GetMouseButtonDown(0) && selectedGroups.Count > 0)
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, 10000f, terrainLayerMask))
-            {
-                foreach (var group in selectedGroups) if (group.unitMatrices.Count > 0) IssueMoveOrder(group, hit.point);
-            }
-        }
-    }
-
-    void IssueMoveOrder(TacticalGroup group, Vector3 destination)
-    {
-        float clampedX = Mathf.Clamp(destination.x, minX, maxX);
-        float clampedZ = Mathf.Clamp(destination.z, minZ, maxZ);
-        group.currentDestination = new Vector3(clampedX, destination.y, clampedZ);
-        group.isMoving = true;
-    }
-
     void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
@@ -973,8 +908,8 @@ public class ArmyHierarchyManager : MonoBehaviour
         isBattleOver = true;
         Time.timeScale = 0f;
 
-        PauseMenuController pauseCtrl = FindAnyObjectByType<PauseMenuController>();
-        if (pauseCtrl != null) pauseCtrl.enabled = false;
+        // PauseMenuController pauseCtrl = FindAnyObjectByType<PauseMenuController>();
+        // if (pauseCtrl != null) pauseCtrl.enabled = false;
 
         if (endGamePanel != null)
         {
@@ -1008,22 +943,16 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     bool IsNameTaken(string nameToCheck)
     {
-        // Sprawdzamy Frakcję A
         foreach (var group in factionAGroups)
         {
-            // Sprawdzamy customName (nazwę nadaną przez gracza)
             if (group.customName == nameToCheck) return true;
-            // Opcjonalnie: sprawdzamy też systemową nazwę, żeby uniknąć duplikatów systemowych
             if (group.groupName == nameToCheck) return true;
         }
-
-        // Sprawdzamy Frakcję B (żeby wróg też nie miał takiej samej nazwy, dla porządku)
         foreach (var group in factionBGroups)
         {
             if (group.customName == nameToCheck) return true;
             if (group.groupName == nameToCheck) return true;
         }
-
         return false;
     }
 }
