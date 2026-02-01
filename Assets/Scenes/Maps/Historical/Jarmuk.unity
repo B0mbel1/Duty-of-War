@@ -966,8 +966,8 @@ MonoBehaviour:
   maxCombatChecksPerFrame: 2000
   hpMax: 2
   dmgInfantry: 1
-  dmgArcherMin: 0.4
-  dmgArcherMax: 0.8
+  dmgArcherMin: 0.3
+  dmgArcherMax: 0.5
   dmgCavalryCharge: 2
   dmgCavalryStatic: 0.8
   factionAGroups: []
