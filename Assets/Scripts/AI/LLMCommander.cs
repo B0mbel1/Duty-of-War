@@ -137,6 +137,18 @@ public class LLMCommander : MonoBehaviour
 
         if (selectedUnits.Count == 0) return;
 
+        if (cmd.action == "STOP")
+        {
+            foreach (var group in selectedUnits)
+            {
+                group.isMoving = false;
+                // Opcjonalnie: ustawiamy cel na obecną pozycję, żeby nie chciały wracać po wznowieniu
+                group.currentDestination = group.groupCenter;
+                Debug.Log($"Grupa {group.groupName} zatrzymana na rozkaz.");
+            }
+            return; // Kończymy tutaj, nie obliczamy pozycji ruchu
+        }
+
         Vector3 targetPosition = Vector3.zero;
         bool positionFound = CalculateTargetPosition(cmd.target_location, out targetPosition);
 
@@ -324,7 +336,19 @@ AI:
     {{ ""unit_tags"": [""Archer""], ""action"": ""MOVE"", ""target_location"": ""Center"" }}
   ],
   ""ai_thought"": ""Rozdzielam siły: jazda na flankę, łucznicy centralnie.""
-}}";
+}}
+
+User: Wszyscy STÓJ! Zatrzymać się!
+AI:
+{{
+  ""commands"": [
+    {{ ""unit_tags"": [""All""], ""action"": ""STOP"", ""target_location"": ""None"" }}
+  ],
+  ""ai_thought"": ""Zatrzymuję całą armię.""
+}}"
+
+
+;
     }
 
     string GetMapContextInfo()
