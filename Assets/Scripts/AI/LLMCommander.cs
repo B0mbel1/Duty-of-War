@@ -126,6 +126,21 @@ public class LLMCommander : MonoBehaviour
                 selectedUnits.AddRange(myUnits);
                 break;
             }
+            if (lowerTag == "selected")
+            {
+                // Pobieramy listę, którą kliknąłeś myszką w UI
+                var manualSelection = armyManager.GetSelectedGroups();
+                foreach (var g in manualSelection)
+                {
+                    // Sprawdzamy, czy zaznaczona jednostka należy do nas 
+                    // (żeby nie sterować wrogiem przez przypadek, jeśli kliknąłeś go dla info)
+                    if (myUnits.Contains(g) && !selectedUnits.Contains(g))
+                    {
+                        selectedUnits.Add(g);
+                    }
+                }
+                continue;
+            }
 
             foreach (var group in myUnits)
             {
@@ -154,7 +169,7 @@ public class LLMCommander : MonoBehaviour
         if (cmd.action == "FORM")
         {
             // Typ formacji jest w polu target_location (np. "Turtle", "Line")
-            string formType = cmd.target_location; 
+            string formType = cmd.target_location;
             foreach (var g in selectedUnits)
             {
                 // Wywołujemy metodę z Managera (upewnij się, że dodałeś ją do ArmyHierarchyManager!)
@@ -369,7 +384,8 @@ public class LLMCommander : MonoBehaviour
         return $@"Jesteś dowódcą w grze RTS. Tłumaczysz komendy gracza na format JSON.
 ZASADY:
 1. Odpowiadaj TYLKO w formacie JSON.
-2. unit_tags: 'Infantry', 'Archer', 'Cavalry', 'All'{dynamicNames}.
+2. unit_tags: 'Infantry', 'Archer', 'Cavalry', 'All', 'Selected'{dynamicNames}.
+   - 'Selected' oznacza jednostki aktualnie wybrane przez gracza (myszką).
 3. target_location:
    - KIERUNKI: 'North' (Góra), 'South' (Dół), 'East' (Prawo), 'West' (Lewo).
    - RELATYWNE: 'Left_Flank', 'Right_Flank', 'Center', 'Enemy_Army', 'My_Base'.
@@ -409,6 +425,8 @@ AI:
   ""ai_thought"": ""Jazda atakuje, łucznicy robią miejsce.""
 }}
 
+
+
 User: Wszyscy STÓJ! Zatrzymać się!
 AI:
 {{
@@ -416,7 +434,13 @@ AI:
     {{ ""unit_tags"": [""All""], ""action"": ""STOP"", ""target_location"": ""None"" }}
   ],
   ""ai_thought"": ""Zatrzymuję całą armię.""
-}}";
+}}
+
+User: Zaznaczone jednostki do lasu!
+    AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Forest_1_Center"" }} ], ""ai_thought"": ""Wysyłam wybrany oddział do lasu."" }}
+
+    User: Wybrani, formacja żółwia!
+    AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""FORM"", ""target_location"": ""Turtle"" }} ], ""ai_thought"": ""Zaznaczeni formują żółwia."" }}";
     }
 
     string GetMapContextInfo()

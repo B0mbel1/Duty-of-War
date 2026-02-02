@@ -1000,4 +1000,10 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.currentDestination = group.groupCenter;
         group.isMoving = false;
     }
+
+    public List<TacticalGroup> GetSelectedGroups()
+    {
+        // Zwracamy kopię listy, żeby nie uszkodzić oryginału
+        return new List<TacticalGroup>(selectedGroups);
+    }
 }
