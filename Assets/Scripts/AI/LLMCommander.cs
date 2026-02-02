@@ -15,6 +15,8 @@ public class LLMCommander : MonoBehaviour
     [Header("Player Settings")]
     public string playerSide = "SideA";
 
+    private Color originalTextColor;
+
     void Start()
     {
         // --- Auto-wykrywanie Managera ---
@@ -38,11 +40,16 @@ public class LLMCommander : MonoBehaviour
 
         if (commandInput != null)
         {
+            originalTextColor = commandInput.textComponent.color;
+
             commandInput.onSubmit.AddListener(val =>
-            {
-                OnSendButtonClicked();
-                commandInput.DeactivateInputField();
-            });
+             {
+                 OnSendButtonClicked();
+                 commandInput.DeactivateInputField();
+             });
+
+            // Ważne: nasłuchiwanie kliknięcia
+            commandInput.onSelect.AddListener(OnInputSelected);
         }
     }
 
@@ -50,6 +57,9 @@ public class LLMCommander : MonoBehaviour
     {
         if (commandInput != null && !string.IsNullOrEmpty(commandInput.text))
         {
+            // --- DODAJ TO SPRAWDZENIE: ---
+            if (commandInput.textComponent.color == Color.red) return;
+
             string textToSend = commandInput.text;
             commandInput.text = "";
             SendOrderToAI(textToSend);
@@ -71,6 +81,44 @@ public class LLMCommander : MonoBehaviour
         geminiNetwork.SendRequest(finalPrompt);
     }
 
+    void ShowErrorInInput()
+    {
+        if (commandInput != null)
+        {
+            // Jeśli już leci jakieś odliczanie, zatrzymaj je (żeby nie mrugało)
+            StopAllCoroutines();
+
+            commandInput.text = "Generale! Polecenia są niejasne!";
+            commandInput.textComponent.color = Color.red;
+
+            // Uruchom odliczanie do zniknięcia
+            StartCoroutine(HideErrorAfterDelay());
+        }
+    }
+
+    // Czyści błąd, gdy gracz kliknie w pole, żeby pisać od nowa
+    void OnInputSelected(string val)
+    {
+        if (commandInput.textComponent.color == Color.red)
+        {
+            StopAllCoroutines(); // Anulujemy znikanie, bo gracz przejął kontrolę
+            commandInput.text = "";
+            commandInput.textComponent.color = originalTextColor; // Przywracamy czarny (lub domyślny)
+        }
+    }
+
+    System.Collections.IEnumerator HideErrorAfterDelay()
+    {
+        yield return new WaitForSeconds(2.0f); // Czekaj 2 sekundy
+
+        // Sprawdzamy, czy tekst nadal jest czerwony (czy gracz nie zaczął pisać w międzyczasie)
+        if (commandInput != null && commandInput.textComponent.color == Color.red)
+        {
+            commandInput.text = "";
+            commandInput.textComponent.color = originalTextColor; // Wracamy do czarnego koloru gotowości
+        }
+    }
+
     void ExecuteAICommands(string jsonResponse)
     {
         Debug.Log("AI Odpowiedziało: " + jsonResponse);
@@ -78,7 +126,11 @@ public class LLMCommander : MonoBehaviour
         try
         {
             AICommandResponse response = JsonUtility.FromJson<AICommandResponse>(jsonResponse);
-
+            if (response == null || response.commands == null || response.commands.Count == 0)
+            {
+                ShowErrorInInput(); // Wyświetlamy błąd logiczny (AI nie zwróciło komend)
+                return;
+            }
             if (!string.IsNullOrEmpty(response.ai_thought))
                 Debug.Log("<color=cyan>Generał myśli: " + response.ai_thought + "</color>");
 
@@ -90,6 +142,7 @@ public class LLMCommander : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError("Błąd interpretacji rozkazu: " + e.Message);
+            ShowErrorInInput(); // Wyświetlamy błąd parsowania
         }
     }
 
