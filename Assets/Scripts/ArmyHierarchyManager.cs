@@ -582,7 +582,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
             if (inWater) newPos.y = waterHeight - swimmingDepth;
-            else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y;
+            else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y +0.5f;
             else newPos.y = terrainY;
 
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
