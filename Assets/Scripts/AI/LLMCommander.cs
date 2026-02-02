@@ -148,6 +148,35 @@ public class LLMCommander : MonoBehaviour
             }
             return; // Kończymy tutaj, nie obliczamy pozycji ruchu
         }
+        if (cmd.target_location.StartsWith("Relative_"))
+        {
+            // Parsujemy stringa: "Relative_Left_100" -> ["Relative", "Left", "100"]
+            string[] parts = cmd.target_location.Split('_');
+            if (parts.Length == 3)
+            {
+                string directionStr = parts[1];
+                float distance = 0;
+                if (float.TryParse(parts[2], out distance))
+                {
+                    Vector3 moveDir = GetDirectionVector(directionStr);
+
+                    foreach (var group in selectedUnits)
+                    {
+                        // Obliczamy nowy cel względem OBECNEJ pozycji grupy
+                        Vector3 newPos = group.groupCenter + (moveDir * distance);
+
+                        float clampedX = Mathf.Clamp(newPos.x, armyManager.minX, armyManager.maxX);
+                        float clampedZ = Mathf.Clamp(newPos.z, armyManager.minZ, armyManager.maxZ);
+
+                        group.currentDestination = new Vector3(clampedX, group.groupCenter.y, clampedZ);
+                        group.isMoving = true;
+                    }
+                    Debug.Log($"Przesuwam jednostki o {distance}m w kierunku {directionStr}");
+                    return; // Kończymy, bo to był ruch relatywny
+                }
+            }
+        }
+
 
         Vector3 targetPosition = Vector3.zero;
         bool positionFound = CalculateTargetPosition(cmd.target_location, out targetPosition);
@@ -163,6 +192,26 @@ public class LLMCommander : MonoBehaviour
                 group.isMoving = true;
                 Debug.Log($"Grupa {group.groupName} rusza do {group.currentDestination}");
             }
+        }
+    }
+
+    // --- POMOCNICZA FUNKCJA DO KIERUNKÓW RELATYWNYCH ---
+    Vector3 GetDirectionVector(string dirName)
+    {
+        bool isSideA = (playerSide == "SideA");
+        // SideA (Rzym): Patrzy w Z+ (Góra). Prawo to X+.
+        // SideB (Goci): Patrzy w Z- (Dół). Prawo to X- (z ich perspektywy).
+
+        Vector3 forward = isSideA ? Vector3.forward : Vector3.back;
+        Vector3 right = isSideA ? Vector3.right : Vector3.left;
+
+        switch (dirName.ToLower())
+        {
+            case "forward": return forward;
+            case "backward": return -forward;
+            case "left": return -right;
+            case "right": return right;
+            default: return Vector3.forward;
         }
     }
 
@@ -336,6 +385,16 @@ AI:
     {{ ""unit_tags"": [""Archer""], ""action"": ""MOVE"", ""target_location"": ""Center"" }}
   ],
   ""ai_thought"": ""Rozdzielam siły: jazda na flankę, łucznicy centralnie.""
+}}
+
+User: Jazda 100 metrów do przodu, łucznicy wycofać się 50 metrów!
+AI:
+{{
+  ""commands"": [
+    {{ ""unit_tags"": [""Cavalry""], ""action"": ""MOVE"", ""target_location"": ""Relative_Forward_100"" }},
+    {{ ""unit_tags"": [""Archer""], ""action"": ""MOVE"", ""target_location"": ""Relative_Backward_50"" }}
+  ],
+  ""ai_thought"": ""Jazda atakuje, łucznicy robią miejsce.""
 }}
 
 User: Wszyscy STÓJ! Zatrzymać się!
