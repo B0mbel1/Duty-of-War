@@ -310,9 +310,18 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space)) ToggleTacticalPause();
 
             // Tutaj jest poprawka dla klawisza 'M':
-            if (Input.GetKeyDown(KeyCode.M) && selectedGroups.Count > 1 && !namingPanel.activeSelf)
+            if (Input.GetKeyDown(KeyCode.M))
             {
-                OpenNamingPanel();
+                // Jeśli panel jest otwarty -> ZAMKNIJ GO
+                if (namingPanel != null && namingPanel.activeSelf)
+                {
+                    namingPanel.SetActive(false);
+                }
+                // Jeśli zamknięty i mamy zaznaczone > 1 grupy -> OTWÓRZ GO
+                else if (selectedGroups.Count > 1)
+                {
+                    OpenNamingPanel();
+                }
             }
         }
 
