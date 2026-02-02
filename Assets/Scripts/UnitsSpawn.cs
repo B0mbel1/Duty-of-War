@@ -232,11 +232,10 @@ public class UnitsSpawn : MonoBehaviour
             if (directionToEnemy == Vector3.zero) directionToEnemy = Vector3.forward;
 
             Quaternion baseRotation = Quaternion.LookRotation(directionToEnemy);
-            
+
             // Dodajemy mały losowy odchył (jitter), np. +/- 10 stopni, żeby nie wyglądali jak roboty
-            float randomJitter = (float)(rand.NextDouble() * 20.0 - 10.0); 
-            Quaternion finalRotation = baseRotation * Quaternion.Euler(0, randomJitter, 0);
-            // -----------------------------------------------
+            // float randomJitter = (float)(rand.NextDouble() * 20.0 - 10.0); 
+            Quaternion finalRotation = baseRotation; // CZYSTA ROTACJA            // -----------------------------------------------
 
             Matrix4x4 matrix = Matrix4x4.TRS(finalPos, finalRotation, Vector3.one * unitDiameter);
 

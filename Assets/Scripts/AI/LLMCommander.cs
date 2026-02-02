@@ -239,16 +239,38 @@ public class LLMCommander : MonoBehaviour
             string[] parts = cmd.target_location.Split('_');
             if (parts.Length == 3)
             {
-                string directionStr = parts[1];
+                string directionStr = parts[1].ToLower(); // np. "forward"
                 float distance = 0;
                 if (float.TryParse(parts[2], out distance))
                 {
-                    Vector3 moveDir = GetDirectionVector(directionStr);
-
                     foreach (var group in selectedUnits)
                     {
-                        // Obliczamy nowy cel względem OBECNEJ pozycji grupy
-                        Vector3 newPos = group.groupCenter + (moveDir * distance);
+                        if (group.unitMatrices.Count == 0) continue;
+
+                        // 1. Pobieramy aktualną rotację grupy (na podstawie pierwszej jednostki)
+                        Quaternion groupRotation = group.unitMatrices[0].rotation;
+
+                        // 2. Obliczamy wektor ruchu LOKALNIE dla tej grupy
+                        Vector3 localDirection = Vector3.forward; // Domyślnie
+
+                        switch (directionStr)
+                        {
+                            case "forward":
+                                localDirection = groupRotation * Vector3.forward; // Ich przód
+                                break;
+                            case "backward":
+                                localDirection = groupRotation * Vector3.back;    // Ich tył
+                                break;
+                            case "left":
+                                localDirection = groupRotation * Vector3.left;    // Ich lewo
+                                break;
+                            case "right":
+                                localDirection = groupRotation * Vector3.right;   // Ich prawo
+                                break;
+                        }
+
+                        // 3. Aplikujemy przesunięcie
+                        Vector3 newPos = group.groupCenter + (localDirection * distance);
 
                         // Clamp (ograniczenie do mapy)
                         float clampedX = Mathf.Clamp(newPos.x, armyManager.minX, armyManager.maxX);
@@ -257,7 +279,7 @@ public class LLMCommander : MonoBehaviour
                         group.currentDestination = new Vector3(clampedX, group.groupCenter.y, clampedZ);
                         group.isMoving = true;
                     }
-                    Debug.Log($"Przesuwam jednostki o {distance}m w kierunku {directionStr}");
+                    Debug.Log($"Przesuwam jednostki o {distance}m w ich lokalnym kierunku: {directionStr}");
                     return; // Kończymy
                 }
             }

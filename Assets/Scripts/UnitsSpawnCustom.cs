@@ -250,15 +250,15 @@ public class UnitsSpawnCustom : MonoBehaviour
 
             // --- NOWOŚĆ: Obrót w stronę wroga ---
             Vector3 directionToEnemy = (lookTarget - finalPos).normalized;
-            directionToEnemy.y = 0; 
+            directionToEnemy.y = 0;
 
             if (directionToEnemy == Vector3.zero) directionToEnemy = Vector3.forward;
 
             Quaternion baseRotation = Quaternion.LookRotation(directionToEnemy);
-            float randomJitter = (float)(rand.NextDouble() * 20.0 - 10.0); 
-            Quaternion finalRotation = baseRotation * Quaternion.Euler(0, randomJitter, 0);
+            // float randomJitter = (float)(rand.NextDouble() * 20.0 - 10.0); 
+            // Quaternion finalRotation = baseRotation * Quaternion.Euler(0, randomJitter, 0);
             // ------------------------------------
-
+            Quaternion finalRotation = baseRotation; // TERAZ PATRZĄ IDEALNIE PROSTO
             Matrix4x4 matrix = Matrix4x4.TRS(finalPos, finalRotation, Vector3.one * unitDiameter);
 
             if (isFactionA)
