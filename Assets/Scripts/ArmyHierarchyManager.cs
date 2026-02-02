@@ -290,28 +290,35 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (!groupsInitialized) return;
 
-        if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
-        if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
-
-        if (Input.GetKeyDown(KeyCode.Space))
+        // --- ZABEZPIECZENIE PRZED PISANIEM ---
+        // Sprawdzamy, czy kursor jest w polu tekstowym (Input Field)
+        bool isTyping = false;
+        if (EventSystem.current != null)
         {
-            bool isTyping = false;
-            if (EventSystem.current != null)
+            GameObject selectedObj = EventSystem.current.currentSelectedGameObject;
+            if (selectedObj != null && selectedObj.GetComponent<TMP_InputField>() != null)
             {
-                GameObject selectedObj = EventSystem.current.currentSelectedGameObject;
-                if (selectedObj != null && selectedObj.GetComponent<TMP_InputField>() != null)
-                {
-                    isTyping = true;
-                }
-            }
-
-            if (!isTyping)
-            {
-                ToggleTacticalPause();
+                isTyping = true;
             }
         }
 
-        // USUNIĘTO OBSŁUGĘ MYSZKI DLA ROZKAZÓW (HandleMouseInput)
+        // --- SKRÓTY KLAWISZOWE (Działają tylko gdy NIE piszemy) ---
+        if (!isTyping)
+        {
+            if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
+            if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
+            if (Input.GetKeyDown(KeyCode.Space)) ToggleTacticalPause();
+
+            // Tutaj jest poprawka dla klawisza 'M':
+            if (Input.GetKeyDown(KeyCode.M) && selectedGroups.Count > 1 && !namingPanel.activeSelf)
+            {
+                OpenNamingPanel();
+            }
+        }
+
+        // --- LOGIKA GRY (Ruch i Walka działają zawsze) ---
+
+        // USUNIĘTO OBSŁUGĘ MYSZKI DLA ROZKAZÓW (HandleMouseInput) - zgodnie z poprzednią prośbą
 
         bool isGameFrozen = isDeploymentPhase || isTacticalPause;
 
@@ -336,11 +343,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         if (!isGameFrozen) ResolveCombatRoundRobin();
-
-        if (Input.GetKeyDown(KeyCode.M) && selectedGroups.Count > 1 && !namingPanel.activeSelf)
-        {
-            OpenNamingPanel();
-        }
     }
 
     void OpenNamingPanel()
