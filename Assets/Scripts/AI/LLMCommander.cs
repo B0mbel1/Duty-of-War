@@ -114,6 +114,7 @@ public class LLMCommander : MonoBehaviour
 
     void ProcessSingleCommand(AICommand cmd)
     {
+        // 1. Znajdź jednostki
         List<TacticalGroup> myUnits = (playerSide == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
         List<TacticalGroup> selectedUnits = new List<TacticalGroup>();
 
@@ -137,17 +138,33 @@ public class LLMCommander : MonoBehaviour
 
         if (selectedUnits.Count == 0) return;
 
+        // --- OBSŁUGA ROZKAZU STOP ---
         if (cmd.action == "STOP")
         {
             foreach (var group in selectedUnits)
             {
                 group.isMoving = false;
-                // Opcjonalnie: ustawiamy cel na obecną pozycję, żeby nie chciały wracać po wznowieniu
-                group.currentDestination = group.groupCenter;
+                group.currentDestination = group.groupCenter; // Reset celu na obecną pozycję
                 Debug.Log($"Grupa {group.groupName} zatrzymana na rozkaz.");
             }
-            return; // Kończymy tutaj, nie obliczamy pozycji ruchu
+            return; // Kończymy funkcję
         }
+
+        // --- OBSŁUGA FORMACJI ---
+        if (cmd.action == "FORM")
+        {
+            // Typ formacji jest w polu target_location (np. "Turtle", "Line")
+            string formType = cmd.target_location; 
+            foreach (var g in selectedUnits)
+            {
+                // Wywołujemy metodę z Managera (upewnij się, że dodałeś ją do ArmyHierarchyManager!)
+                armyManager.ApplyFormation(g, formType);
+                Debug.Log($"Grupa {g.groupName} zmienia formację na: {formType}");
+            }
+            return; // Kończymy funkcję
+        }
+
+        // --- OBSŁUGA RUCHU RELATYWNEGO (np. "Forward 100m") ---
         if (cmd.target_location.StartsWith("Relative_"))
         {
             // Parsujemy stringa: "Relative_Left_100" -> ["Relative", "Left", "100"]
@@ -165,6 +182,7 @@ public class LLMCommander : MonoBehaviour
                         // Obliczamy nowy cel względem OBECNEJ pozycji grupy
                         Vector3 newPos = group.groupCenter + (moveDir * distance);
 
+                        // Clamp (ograniczenie do mapy)
                         float clampedX = Mathf.Clamp(newPos.x, armyManager.minX, armyManager.maxX);
                         float clampedZ = Mathf.Clamp(newPos.z, armyManager.minZ, armyManager.maxZ);
 
@@ -172,12 +190,12 @@ public class LLMCommander : MonoBehaviour
                         group.isMoving = true;
                     }
                     Debug.Log($"Przesuwam jednostki o {distance}m w kierunku {directionStr}");
-                    return; // Kończymy, bo to był ruch relatywny
+                    return; // Kończymy
                 }
             }
         }
 
-
+        // --- OBSŁUGA RUCHU STANDARDOWEGO (Konkretny punkt na mapie) ---
         Vector3 targetPosition = Vector3.zero;
         bool positionFound = CalculateTargetPosition(cmd.target_location, out targetPosition);
 
@@ -215,7 +233,7 @@ public class LLMCommander : MonoBehaviour
         }
     }
 
-    // --- NOWA LOGIKA CELÓW (STRONY ŚWIATA + OBIEKTY) ---
+    // --- LOGIKA CELÓW ABSOLUTNYCH (Strony świata, Obiekty) ---
 
     bool CalculateTargetPosition(string locationName, out Vector3 position)
     {
@@ -226,25 +244,20 @@ public class LLMCommander : MonoBehaviour
         float centerZ = (armyManager.minZ + armyManager.maxZ) / 2;
 
         bool isSideA = (playerSide == "SideA");
-        // Baza gracza
         Vector3 myBasePos = isSideA ? new Vector3(centerX, 0, armyManager.minZ) : new Vector3(centerX, 0, armyManager.maxZ);
 
-        // --- 1. SPRAWDZANIE DOKŁADNYCH NAZW Z MAPY (PRIORYTET) ---
-        // Jeśli AI powie "Forest_1_North", to szukamy tego konkretnego znacznika.
+        // 1. Sprawdzanie dokładnych nazw (TerrainFeature)
         TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
         foreach (var feature in allFeatures)
         {
             if (feature.featureName.ToLower() == loc)
             {
-                // Znaleziono konkretny punkt (np. "Forest_1_SouthEast")
                 position = feature.transform.position;
                 return true;
             }
         }
 
-        // --- 2. KOMENDY OGÓLNE (Relatywne i Globalne) ---
-
-        // A. Komendy Relatywne (Zależne od gracza)
+        // 2. Komendy ogólne
         if (loc.Contains("center")) { position = new Vector3(centerX, 0, centerZ); return true; }
         if (loc.Contains("enemy") || loc.Contains("attack")) { position = GetEnemyArmyCenter(); return true; }
         if (loc.Contains("base") || loc.Contains("retreat"))
@@ -257,7 +270,6 @@ public class LLMCommander : MonoBehaviour
         // B. Flanki (Lewa/Prawa - Zależne od tego, w którą stronę patrzymy)
         if (loc == "left flank" || loc == "left")
         {
-            // SideA (patrzy Z+): Lewa to MinX. SideB (patrzy Z-): Lewa to MaxX.
             float xPos = isSideA ? (armyManager.minX + 250) : (armyManager.maxX - 250);
             position = new Vector3(xPos, 0, centerZ);
             return true;
@@ -269,21 +281,20 @@ public class LLMCommander : MonoBehaviour
             return true;
         }
 
-        // C. GLOBALNE STRONY ŚWIATA (Niezależne od frakcji)
-        // North = Max Z, South = Min Z, East = Max X, West = Min X
-        float mapMargin = 200f; // Margines od krawędzi
+        // C. GLOBALNE STRONY ŚWIATA
+        float mapMargin = 200f;
 
-        if (loc.Contains("north")) // Północ (Góra mapy)
+        if (loc.Contains("north")) // Północ
         {
             float targetX = centerX;
-            if (loc.Contains("east")) targetX = armyManager.maxX - mapMargin; // Północny Wschód
-            else if (loc.Contains("west")) targetX = armyManager.minX + mapMargin; // Północny Zachód
+            if (loc.Contains("east")) targetX = armyManager.maxX - mapMargin;
+            else if (loc.Contains("west")) targetX = armyManager.minX + mapMargin;
 
             position = new Vector3(targetX, 0, armyManager.maxZ - mapMargin);
             return true;
         }
 
-        if (loc.Contains("south")) // Południe (Dół mapy)
+        if (loc.Contains("south")) // Południe
         {
             float targetX = centerX;
             if (loc.Contains("east")) targetX = armyManager.maxX - mapMargin;
@@ -293,20 +304,19 @@ public class LLMCommander : MonoBehaviour
             return true;
         }
 
-        if (loc.Contains("east")) // Wschód (Prawo mapy)
+        if (loc.Contains("east")) // Wschód
         {
             position = new Vector3(armyManager.maxX - mapMargin, 0, centerZ);
             return true;
         }
 
-        if (loc.Contains("west")) // Zachód (Lewo mapy)
+        if (loc.Contains("west")) // Zachód
         {
             position = new Vector3(armyManager.minX + mapMargin, 0, centerZ);
             return true;
         }
 
-        // --- 3. FALLBACK DLA OBIEKTÓW ---
-        // Jeśli AI podało "River" zamiast "River_1", szukamy obiektu i stajemy PRZED nim.
+        // 3. Fallback dla zwykłych obiektów
         GameObject featureObj = GameObject.Find(locationName);
         if (featureObj != null)
         {
@@ -364,7 +374,10 @@ ZASADY:
    - KIERUNKI: 'North' (Góra), 'South' (Dół), 'East' (Prawo), 'West' (Lewo).
    - RELATYWNE: 'Left_Flank', 'Right_Flank', 'Center', 'Enemy_Army', 'My_Base'.
    - TERENOWE (Preferowane): {mapLocations}.
-4. action: 'MOVE' lub 'ATTACK'.
+   - DLA KOMENDY STOP: 'None'.
+   - DLA PRZESUNIĘĆ (np. 100m w lewo): 'Relative_{{Kierunek}}_{{Metry}}'. Kierunki: Forward, Backward, Left, Right.
+   - DLA 'FORM' (Formacje): 'Line' (Szereg), 'Double_Line' (Dwuszereg), 'Box' (Kwadrat), 'Turtle' (Żółw), 'Loose' (Luźna).
+4. action: 'MOVE', 'ATTACK', 'STOP', 'FORM'.
 
 PRZYKŁADY (Zawsze używaj tablicy 'commands'!):
 
@@ -377,14 +390,13 @@ AI:
   ""ai_thought"": ""Wysyłam piechotę na północny skraj lasu.""
 }}
 
-User: Jazda na wschodnią flankę, a łucznicy na środek!
+User: Jazda ustawić się w dwuszeregu!
 AI:
 {{
   ""commands"": [
-    {{ ""unit_tags"": [""Cavalry""], ""action"": ""MOVE"", ""target_location"": ""Right_Flank"" }},
-    {{ ""unit_tags"": [""Archer""], ""action"": ""MOVE"", ""target_location"": ""Center"" }}
+    {{ ""unit_tags"": [""Cavalry""], ""action"": ""FORM"", ""target_location"": ""Double_Line"" }}
   ],
-  ""ai_thought"": ""Rozdzielam siły: jazda na flankę, łucznicy centralnie.""
+  ""ai_thought"": ""Jazda zmienia szyk na dwuszereg.""
 }}
 
 User: Jazda 100 metrów do przodu, łucznicy wycofać się 50 metrów!
@@ -404,10 +416,7 @@ AI:
     {{ ""unit_tags"": [""All""], ""action"": ""STOP"", ""target_location"": ""None"" }}
   ],
   ""ai_thought"": ""Zatrzymuję całą armię.""
-}}"
-
-
-;
+}}";
     }
 
     string GetMapContextInfo()

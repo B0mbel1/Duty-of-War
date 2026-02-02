@@ -372,10 +372,10 @@ public class ArmyHierarchyManager : MonoBehaviour
                 warningText.text = "Nazwa już istnieje!";
                 nameInput.Select();
             }
-            return; 
+            return;
         }
 
-        if (warningText != null) warningText.text = ""; 
+        if (warningText != null) warningText.text = "";
         MergeSelectedGroups(newName);
 
         if (namingPanel != null) namingPanel.SetActive(false);
@@ -563,7 +563,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
 
             float finalMod = slopeMod * forestMod;
-            if (inWater) finalMod *= waterSpeedPenalty; 
+            if (inWater) finalMod *= waterSpeedPenalty;
 
             Vector3 newPos = currentPos + (groupDirection * myBaseSpeed * finalMod);
 
@@ -954,5 +954,50 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (group.groupName == nameToCheck) return true;
         }
         return false;
+    }
+
+    // --- NOWOŚĆ: SYSTEM FORMACJI ---
+    public void ApplyFormation(TacticalGroup group, string formationType)
+    {
+        if (group.unitMatrices.Count == 0) return;
+
+        int count = group.unitMatrices.Count;
+        float spacing = 1.5f;
+        int cols = 0;
+
+        switch (formationType.ToLower())
+        {
+            case "line": cols = count; spacing = 1.2f; break;
+            case "double_line": cols = Mathf.CeilToInt(count / 2.0f); spacing = 1.3f; break;
+            case "box":
+            case "turtle": cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 1.0f; break;
+            case "loose": cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 3.0f; break;
+            default: cols = Mathf.CeilToInt(Mathf.Sqrt(count)); break;
+        }
+
+        Vector3 center = group.groupCenter;
+        Quaternion rotation = group.unitMatrices[0].rotation;
+        Vector3 right = rotation * Vector3.right;
+        Vector3 back = rotation * Vector3.back;
+
+        float totalWidth = (cols - 1) * spacing;
+        Vector3 startPos = center - (right * totalWidth * 0.5f);
+
+        for (int i = 0; i < count; i++)
+        {
+            int col = i % cols;
+            int row = i / cols;
+            Vector3 offset = (right * col * spacing) + (back * row * spacing);
+            Vector3 finalPos = startPos + offset;
+
+            if (terrain != null) finalPos.y = terrain.SampleHeight(finalPos) + terrain.transform.position.y;
+            Vector3 scale = group.unitMatrices[i].lossyScale;
+            group.unitMatrices[i] = Matrix4x4.TRS(finalPos, rotation, scale);
+        }
+
+        group.UpdateBatchData();
+        group.RecalculateCenter();
+        group.currentDestination = group.groupCenter;
+        group.isMoving = false;
     }
 }
