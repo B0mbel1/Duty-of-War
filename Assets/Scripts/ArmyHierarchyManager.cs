@@ -515,23 +515,16 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 currentPos = mat.GetColumn(3);
             UnitArchetype arch = group.GetUnitArchetype(i);
 
-            Vector3 offsetFromCenter = currentPos - group.groupCenter;
-            float projectedDist = Vector3.Dot(offsetFromCenter, groupDirection);
-
-            float catchUpMultiplier = 1.0f;
-
-            if (projectedDist < -5.0f)
-            {
-                catchUpMultiplier = 1.4f;
-            }
-            else if (distToTargetSq < (stopDistance * stopDistance) && projectedDist > 0)
-            {
-                catchUpMultiplier = 0.3f;
-            }
+            // --- USUNIĘTO OBLICZANIE projectedDist i catchUpMultiplier ---
+            // Wcześniej tutaj był kod przyspieszający jednostki z tyłu (1.4x)
+            // i zwalniający te z przodu (0.3x). Teraz go nie ma.
 
             float mySpeedMultiplier = (arch != null) ? arch.speedMultiplier : 1.0f;
-            float myBaseSpeed = globalBaseSpeed * mySpeedMultiplier * catchUpMultiplier;
+            
+            // Prędkość zależy teraz TYLKO od bazowej prędkości i typu jednostki
+            float myBaseSpeed = globalBaseSpeed * mySpeedMultiplier; 
 
+            // --- Reszta fizyki terenu bez zmian ---
             float terrainY = currentPos.y;
             if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
 
@@ -582,7 +575,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
             if (inWater) newPos.y = waterHeight - swimmingDepth;
-            else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y +0.5f;
+            else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y + 0.5f;
             else newPos.y = terrainY;
 
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
