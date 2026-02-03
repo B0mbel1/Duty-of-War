@@ -10,7 +10,7 @@ public class TerrainScanner : MonoBehaviour
 
     [Header("Ustawienia Ogólne")]
     public Terrain terrain;
-    public GameObject markerPrefab; 
+    public GameObject markerPrefab;
 
     [Header("Wykrywanie Wzgórz")]
     public float heightThreshold = 20.0f;
@@ -87,7 +87,7 @@ public class TerrainScanner : MonoBehaviour
         usedNames.Clear();
         ScanForHills_Improved();
         ScanForForests_Clustered();
-        
+
         Debug.Log("Skanowanie zakończone. Możesz teraz przesunąć punkty ręcznie.");
     }
 
@@ -239,21 +239,68 @@ public class TerrainScanner : MonoBehaviour
     void GenerateMarkersForCluster(ForestCluster forest)
     {
         Vector3 center = forest.GetCenter();
+        string dirName = GetLocationName(center); // np. "North", "East"
 
-        // 1. Ustal, w jakiej części mapy leży las (np. "North", "West")
-        string directionName = GetLocationName(center);
+        // Generujemy nazwę
+        string baseID = GetUniqueName("Forest_" + dirName);
+        string plDesc = TranslateDir(dirName) + " las";
 
-        // 2. Zbuduj nazwę techniczną
-        string uniqueID = GetUniqueName("Forest_" + directionName);
-        string plDesc = TranslateDir(directionName) + " las";
+        // Obliczamy wymiary lasu
+        float widthX = forest.maxX - forest.minX;
+        float depthZ = forest.maxZ - forest.minZ;
 
-        // Zastosowanie Twojego Edge Inset dla punktu centralnego
-        // Jeśli chcesz, żeby punkt centralny też był lekko przesuwany względem środka masy (opcjonalne), 
-        // ale standardowo Center to Center. 
-        // W poprzedniej wersji przesuwaliśmy skrajne punkty. 
-        // Skoro tutaj generujemy TYLKO Center (jak w Twoim kodzie), to wstawiamy go po prostu w center.
+        // Domyślne ustawienia linii
+        float calculatedLength = 50f;
+        Vector3 calculatedOrientation = Vector3.right;
+
+        // LOGIKA AUTOMATYCZNEGO DOPASOWANIA LINII:
+        // Jeśli las jest na Północy/Południu -> Linia powinna być pozioma (oś X)
+        // Jeśli las jest na Wschodzie/Zachodzie -> Linia powinna być pionowa (oś Z)
+        // Jeśli Centrum -> Bierzemy dłuższą oś lasu
+
+        if (dirName == "North" || dirName == "South")
+        {
+            calculatedOrientation = Vector3.right; // Poziomo
+            calculatedLength = widthX * 0.8f; // 80% szerokości lasu
+        }
+        else if (dirName == "East" || dirName == "West")
+        {
+            calculatedOrientation = Vector3.forward; // Pionowo
+            calculatedLength = depthZ * 0.8f; // 80% głębokości lasu
+        }
+        else // Center
+        {
+            if (widthX > depthZ)
+            {
+                calculatedOrientation = Vector3.right;
+                calculatedLength = widthX * 0.6f;
+            }
+            else
+            {
+                calculatedOrientation = Vector3.forward;
+                calculatedLength = depthZ * 0.6f;
+            }
+        }
+
+        // Tworzymy znacznik z danymi o linii
+        CreateMarker(center, baseID, plDesc, Color.green, calculatedLength, calculatedOrientation);
+    }
+
+    void CreateMarker(Vector3 pos, string idName, string desc, Color color, float len = 0.0f, Vector3 orient = default(Vector3))
+    {
+        if (orient == Vector3.zero) orient = Vector3.forward;
         
-        CreateMarker(center, uniqueID, plDesc, Color.green);
+        GameObject marker = new GameObject($"Auto_{idName}");
+        marker.transform.position = pos;
+
+        TerrainFeature feature = marker.AddComponent<TerrainFeature>();
+        feature.featureName = idName;
+        feature.description = desc;
+        feature.debugColor = color;
+
+        // Przypisujemy nowe dane o linii
+        feature.lineLength = len;
+        feature.lineOrientation = orient;
     }
 
     string GetLocationName(Vector3 pos)
@@ -331,14 +378,4 @@ public class TerrainScanner : MonoBehaviour
         return true;
     }
 
-    void CreateMarker(Vector3 pos, string idName, string desc, Color color)
-    {
-        GameObject marker = new GameObject($"Auto_{idName}");
-        marker.transform.position = pos;
-
-        TerrainFeature feature = marker.AddComponent<TerrainFeature>();
-        feature.featureName = idName; 
-        feature.description = desc;   
-        feature.debugColor = color;
-    }
 }

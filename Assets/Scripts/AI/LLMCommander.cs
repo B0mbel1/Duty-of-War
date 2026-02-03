@@ -286,6 +286,30 @@ public class LLMCommander : MonoBehaviour
         }
 
         // --- OBSŁUGA RUCHU STANDARDOWEGO (Konkretny punkt na mapie) ---
+        TerrainFeature targetFeature = null;
+        TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
+
+        foreach (var f in allFeatures)
+        {
+            if (f.featureName.ToLower() == cmd.target_location.ToLower())
+            {
+                targetFeature = f;
+                break;
+            }
+        }
+
+        // JEŚLI TO FEATURE Z LINIĄ -> Użyj nowej logiki
+        if (targetFeature != null && targetFeature.lineLength > 1.0f)
+        {
+            foreach (var group in selectedUnits)
+            {
+                // Wywołujemy nową funkcję z Managera
+                armyManager.MoveGroupToLineFeature(group, targetFeature);
+            }
+            return; // Kończymy, bo rozkaz wydany
+        }
+
+        // JEŚLI TO ZWYKŁY PUNKT (lub feature bez linii) -> Stara logika
         Vector3 targetPosition = Vector3.zero;
         bool positionFound = CalculateTargetPosition(cmd.target_location, out targetPosition);
 
@@ -293,11 +317,13 @@ public class LLMCommander : MonoBehaviour
         {
             foreach (var group in selectedUnits)
             {
+                // Jeśli trafiliśmy na feature punktowy (np. Wzgórze bez linii), idziemy standardowo
                 float clampedX = Mathf.Clamp(targetPosition.x, armyManager.minX, armyManager.maxX);
                 float clampedZ = Mathf.Clamp(targetPosition.z, armyManager.minZ, armyManager.maxZ);
 
                 group.currentDestination = new Vector3(clampedX, targetPosition.y, clampedZ);
                 group.isMoving = true;
+                group.isReforming = false; // Ważne: to jest zwykły ruch, nie formacja
                 Debug.Log($"Grupa {group.groupName} rusza do {group.currentDestination}");
             }
         }
