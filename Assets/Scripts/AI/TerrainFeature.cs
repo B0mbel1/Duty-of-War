@@ -6,32 +6,38 @@ public class TerrainFeature : MonoBehaviour
     public string featureName; 
     [TextArea] public string description; 
 
-    [Header("Ustawienia Linii Frontu")]
-    public float lineLength = 20.0f; // Długość linii (szerokość formacji)
-    public Vector3 lineOrientation = Vector3.right; // W którą stronę biegnie linia (Right = poziomo, Forward = pionowo)
+    [Header("Ustawienia Linii")]
+    public float lineLength = 20.0f; 
+    public Vector3 lineOrientation = Vector3.right; 
+    
+    [Header("Ustawienia Rzeczne")]
+    public bool isRiver = false; // Czy to jest rzeka?
+    public float riverBankOffset = 10.0f; // Jak daleko od środka rzeki jest brzeg (bezpieczna strefa)
 
     [Header("Debug")]
     public Color debugColor = Color.green;
-    public float radius = 2.0f; 
+    public float radius = 2.0f;
 
     void OnDrawGizmos()
     {
         Gizmos.color = debugColor;
-        
-        // Rysujemy sferę w punkcie centralnym (punkt zaczepienia)
         Gizmos.DrawWireSphere(transform.position, radius);
         
-        // Rysujemy LINIĘ FRONTU
-        // Obliczamy początek i koniec linii względem środka
         Vector3 start = transform.position - (lineOrientation * lineLength * 0.5f);
         Vector3 end = transform.position + (lineOrientation * lineLength * 0.5f);
         
-        // Gruba linia wyznaczająca front
         Gizmos.DrawLine(start, end);
-        
-        // Dodatkowe "wąsy" na końcach, żeby było widać granice w edytorze
         Gizmos.DrawLine(start, start + Vector3.up * 5);
         Gizmos.DrawLine(end, end + Vector3.up * 5);
+
+        // Wizualizacja brzegów (tylko dla rzek)
+        if (isRiver)
+        {
+            Gizmos.color = Color.blue;
+            Vector3 perp = Vector3.Cross(Vector3.up, lineOrientation).normalized * riverBankOffset;
+            Gizmos.DrawLine(start + perp, end + perp); // Brzeg A
+            Gizmos.DrawLine(start - perp, end - perp); // Brzeg B
+        }
     }
     
 #if UNITY_EDITOR

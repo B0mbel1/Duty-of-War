@@ -235,6 +235,7 @@ GameObject:
   - component: {fileID: 716981142}
   - component: {fileID: 716981141}
   - component: {fileID: 716981140}
+  - component: {fileID: 716981144}
   m_Layer: 4
   m_Name: River
   m_TagString: Water
@@ -335,6 +336,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &716981144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 716981139}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 223aeebcdca464f44b83b04762bb649a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TerrainFeature
+  featureName: Rzeka
+  description: "Rzeka, przez kt\xF3r\u0105 mo\u017Cna przej\u015B\u0107."
+  lineLength: 1000
+  lineOrientation: {x: 1, y: 0, z: 0}
+  isRiver: 1
+  riverBankOffset: 50
+  debugColor: {r: 0, g: 1, b: 0, a: 1}
+  radius: 10
 --- !u!114 &877380238 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8558128190605741031, guid: 49d326ed6d683cd42b1395750475b645, type: 3}

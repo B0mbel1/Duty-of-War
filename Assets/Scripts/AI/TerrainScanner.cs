@@ -22,6 +22,10 @@ public class TerrainScanner : MonoBehaviour
     public int scanResolutionDivisor = 4;
     public int minForestSize = 50;
 
+    [Header("Wykrywanie Wody (Rzeki)")]
+    public string waterLayerName = "Water"; // Nazwa warstwy texture w Terrain
+    public float riverWidthMultiplier = 0.4f;
+
     // Lista użytych nazw, aby uniknąć duplikatów
     private HashSet<string> usedNames = new HashSet<string>();
 
@@ -87,10 +91,72 @@ public class TerrainScanner : MonoBehaviour
         usedNames.Clear();
         ScanForHills_Improved();
         ScanForForests_Clustered();
+        ScanForWater_Clustered();
 
         Debug.Log("Skanowanie zakończone. Możesz teraz przesunąć punkty ręcznie.");
     }
 
+    void ScanForWater_Clustered()
+    {
+        TerrainData data = terrain.terrainData;
+        int alphaW = data.alphamapWidth;
+        int alphaH = data.alphamapHeight;
+
+        int waterIdx = -1;
+        for (int i = 0; i < data.terrainLayers.Length; i++)
+        {
+            // Szukamy warstwy wody
+            if (data.terrainLayers[i].name == waterLayerName)
+            {
+                waterIdx = i;
+                break;
+            }
+        }
+
+        if (waterIdx == -1) return; // Brak wody na mapie
+
+        float[,,] maps = data.GetAlphamaps(0, 0, alphaW, alphaH);
+        bool[,] visited = new bool[alphaW, alphaH];
+        List<ForestCluster> rivers = new List<ForestCluster>(); // Używamy tej samej klasy co lasy
+
+        int step = scanResolutionDivisor;
+
+        for (int x = 0; x < alphaW; x += step)
+        {
+            for (int y = 0; y < alphaH; y += step)
+            {
+                if (visited[x, y]) continue;
+                if (maps[y, x, waterIdx] > 0.5f) // Jeśli to woda
+                {
+                    ForestCluster cluster = PerformFloodFill(x, y, alphaW, alphaH, maps, waterIdx, visited, step);
+                    if (cluster.points.Count > minForestSize) rivers.Add(cluster);
+                }
+            }
+        }
+
+        foreach (var river in rivers)
+        {
+            GenerateRiverMarkers(river);
+        }
+    }
+
+    void GenerateRiverMarkers(ForestCluster river)
+    {
+        Vector3 center = river.GetCenter();
+        string dirName = GetLocationName(center);
+        string baseID = GetUniqueName("River_" + dirName);
+
+        float widthX = river.maxX - river.minX;
+        float depthZ = river.maxZ - river.minZ;
+
+        // Rzeka zazwyczaj płynie wzdłuż dłuższej krawędzi
+        Vector3 orientation = (widthX > depthZ) ? Vector3.right : Vector3.forward;
+        float length = (widthX > depthZ) ? widthX : depthZ;
+
+        // Tworzymy znacznik
+        // WAŻNE: Ostatni parametr to isRiver = true
+        CreateMarker(center, baseID, "Rzeka", Color.blue, length * riverWidthMultiplier, orientation, true);
+    }
     // --- WZGÓRZA ---
     void ScanForHills_Improved()
     {
@@ -286,10 +352,10 @@ public class TerrainScanner : MonoBehaviour
         CreateMarker(center, baseID, plDesc, Color.green, calculatedLength, calculatedOrientation);
     }
 
-    void CreateMarker(Vector3 pos, string idName, string desc, Color color, float len = 0.0f, Vector3 orient = default(Vector3))
+    void CreateMarker(Vector3 pos, string idName, string desc, Color color, float len = 0.0f, Vector3 orient = default(Vector3), bool isRiver = false)
     {
         if (orient == Vector3.zero) orient = Vector3.forward;
-        
+
         GameObject marker = new GameObject($"Auto_{idName}");
         marker.transform.position = pos;
 
@@ -297,10 +363,12 @@ public class TerrainScanner : MonoBehaviour
         feature.featureName = idName;
         feature.description = desc;
         feature.debugColor = color;
-
-        // Przypisujemy nowe dane o linii
         feature.lineLength = len;
         feature.lineOrientation = orient;
+
+        // NOWOŚĆ: Ustawiamy czy to rzeka i szerokość brzegu
+        feature.isRiver = isRiver;
+        if (isRiver) feature.riverBankOffset = 15.0f; // np. 15 metrów od środka wody
     }
 
     string GetLocationName(Vector3 pos)

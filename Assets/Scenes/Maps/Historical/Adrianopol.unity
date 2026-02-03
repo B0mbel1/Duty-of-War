@@ -1103,6 +1103,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TerrainFeature
   featureName: Rzeka
   description: "Rzeka, przez kt\xF3r\u0105 mo\u017Cna przej\u015B\u0107."
+  lineLength: 1000
+  lineOrientation: {x: 1, y: 0, z: 0}
+  isRiver: 1
+  riverBankOffset: 50
   debugColor: {r: 0, g: 1, b: 0, a: 1}
   radius: 5
 --- !u!114 &1755950473 stripped

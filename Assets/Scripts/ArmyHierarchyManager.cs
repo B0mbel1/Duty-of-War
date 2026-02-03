@@ -652,52 +652,68 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (group.unitMatrices.Count == 0) return;
 
-        // 1. Pobieramy parametry linii z TerrainFeature
         Vector3 center = feature.transform.position;
-        Vector3 lineDir = feature.lineOrientation.normalized; // Kierunek linii (np. prawo)
+        Vector3 lineDir = feature.lineOrientation.normalized;
         float lineLen = feature.lineLength;
 
-        // 2. Obliczamy wektor "do przodu" (prostopadły do linii), żeby jednostki wiedziały gdzie patrzeć
-        // Zakładamy, że jeśli linia idzie w Prawo (X), to przód jest w Górę (Z) lub odwrotnie.
-        // Używamy Vector3.up jako osi obrotu.
+        // Obliczamy wektor prostopadły do rzeki (Normalna)
+        // Jeśli rzeka płynie w Prawo (X), to Normalna jest w Przód (Z)
+        Vector3 riverNormal = Vector3.Cross(Vector3.up, lineDir).normalized;
+
+        // --- LOGIKA RZECZNA ---
+        if (feature.isRiver)
+        {
+            // Sprawdzamy, po której stronie rzeki znajduje się GRUPA
+            Vector3 toGroup = group.groupCenter - center;
+
+            // Iloczyn skalarny powie nam, czy jesteśmy "przed" czy "za" normalną
+            float side = Vector3.Dot(toGroup, riverNormal);
+
+            // Jeśli side > 0, jesteśmy po stronie, w którą celuje Normalna.
+            // Jeśli side < 0, jesteśmy po przeciwnej.
+            // Przesuwamy środek formacji w naszą stronę o szerokość brzegu (riverBankOffset)
+
+            Vector3 offsetVector = (side > 0) ? riverNormal : -riverNormal;
+            center += offsetVector * feature.riverBankOffset;
+
+            // Debug: Logujemy stronę
+            // Debug.Log($"Rzeka: Grupa {group.groupName} staje na brzegu {(side > 0 ? "Pozytywnym" : "Negatywnym")}");
+        }
+
+        // --- DALSZA CZĘŚĆ (Rozstawianie żołnierzy) ---
+        // Teraz 'center' to nie środek rzeki, ale punkt na brzegu, więc reszta kodu działa standardowo
+
+        // Kierunek patrzenia: Zawsze w stronę rzeki (czyli przeciwnie do offsetu brzegu)
         Vector3 faceDir = Vector3.Cross(Vector3.up, lineDir).normalized;
+        if (feature.isRiver)
+        {
+            // Jeśli to rzeka, patrz w stronę wody (czyli odwróć wektor, jeśli stoisz po drugiej stronie)
+            Vector3 toWater = (feature.transform.position - center).normalized;
+            faceDir = toWater;
+        }
 
-        // Opcjonalnie: Jeśli chcesz odwrócić front (np. Goci patrzą w dół, Rzym w górę), możesz to tutaj dodać:
-        // if (feature.featureName.Contains("North")) faceDir = -faceDir; 
-
-        // 3. Logika układania żołnierzy
         int unitCount = group.unitMatrices.Count;
-        
-        // Obliczamy ile jednostek zmieści się w jednym szeregu na tej linii
-        // Przyjmujemy odstęp np. 1.5m
-        float spacing = 1.5f; 
+        float spacing = 1.5f;
         int maxUnitsPerRow = Mathf.FloorToInt(lineLen / spacing);
         if (maxUnitsPerRow < 1) maxUnitsPerRow = 1;
 
-        // Ile rzędów potrzebujemy?
-        int rows = Mathf.CeilToInt((float)unitCount / maxUnitsPerRow);
-        
-        // Przygotowujemy listę celów
-        while (group.formationTargets.Count < unitCount) group.formationTargets.Add(Vector3.zero);
-
-        // Punkt startowy (lewy górny róg formacji na linii)
-        // Przesuwamy się w lewo o połowę długości zajętej przez oddział (żeby byli wycentrowani na linii)
+        // Start linii (lewy róg)
         float currentLineWidth = Mathf.Min(unitCount, maxUnitsPerRow) * spacing;
         Vector3 lineStart = center - (lineDir * currentLineWidth * 0.5f);
 
-        // Pętla po jednostkach
+        while (group.formationTargets.Count < unitCount) group.formationTargets.Add(Vector3.zero);
+
         for (int i = 0; i < unitCount; i++)
         {
             int row = i / maxUnitsPerRow;
             int col = i % maxUnitsPerRow;
 
-            // Pozycja na linii (column) + cofnięcie dla kolejnych szeregów (row)
-            // faceDir * row * spacing * -1 (minus bo szeregi idą do tyłu)
-            Vector3 pos = lineStart 
-                        + (lineDir * col * spacing) 
-                        - (faceDir * row * spacing); 
+            // Ważne: kolejne szeregi ustawiają się ZA pierwszym (czyli dalej od rzeki)
+            // faceDir to kierunek "na rzekę". Więc odejmujemy go (-faceDir), żeby cofnąć się w głąb lądu
+            Vector3 pos = lineStart
+                        + (lineDir * col * spacing)
+                        - (faceDir * row * spacing);
 
-            // Dopasowanie do terenu (Y)
             if (terrain != null)
                 pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
             else
@@ -706,21 +722,18 @@ public class ArmyHierarchyManager : MonoBehaviour
             group.formationTargets[i] = pos;
         }
 
-        // 4. Aplikujemy rotację (wszyscy patrzą "przed siebie" względem linii)
+        // Aplikujemy rotację (patrzą na rzekę)
         Quaternion targetRotation = Quaternion.LookRotation(faceDir);
-        for(int i=0; i<group.unitMatrices.Count; i++)
+        for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             Vector3 s = group.unitMatrices[i].lossyScale;
             Vector3 p = group.unitMatrices[i].GetColumn(3);
-            // Nadpisujemy rotację, żeby podczas marszu już się obracali
             group.unitMatrices[i] = Matrix4x4.TRS(p, targetRotation, s);
         }
 
-        // 5. Uruchamiamy ruch
         group.isReforming = true;
         group.isMoving = true;
-        group.currentDestination = center; // Ogólny cel dla UI/Debug
-        Debug.Log($"Grupa {group.groupName} ustawia się na linii: {feature.featureName} (Długość: {lineLen})");
+        group.currentDestination = center;
     }
     void ResolveCombatRoundRobin()
     {
