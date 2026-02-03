@@ -492,19 +492,23 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         float distToTargetSq = Vector3.SqrMagnitude(flatTarget - flatCenter);
 
-        if (distToTargetSq < 0.5f)
+        if (!group.isReforming && distToTargetSq < 0.5f)
         {
             group.isMoving = false;
             return;
         }
+        float globalBaseSpeed = moveSpeed * Time.deltaTime;
+        int unitsReachedTarget = 0;
 
         Vector3 groupDirection = (flatTarget - flatCenter).normalized;
-        float globalBaseSpeed = moveSpeed * Time.deltaTime;
+        Quaternion targetRot = Quaternion.LookRotation(groupDirection != Vector3.zero ? groupDirection : Vector3.forward);
 
-        Quaternion currentRot = group.unitMatrices[0].rotation;
-        Quaternion targetRot = Quaternion.LookRotation(groupDirection);
+        if (group.isReforming && group.unitMatrices.Count > 0)
+            targetRot = group.unitMatrices[0].rotation;
+
+        Quaternion currentRot = group.unitMatrices.Count > 0 ? group.unitMatrices[0].rotation : Quaternion.identity;
         Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
-        Vector3 scaleVec = group.unitMatrices[0].lossyScale;
+
 
         int alphaWidth = 0, alphaHeight = 0;
         if (terrainData != null) { alphaWidth = terrainData.alphamapWidth; alphaHeight = terrainData.alphamapHeight; }
@@ -513,23 +517,56 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             Matrix4x4 mat = group.unitMatrices[i];
             Vector3 currentPos = mat.GetColumn(3);
+            Vector3 scaleVec = mat.lossyScale;
             UnitArchetype arch = group.GetUnitArchetype(i);
 
-            // --- USUNIĘTO OBLICZANIE projectedDist i catchUpMultiplier ---
-            // Wcześniej tutaj był kod przyspieszający jednostki z tyłu (1.4x)
-            // i zwalniający te z przodu (0.3x). Teraz go nie ma.
+            Vector3 moveDirection;
+            float distToSlot = 0f;
+
+            if (group.isReforming)
+            {
+                // Jeśli formujemy, idziemy do SWOJEGO celu
+                if (i < group.formationTargets.Count)
+                {
+                    Vector3 targetPos = group.formationTargets[i];
+                    Vector3 diff = targetPos - currentPos;
+                    // Ignorujemy oś Y dla kierunku ruchu
+                    Vector3 flatDiff = new Vector3(diff.x, 0, diff.z);
+                    distToSlot = flatDiff.magnitude;
+
+                    if (distToSlot < 0.2f)
+                    {
+                        moveDirection = Vector3.zero; // Jesteś na miejscu
+                        unitsReachedTarget++;
+                    }
+                    else
+                    {
+                        moveDirection = flatDiff.normalized;
+                    }
+                }
+                else
+                {
+                    moveDirection = Vector3.zero; // Fallback
+                    unitsReachedTarget++;
+                }
+            }
+            else
+            {
+                // Zwykły ruch grupy
+                moveDirection = groupDirection;
+            }
+            if (moveDirection == Vector3.zero) continue;
+
 
             float mySpeedMultiplier = (arch != null) ? arch.speedMultiplier : 1.0f;
-            
-            // Prędkość zależy teraz TYLKO od bazowej prędkości i typu jednostki
-            float myBaseSpeed = globalBaseSpeed * mySpeedMultiplier; 
+            float myBaseSpeed = globalBaseSpeed * mySpeedMultiplier;
 
             // --- Reszta fizyki terenu bez zmian ---
             float terrainY = currentPos.y;
             if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
-
             bool inWater = false;
             float waterHeight = -1000f;
+
             RaycastHit hit;
             if (Physics.Raycast(currentPos + Vector3.up * 50f, Vector3.down, out hit, 100f, waterLayerMask))
             {
@@ -539,7 +576,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             float slopeMod = 1.0f;
             if (terrain != null && !inWater)
             {
-                Vector3 probePos = currentPos + (groupDirection * slopeCheckDistance);
+                Vector3 probePos = currentPos + (moveDirection * slopeCheckDistance);
                 float nextY = terrain.SampleHeight(probePos) + terrain.transform.position.y;
                 float angle = Mathf.Atan2(nextY - terrainY, slopeCheckDistance) * Mathf.Rad2Deg;
 
@@ -569,7 +606,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             float finalMod = slopeMod * forestMod;
             if (inWater) finalMod *= waterSpeedPenalty;
 
-            Vector3 newPos = currentPos + (groupDirection * myBaseSpeed * finalMod);
+            Vector3 newPos = currentPos + (moveDirection * myBaseSpeed * finalMod);
 
             newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
             newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
@@ -578,13 +615,37 @@ public class ArmyHierarchyManager : MonoBehaviour
             else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y + 0.5f;
             else newPos.y = terrainY;
 
+            Quaternion unitRot = nextRot;
+            if (group.isReforming && moveDirection.sqrMagnitude > 0.1f)
+                unitRot = Quaternion.Lerp(mat.rotation, Quaternion.LookRotation(moveDirection), 10f * Time.deltaTime);
+            else if (group.isReforming) // Jak doszedł, obróć się frontem
+                unitRot = nextRot;
+
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
         }
-
+        if (group.isReforming && unitsReachedTarget >= group.unitMatrices.Count)
+        {
+            group.isReforming = false;
+            group.isMoving = false;
+            // Wyrównaj idealnie rotację na koniec
+            ApplyFinalFormationRotation(group);
+        }
         group.UpdateBatchData();
         group.RecalculateCenter();
     }
+    void ApplyFinalFormationRotation(TacticalGroup group)
+    {
+        if (group.unitMatrices.Count == 0) return;
+        Quaternion finalRot = group.unitMatrices[0].rotation;
+        Vector3 scale = group.unitMatrices[0].lossyScale;
 
+        for (int i = 0; i < group.unitMatrices.Count; i++)
+        {
+            Vector3 pos = group.unitMatrices[i].GetColumn(3);
+            group.unitMatrices[i] = Matrix4x4.TRS(pos, finalRot, scale);
+        }
+        group.UpdateBatchData();
+    }
     void ResolveCombatRoundRobin()
     {
         int totalBudget = maxCombatChecksPerFrame;
@@ -965,6 +1026,11 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (group.unitMatrices.Count == 0) return;
 
+        while (group.formationTargets.Count < group.unitMatrices.Count)
+            group.formationTargets.Add(group.groupCenter);
+        while (group.formationTargets.Count > group.unitMatrices.Count)
+            group.formationTargets.RemoveAt(group.formationTargets.Count - 1);
+
         int count = group.unitMatrices.Count;
         float spacing = 1.5f;
         int cols = 0;
@@ -980,6 +1046,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         Vector3 center = group.groupCenter;
+
         Quaternion rotation = group.unitMatrices[0].rotation;
         Vector3 right = rotation * Vector3.right;
         Vector3 back = rotation * Vector3.back;
@@ -994,15 +1061,23 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 offset = (right * col * spacing) + (back * row * spacing);
             Vector3 finalPos = startPos + offset;
 
-            if (terrain != null) finalPos.y = terrain.SampleHeight(finalPos) + terrain.transform.position.y;
-            Vector3 scale = group.unitMatrices[i].lossyScale;
-            group.unitMatrices[i] = Matrix4x4.TRS(finalPos, rotation, scale);
+            // Dopasowanie do terenu (dla celu)
+            if (terrain != null)
+                finalPos.y = terrain.SampleHeight(finalPos) + terrain.transform.position.y;
+            else
+                finalPos.y = group.unitMatrices[i].GetColumn(3).y; // fallback
+
+            group.formationTargets[i] = finalPos;
         }
 
-        group.UpdateBatchData();
-        group.RecalculateCenter();
+        group.isReforming = true;
+        group.isMoving = true;
         group.currentDestination = group.groupCenter;
-        group.isMoving = false;
+        Debug.Log($"Grupa {group.groupName} rozpoczyna formowanie: {formationType}");
+        // group.UpdateBatchData();
+        // group.RecalculateCenter();
+        // group.currentDestination = group.groupCenter;
+        // group.isMoving = false;
     }
 
     public List<TacticalGroup> GetSelectedGroups()

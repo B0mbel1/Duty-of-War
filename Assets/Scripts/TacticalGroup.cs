@@ -8,19 +8,20 @@ public class UnitArchetype
 {
     public UnitType type;
     public Mesh unitMesh;
-    
+
     // Materiał aktualny (może być zielony jak zaznaczysz)
     public Material unitMaterial;
     // Materiał oryginalny (zapamiętany do odznaczenia) - NOWOŚĆ
-    public Material originalMaterial; 
-    
+    public Material originalMaterial;
+
     public Mesh arrowMesh;
     public Material arrowMaterial;
-    
-    public float speedMultiplier = 1.0f; 
-    
+
+    public float speedMultiplier = 1.0f;
+
     public List<Matrix4x4[]> batchBuffers = new List<Matrix4x4[]>();
-    public int currentCount = 0; 
+
+    public int currentCount = 0;
 }
 
 [System.Serializable]
@@ -38,7 +39,8 @@ public class TacticalGroup
     public List<float> unitHealth = new List<float>();
     public List<float> attackCooldowns = new List<float>();
     public List<Vector3> lastPositions = new List<Vector3>();
-
+    public List<Vector3> formationTargets = new List<Vector3>();
+    public bool isReforming = false;
     public Vector3 currentDestination;
     public bool isMoving = false;
     public Vector3 groupCenter;
@@ -59,7 +61,7 @@ public class TacticalGroup
         baseArch.originalMaterial = mat; // Zapamiętujemy oryginał
         baseArch.speedMultiplier = 1.0f;
         archetypes.Add(baseArch);
-        
+
         RecalculateStats();
     }
 
@@ -70,6 +72,7 @@ public class TacticalGroup
         attackCooldowns.Add(0f);
         lastPositions.Add((Vector3)matrix.GetColumn(3));
         unitArchetypeIndices.Add(archetypeIndex);
+        formationTargets.Add((Vector3)matrix.GetColumn(3));
     }
 
     public void RemoveUnitAt(int index)
@@ -82,6 +85,8 @@ public class TacticalGroup
             attackCooldowns[index] = attackCooldowns[lastIndex];
             lastPositions[index] = lastPositions[lastIndex];
             unitArchetypeIndices[index] = unitArchetypeIndices[lastIndex];
+            if (formationTargets.Count > lastIndex)
+                formationTargets[index] = formationTargets[lastIndex];
         }
         unitMatrices.RemoveAt(lastIndex);
         unitHealth.RemoveAt(lastIndex);
@@ -89,15 +94,18 @@ public class TacticalGroup
         lastPositions.RemoveAt(lastIndex);
         unitArchetypeIndices.RemoveAt(lastIndex);
 
-        RebuildBatchesFull(); 
+        if (formationTargets.Count > lastIndex)
+            formationTargets.RemoveAt(lastIndex);
+
+        RebuildBatchesFull();
     }
 
     public void RecalculateStats()
     {
         minGroupSpeedMultiplier = 100f;
         if (archetypes.Count == 0) minGroupSpeedMultiplier = 1.0f;
-        
-        foreach(var arch in archetypes)
+
+        foreach (var arch in archetypes)
         {
             if (arch.speedMultiplier < minGroupSpeedMultiplier)
                 minGroupSpeedMultiplier = arch.speedMultiplier;
@@ -113,12 +121,12 @@ public class TacticalGroup
         }
 
         List<List<Matrix4x4>> tempSeparated = new List<List<Matrix4x4>>();
-        for(int i=0; i<archetypes.Count; i++) tempSeparated.Add(new List<Matrix4x4>());
+        for (int i = 0; i < archetypes.Count; i++) tempSeparated.Add(new List<Matrix4x4>());
 
         for (int i = 0; i < unitMatrices.Count; i++)
         {
             int archIndex = unitArchetypeIndices[i];
-            if(archIndex < tempSeparated.Count)
+            if (archIndex < tempSeparated.Count)
                 tempSeparated[archIndex].Add(unitMatrices[i]);
         }
 
@@ -132,7 +140,7 @@ public class TacticalGroup
             {
                 int count = Mathf.Min(BATCH_SIZE, list.Count - k);
                 Matrix4x4[] batch = new Matrix4x4[count];
-                for(int m=0; m<count; m++) batch[m] = list[k+m];
+                for (int m = 0; m < count; m++) batch[m] = list[k + m];
                 arch.batchBuffers.Add(batch);
             }
         }
@@ -142,7 +150,7 @@ public class TacticalGroup
 
     public void UpdateBatchData()
     {
-        int[] counters = new int[archetypes.Count]; 
+        int[] counters = new int[archetypes.Count];
 
         for (int i = 0; i < unitMatrices.Count; i++)
         {
@@ -155,7 +163,7 @@ public class TacticalGroup
 
             if (batchIndex < arch.batchBuffers.Count)
                 arch.batchBuffers[batchIndex][elementIndex] = unitMatrices[i];
-            
+
             counters[archIndex]++;
         }
     }
@@ -164,7 +172,7 @@ public class TacticalGroup
     {
         if (unitMatrices.Count == 0) return;
         Vector3 sum = Vector3.zero;
-        int step = Mathf.Max(1, unitMatrices.Count / 50); 
+        int step = Mathf.Max(1, unitMatrices.Count / 50);
         int sampledCount = 0;
         float minX = float.MaxValue, maxX = float.MinValue;
         float minZ = float.MaxValue, maxZ = float.MinValue;
@@ -202,7 +210,7 @@ public class TacticalGroup
                 Graphics.DrawMeshInstanced(arch.arrowMesh, 0, arch.arrowMaterial, batch);
         }
     }
-    
+
     public UnitArchetype GetUnitArchetype(int unitIndex)
     {
         if (unitIndex >= 0 && unitIndex < unitArchetypeIndices.Count)
