@@ -137,7 +137,7 @@ PrefabInstance:
       objectReference: {fileID: 1231677631}
     - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
       propertyPath: unitSpacing
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 1553181247848204900, guid: 4e0c0785636b5874e9764c740e4ec3b0, type: 3}
       propertyPath: factionAText

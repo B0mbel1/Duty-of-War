@@ -45,8 +45,9 @@ public class TacticalGroup
     public bool isMoving = false;
     public Vector3 groupCenter;
     public float groupRadius = 5.0f;
+    public Vector3 targetFacingDirection = Vector3.forward;
     public float minGroupSpeedMultiplier = 1.0f;
-
+    [System.NonSerialized] public TerrainFeature assignedFeature = null;
     private const int BATCH_SIZE = 1023;
 
     public TacticalGroup(string name, Mesh mesh, Material mat, HierarchyRank r, UnitType unitType)

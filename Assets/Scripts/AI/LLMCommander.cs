@@ -185,8 +185,6 @@ public class LLMCommander : MonoBehaviour
                 var manualSelection = armyManager.GetSelectedGroups();
                 foreach (var g in manualSelection)
                 {
-                    // Sprawdzamy, czy zaznaczona jednostka należy do nas 
-                    // (żeby nie sterować wrogiem przez przypadek, jeśli kliknąłeś go dla info)
                     if (myUnits.Contains(g) && !selectedUnits.Contains(g))
                     {
                         selectedUnits.Add(g);
@@ -212,34 +210,34 @@ public class LLMCommander : MonoBehaviour
             foreach (var group in selectedUnits)
             {
                 group.isMoving = false;
-                group.currentDestination = group.groupCenter; // Reset celu na obecną pozycję
+                group.isReforming = false;
+                group.currentDestination = group.groupCenter; 
+                group.targetFacingDirection = Vector3.zero; // Resetujemy wymuszony obrót
                 Debug.Log($"Grupa {group.groupName} zatrzymana na rozkaz.");
+                group.assignedFeature = null;
             }
-            return; // Kończymy funkcję
+            return;
         }
 
         // --- OBSŁUGA FORMACJI ---
         if (cmd.action == "FORM")
         {
-            // Typ formacji jest w polu target_location (np. "Turtle", "Line")
-            string formType = cmd.target_location;
+            string formType = cmd.target_location; // np. "Turtle", "Line"
             foreach (var g in selectedUnits)
             {
-                // Wywołujemy metodę z Managera (upewnij się, że dodałeś ją do ArmyHierarchyManager!)
                 armyManager.ApplyFormation(g, formType);
                 Debug.Log($"Grupa {g.groupName} zmienia formację na: {formType}");
             }
-            return; // Kończymy funkcję
+            return;
         }
 
-        // --- OBSŁUGA RUCHU RELATYWNEGO (np. "Forward 100m") ---
+        // --- OBSŁUGA RUCHU RELATYWNEGO (np. "Forward 100m", "Backward 50m") ---
         if (cmd.target_location.StartsWith("Relative_"))
         {
-            // Parsujemy stringa: "Relative_Left_100" -> ["Relative", "Left", "100"]
             string[] parts = cmd.target_location.Split('_');
             if (parts.Length == 3)
             {
-                string directionStr = parts[1].ToLower(); // np. "forward"
+                string directionStr = parts[1].ToLower(); // np. "forward", "backward"
                 float distance = 0;
                 if (float.TryParse(parts[2], out distance))
                 {
@@ -247,29 +245,38 @@ public class LLMCommander : MonoBehaviour
                     {
                         if (group.unitMatrices.Count == 0) continue;
 
-                        // 1. Pobieramy aktualną rotację grupy (na podstawie pierwszej jednostki)
+                        // 1. Pobieramy rotację i pozycję
                         Quaternion groupRotation = group.unitMatrices[0].rotation;
+                        Vector3 currentForward = groupRotation * Vector3.forward;
 
-                        // 2. Obliczamy wektor ruchu LOKALNIE dla tej grupy
-                        Vector3 localDirection = Vector3.forward; // Domyślnie
+                        // 2. Obliczamy wektor ruchu LOKALNIE
+                        Vector3 localDirection = Vector3.forward; 
 
                         switch (directionStr)
                         {
-                            case "forward":
-                                localDirection = groupRotation * Vector3.forward; // Ich przód
-                                break;
-                            case "backward":
-                                localDirection = groupRotation * Vector3.back;    // Ich tył
-                                break;
-                            case "left":
-                                localDirection = groupRotation * Vector3.left;    // Ich lewo
-                                break;
-                            case "right":
-                                localDirection = groupRotation * Vector3.right;   // Ich prawo
-                                break;
+                            case "forward":  localDirection = groupRotation * Vector3.forward; break;
+                            case "backward": localDirection = groupRotation * Vector3.back;    break;
+                            case "left":     localDirection = groupRotation * Vector3.left;    break;
+                            case "right":    localDirection = groupRotation * Vector3.right;   break;
                         }
 
-                        // 3. Aplikujemy przesunięcie
+                        // 3. LOGIKA OBROTU (Fix dla wycofywania)
+                        // Jeśli idziemy do tyłu, chcemy nadal patrzeć na wroga (przód)
+                        if (directionStr == "backward")
+                        {
+                            group.targetFacingDirection = currentForward;
+                        }
+                        else if (directionStr == "forward")
+                        {
+                            group.targetFacingDirection = currentForward;
+                        }
+                        else
+                        {
+                            // Przy ruchu w bok, niech patrzą tam gdzie idą (chyba że wolisz inaczej)
+                            group.targetFacingDirection = localDirection.normalized;
+                        }
+
+                        // 4. Aplikujemy przesunięcie
                         Vector3 newPos = group.groupCenter + (localDirection * distance);
 
                         // Clamp (ograniczenie do mapy)
@@ -278,14 +285,15 @@ public class LLMCommander : MonoBehaviour
 
                         group.currentDestination = new Vector3(clampedX, group.groupCenter.y, clampedZ);
                         group.isMoving = true;
+                        group.isReforming = true; // Włączamy reforming, żeby użyli precyzyjnego ruchu
                     }
-                    Debug.Log($"Przesuwam jednostki o {distance}m w ich lokalnym kierunku: {directionStr}");
-                    return; // Kończymy
+                    Debug.Log($"Przesuwam jednostki o {distance}m ({directionStr})");
+                    return; 
                 }
             }
         }
 
-        // --- OBSŁUGA RUCHU STANDARDOWEGO (Konkretny punkt na mapie) ---
+        // --- OBSŁUGA RUCHU DO KONKRETNEGO OBIEKTU (Lasy, Rzeki) ---
         TerrainFeature targetFeature = null;
         TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
 
@@ -298,18 +306,18 @@ public class LLMCommander : MonoBehaviour
             }
         }
 
-        // JEŚLI TO FEATURE Z LINIĄ -> Użyj nowej logiki
-        if (targetFeature != null && targetFeature.lineLength > 1.0f)
+        // JEŚLI TO FEATURE Z LINIĄ (Las, Rzeka) -> Użyj logiki "MoveGroupToLineFeature"
+        if (targetFeature != null && (targetFeature.lineLength > 1.0f || targetFeature.isRiver))
         {
             foreach (var group in selectedUnits)
             {
-                // Wywołujemy nową funkcję z Managera
+                // Manager obliczy pozycję wzdłuż linii/rzeki i ustawi odpowiedni targetFacingDirection
                 armyManager.MoveGroupToLineFeature(group, targetFeature);
             }
-            return; // Kończymy, bo rozkaz wydany
+            return; 
         }
 
-        // JEŚLI TO ZWYKŁY PUNKT (lub feature bez linii) -> Stara logika
+        // --- OBSŁUGA RUCHU STANDARDOWEGO (Zwykły punkt na mapie) ---
         Vector3 targetPosition = Vector3.zero;
         bool positionFound = CalculateTargetPosition(cmd.target_location, out targetPosition);
 
@@ -317,13 +325,16 @@ public class LLMCommander : MonoBehaviour
         {
             foreach (var group in selectedUnits)
             {
-                // Jeśli trafiliśmy na feature punktowy (np. Wzgórze bez linii), idziemy standardowo
                 float clampedX = Mathf.Clamp(targetPosition.x, armyManager.minX, armyManager.maxX);
                 float clampedZ = Mathf.Clamp(targetPosition.z, armyManager.minZ, armyManager.maxZ);
 
                 group.currentDestination = new Vector3(clampedX, targetPosition.y, clampedZ);
+                
+                // Dla zwykłego ruchu resetujemy wymuszony obrót (będą patrzeć tam gdzie idą)
+                group.targetFacingDirection = Vector3.zero; 
+                
                 group.isMoving = true;
-                group.isReforming = false; // Ważne: to jest zwykły ruch, nie formacja
+                group.isReforming = false; // Zwykły marsz (luźniejszy)
                 Debug.Log($"Grupa {group.groupName} rusza do {group.currentDestination}");
             }
         }
