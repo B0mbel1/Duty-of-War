@@ -97,6 +97,12 @@ public class ArmyHierarchyManager : MonoBehaviour
     public float dmgCavalryCharge = 2.0f;
     public float dmgCavalryStatic = 0.8f;
 
+    [Header("Cursor Settings")]
+    public GameObject cursorMarkerPrefab; // Przypisz tu prefab (np. cylinder lub flagę)
+    private GameObject activeCursorMarker;
+    [HideInInspector] public Vector3 lastCursorPosition;
+    [HideInInspector] public bool hasCursorPosition = false;
+    public LayerMask groundLayerMask = ~0;
     // --- DANE ---
     public List<TacticalGroup> factionAGroups = new List<TacticalGroup>();
     public List<TacticalGroup> factionBGroups = new List<TacticalGroup>();
@@ -143,6 +149,7 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         PrepareIndicatorMeshes();
         Invoke(nameof(InitializeGroups), 0.5f);
+        
 
         if (namingPanel != null) namingPanel.SetActive(false);
         if (confirmNameButton != null) confirmNameButton.onClick.AddListener(OnMergeConfirmed);
@@ -160,7 +167,24 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
     }
+    public void SetCursorPosition(Vector3 pos)
+    {
+        lastCursorPosition = pos;
+        hasCursorPosition = true;
 
+        if (activeCursorMarker == null && cursorMarkerPrefab != null)
+        {
+            activeCursorMarker = Instantiate(cursorMarkerPrefab);
+        }
+
+        if (activeCursorMarker != null)
+        {
+            activeCursorMarker.transform.position = pos;
+            activeCursorMarker.SetActive(true);
+        }
+
+        Debug.Log($"Ustawiono kursor w: {pos}");
+    }
     void PrepareIndicatorMeshes()
     {
         cachedInfantryMesh = CreateOffsetMesh(indicatorMeshInfantry, new Vector3(0, 0.1f, 0.5f), new Vector3(90, 0, 0), new Vector3(0.2f, 1.0f, 0.2f));
@@ -351,9 +375,39 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
 
+        if (Input.GetMouseButtonDown(0))
+        {
+            // 2. OCHRONA UI: Sprawdzamy, czy kursor jest nad przyciskiem/interfejsem
+            if (EventSystem.current.IsPointerOverGameObject())
+            {
+                return; // Jeśli klikamy w UI, przerywamy funkcję (nie stawiamy kursora)
+            }
+
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            // 3. Raycast (rzucamy promień w świat)
+            // Dodaliśmy 'groundLayerMask', żebyś mógł w Inspectorze wybrać, co jest podłogą
+            if (Physics.Raycast(ray, out hit, 10000f, groundLayerMask))
+            {
+                // Opcjonalnie: Jeśli klikniesz w inną jednostkę, też nie stawiaj kursora (żebyś mógł ją zaznaczyć)
+                // if (hit.collider.CompareTag("Unit")) return;
+
+                SetCursorPosition(hit.point);
+            }
+        }
+
         if (!isGameFrozen) ResolveCombatRoundRobin();
     }
-
+    public void HideCursorMarker()
+    {
+        if (activeCursorMarker != null)
+        {
+            activeCursorMarker.SetActive(false);
+        }
+        // WAŻNE: Nie ustawiamy hasCursorPosition = false tutaj.
+        // AI potrzebuje jeszcze chwili (sekunda/dwie), żeby odebrać dane.
+    }
     void OpenNamingPanel()
     {
         if (namingPanel != null)
@@ -1136,37 +1190,57 @@ public class ArmyHierarchyManager : MonoBehaviour
     }
 
     // --- NOWOŚĆ: SYSTEM FORMACJI ---
-    public void ApplyFormation(TacticalGroup group, string formationType)
+    public void ApplyFormation(TacticalGroup group, string formationType, Vector3? centerOverride = null)
     {
         if (group.unitMatrices.Count == 0) return;
 
-        while (group.formationTargets.Count < group.unitMatrices.Count)
-            group.formationTargets.Add(group.groupCenter);
-        while (group.formationTargets.Count > group.unitMatrices.Count)
-            group.formationTargets.RemoveAt(group.formationTargets.Count - 1);
+        // Resetujemy przypisanie do terenu (bo to ręczny rozkaz)
+        group.assignedFeature = null;
+
+        // Ustalmy środek formacji: albo tam gdzie kliknąłeś, albo tam gdzie stoją
+        Vector3 center = centerOverride.HasValue ? centerOverride.Value : group.groupCenter;
 
         int count = group.unitMatrices.Count;
-        float spacing = 1.5f;
-        int cols = 0;
+        int cols = 10; // Domyślna szerokość
+        float spacing = 2.0f;
 
-        switch (formationType.ToLower())
+        // Przykładowe definicje formacji
+        if (formationType.ToLower().Contains("line") || formationType.ToLower().Contains("linia"))
         {
-            case "line": cols = count; spacing = 1.2f; break;
-            case "double_line": cols = Mathf.CeilToInt(count / 2.0f); spacing = 1.3f; break;
-            case "box":
-            case "turtle": cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 1.0f; break;
-            case "loose": cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 3.0f; break;
-            default: cols = Mathf.CeilToInt(Mathf.Sqrt(count)); break;
+            cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 2);
+            spacing = 1.5f;
+        }
+        else if (formationType.ToLower().Contains("turtle") || formationType.ToLower().Contains("żółw"))
+        {
+            cols = Mathf.CeilToInt(Mathf.Sqrt(count)); // Kwadrat
+            spacing = 1.2f; // Ciasno
+        }
+        else if (formationType.ToLower().Contains("double") || formationType.ToLower().Contains("dwuszereg"))
+        {
+            cols = count / 2;
+            spacing = 1.8f;
         }
 
-        Vector3 center = group.groupCenter;
-
+        // Kierunek patrzenia:
+        // Jeśli wskazaliśmy cel kursorem -> patrzymy od obecnej pozycji w stronę celu
+        // Jeśli formujemy w miejscu -> patrzymy tam gdzie dotychczas (Forward grupy)
         Quaternion rotation = group.unitMatrices[0].rotation;
+
+        if (centerOverride.HasValue)
+        {
+            Vector3 directionToTarget = (center - group.groupCenter).normalized;
+            if (directionToTarget != Vector3.zero)
+                rotation = Quaternion.LookRotation(directionToTarget);
+        }
+
         Vector3 right = rotation * Vector3.right;
-        Vector3 back = rotation * Vector3.back;
+        Vector3 back = rotation * Vector3.back; // Szeregi idą do tyłu
 
         float totalWidth = (cols - 1) * spacing;
         Vector3 startPos = center - (right * totalWidth * 0.5f);
+
+        // Upewniamy się, że lista celów jest wystarczająco długa
+        while (group.formationTargets.Count < count) group.formationTargets.Add(Vector3.zero);
 
         for (int i = 0; i < count; i++)
         {
@@ -1175,23 +1249,22 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 offset = (right * col * spacing) + (back * row * spacing);
             Vector3 finalPos = startPos + offset;
 
-            // Dopasowanie do terenu (dla celu)
+            // Dopasowanie do terenu
             if (terrain != null)
                 finalPos.y = terrain.SampleHeight(finalPos) + terrain.transform.position.y;
             else
-                finalPos.y = group.unitMatrices[i].GetColumn(3).y; // fallback
+                finalPos.y = center.y;
 
             group.formationTargets[i] = finalPos;
         }
 
+        // Zapisujemy, że mają tam patrzeć
+        group.targetFacingDirection = rotation * Vector3.forward;
+
         group.isReforming = true;
         group.isMoving = true;
-        group.currentDestination = group.groupCenter;
-        Debug.Log($"Grupa {group.groupName} rozpoczyna formowanie: {formationType}");
-        // group.UpdateBatchData();
-        // group.RecalculateCenter();
-        // group.currentDestination = group.groupCenter;
-        // group.isMoving = false;
+        group.currentDestination = center;
+        Debug.Log($"Grupa {group.groupName} formuje {formationType} w punkcie {center}");
     }
 
     public List<TacticalGroup> GetSelectedGroups()

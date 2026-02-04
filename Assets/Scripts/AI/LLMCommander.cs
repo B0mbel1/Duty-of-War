@@ -51,6 +51,35 @@ public class LLMCommander : MonoBehaviour
             // Ważne: nasłuchiwanie kliknięcia
             commandInput.onSelect.AddListener(OnInputSelected);
         }
+
+        if (commandInput != null)
+        {
+            originalTextColor = commandInput.textComponent.color;
+
+            // --- TUTAJ JEST ZMIANA ---
+            commandInput.onSubmit.AddListener(val =>
+            {
+                if (!string.IsNullOrWhiteSpace(val))
+                {
+                    // 1. Konstruujemy prompt
+                    string systemPrompt = ConstructSystemPrompt();
+                    string fullPrompt = systemPrompt + "\nUser: " + val;
+
+                    // 2. Wysyłamy do AI
+                    geminiNetwork.SendRequest(fullPrompt);
+
+                    // 3. Czyścimy pole tekstowe i blokujemy je na chwilę
+                    commandInput.text = "";
+                    commandInput.ActivateInputField(); // Żeby nie trzeba było klikać znowu
+
+                    // 4. NOWOŚĆ: Ukrywamy znacznik kursora natychmiast po wciśnięciu Enter
+                    armyManager.HideCursorMarker();
+                }
+
+                // Opcjonalnie: przywracamy focus na grę, żebyś mógł ruszać kamerą
+                // EventSystem.current.SetSelectedGameObject(null); 
+            });
+        }
     }
 
     public void OnSendButtonClicked()
@@ -201,6 +230,17 @@ public class LLMCommander : MonoBehaviour
                 }
             }
         }
+        bool useCursor = (cmd.target_location.ToLower() == "cursor" || cmd.target_location.ToLower() == "marker");
+
+        // Jeśli LLM prosi o kursor, ale gracz nie kliknął - przerywamy lub używamy pozycji grupy
+        Vector3? targetCursorPos = null;
+        if (useCursor)
+        {
+            if (armyManager.hasCursorPosition)
+                targetCursorPos = armyManager.lastCursorPosition;
+            else
+                Debug.LogWarning("Rozkaz dotyczy kursora, ale nie zaznaczono miejsca na mapie!");
+        }
 
         if (selectedUnits.Count == 0) return;
 
@@ -211,7 +251,7 @@ public class LLMCommander : MonoBehaviour
             {
                 group.isMoving = false;
                 group.isReforming = false;
-                group.currentDestination = group.groupCenter; 
+                group.currentDestination = group.groupCenter;
                 group.targetFacingDirection = Vector3.zero; // Resetujemy wymuszony obrót
                 Debug.Log($"Grupa {group.groupName} zatrzymana na rozkaz.");
                 group.assignedFeature = null;
@@ -222,11 +262,37 @@ public class LLMCommander : MonoBehaviour
         // --- OBSŁUGA FORMACJI ---
         if (cmd.action == "FORM")
         {
-            string formType = cmd.target_location; // np. "Turtle", "Line"
+            string formType = cmd.target_location; // Domyślnie typ formacji jest w target_location
+
+            // Czasami LLM może zwrócić np. target_location: "Cursor", a typ w jakimś innym polu, 
+            // ale dla uproszczenia załóżmy, że jeśli to formacja, to nazwa formacji jest kluczowa.
+            // Zróbmy tak: Jeśli gracz kliknął na mapę, a komenda to FORM, to ZAWSZE używamy kursora jako celu.
+
+            if (armyManager.hasCursorPosition)
+            {
+                targetCursorPos = armyManager.lastCursorPosition;
+            }
+
             foreach (var g in selectedUnits)
             {
-                armyManager.ApplyFormation(g, formType);
-                Debug.Log($"Grupa {g.groupName} zmienia formację na: {formType}");
+                // Wywołujemy zmodyfikowaną funkcję z punktem docelowym
+                armyManager.ApplyFormation(g, formType, targetCursorPos);
+            }
+            return;
+        }
+
+        if (useCursor && targetCursorPos.HasValue && cmd.action == "MOVE")
+        {
+            foreach (var group in selectedUnits)
+            {
+                group.assignedFeature = null; // Resetujemy przypisanie do terenu
+
+                // Prosta logika ruchu do punktu (ArmyManager ustawi formację 'Default' w locie w Update, 
+                // lub możemy wymusić ApplyFormation("Line", pos) żeby szli ładnie).
+
+                // Użyjmy ApplyFormation jako metody ruchu, bo to zapewnia, że nie zrobią bloba, 
+                // tylko pójdą uformowani w linię w tamto miejsce.
+                armyManager.ApplyFormation(group, "Line", targetCursorPos.Value);
             }
             return;
         }
@@ -250,14 +316,14 @@ public class LLMCommander : MonoBehaviour
                         Vector3 currentForward = groupRotation * Vector3.forward;
 
                         // 2. Obliczamy wektor ruchu LOKALNIE
-                        Vector3 localDirection = Vector3.forward; 
+                        Vector3 localDirection = Vector3.forward;
 
                         switch (directionStr)
                         {
-                            case "forward":  localDirection = groupRotation * Vector3.forward; break;
-                            case "backward": localDirection = groupRotation * Vector3.back;    break;
-                            case "left":     localDirection = groupRotation * Vector3.left;    break;
-                            case "right":    localDirection = groupRotation * Vector3.right;   break;
+                            case "forward": localDirection = groupRotation * Vector3.forward; break;
+                            case "backward": localDirection = groupRotation * Vector3.back; break;
+                            case "left": localDirection = groupRotation * Vector3.left; break;
+                            case "right": localDirection = groupRotation * Vector3.right; break;
                         }
 
                         // 3. LOGIKA OBROTU (Fix dla wycofywania)
@@ -288,7 +354,7 @@ public class LLMCommander : MonoBehaviour
                         group.isReforming = true; // Włączamy reforming, żeby użyli precyzyjnego ruchu
                     }
                     Debug.Log($"Przesuwam jednostki o {distance}m ({directionStr})");
-                    return; 
+                    return;
                 }
             }
         }
@@ -314,7 +380,7 @@ public class LLMCommander : MonoBehaviour
                 // Manager obliczy pozycję wzdłuż linii/rzeki i ustawi odpowiedni targetFacingDirection
                 armyManager.MoveGroupToLineFeature(group, targetFeature);
             }
-            return; 
+            return;
         }
 
         // --- OBSŁUGA RUCHU STANDARDOWEGO (Zwykły punkt na mapie) ---
@@ -329,10 +395,10 @@ public class LLMCommander : MonoBehaviour
                 float clampedZ = Mathf.Clamp(targetPosition.z, armyManager.minZ, armyManager.maxZ);
 
                 group.currentDestination = new Vector3(clampedX, targetPosition.y, clampedZ);
-                
+
                 // Dla zwykłego ruchu resetujemy wymuszony obrót (będą patrzeć tam gdzie idą)
-                group.targetFacingDirection = Vector3.zero; 
-                
+                group.targetFacingDirection = Vector3.zero;
+
                 group.isMoving = true;
                 group.isReforming = false; // Zwykły marsz (luźniejszy)
                 Debug.Log($"Grupa {group.groupName} rusza do {group.currentDestination}");
@@ -505,6 +571,7 @@ ZASADY:
    - DLA KOMENDY STOP: 'None'.
    - DLA PRZESUNIĘĆ (np. 100m w lewo): 'Relative_{{Kierunek}}_{{Metry}}'. Kierunki: Forward, Backward, Left, Right.
    - DLA 'FORM' (Formacje): 'Line' (Szereg), 'Double_Line' (Dwuszereg), 'Box' (Kwadrat), 'Turtle' (Żółw), 'Loose' (Luźna).
+   - SPECJALNE: 'Cursor' - UŻYJ TEGO, gdy gracz mówi 'tam', 'tutaj', 'w miejscu kliknięcia', 'do znacznika' LUB wydaje rozkaz formacji bez podania miejsca (np. 'Uformuj linię').
 4. action: 'MOVE', 'ATTACK', 'STOP', 'FORM'.
 
 PRZYKŁADY (Zawsze używaj tablicy 'commands'!):
@@ -537,7 +604,11 @@ AI:
   ""ai_thought"": ""Jazda atakuje, łucznicy robią miejsce.""
 }}
 
+User: Idźcie tam! (Gracz kliknął na mapę)
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Cursor"" }} ], ""ai_thought"": ""Ruch w miejsce wskazane kursorem."" }}
 
+User: Wszyscy formować żółwia w tym miejscu!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""All""], ""action"": ""FORM"", ""target_location"": ""Turtle"" }} ], ""ai_thought"": ""Cała armia formuje żółwia w miejscu kursora."" }}
 
 User: Wszyscy STÓJ! Zatrzymać się!
 AI:
