@@ -621,7 +621,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             else if (group.isReforming) // Jak doszedł, obróć się frontem
                 unitRot = nextRot;
 
-            group.unitMatrices[i] = Matrix4x4.TRS(newPos, nextRot, scaleVec);
+            group.unitMatrices[i] = Matrix4x4.TRS(newPos, unitRot, scaleVec);
         }
         if (group.isReforming && unitsReachedTarget >= group.unitMatrices.Count)
         {
