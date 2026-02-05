@@ -163,6 +163,8 @@ MonoBehaviour:
   description: "Po\u0142udniowy las"
   lineLength: 793.75
   lineOrientation: {x: 1, y: 0, z: 0}
+  isRiver: 0
+  riverBankOffset: 10
   debugColor: {r: 0, g: 1, b: 0, a: 1}
   radius: 2
 --- !u!4 &237593712
@@ -387,6 +389,12 @@ MonoBehaviour:
   dmgArcherMax: 0.5
   dmgCavalryCharge: 2
   dmgCavalryStatic: 0.8
+  cursorMarkerPrefab: {fileID: 8569586844813153232, guid: 14bfbc18e4eb9664f9b147248f2bd5b1, type: 3}
+  lastCursorPosition: {x: 0, y: 0, z: 0}
+  hasCursorPosition: 0
+  groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   factionAGroups: []
   factionBGroups: []
   terrainLayerMask:
@@ -778,6 +786,8 @@ MonoBehaviour:
   description: "P\xF3\u0142nocny las"
   lineLength: 793.75
   lineOrientation: {x: 1, y: 0, z: 0}
+  isRiver: 0
+  riverBankOffset: 10
   debugColor: {r: 0, g: 1, b: 0, a: 1}
   radius: 2
 --- !u!4 &1132291367
