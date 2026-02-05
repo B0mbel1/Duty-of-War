@@ -1316,43 +1316,35 @@ public class ArmyHierarchyManager : MonoBehaviour
     }
 
     // --- NOWOŚĆ: SYSTEM FORMACJI ---
-    public void ApplyFormation(TacticalGroup group, string formationType, Vector3? centerOverride = null)
+    public void ApplyFormation(TacticalGroup group, string formationType, Vector3? centerOverride = null, Vector3? lookDirectionOverride = null)
     {
         if (group.unitMatrices.Count == 0) return;
 
-        // Resetujemy przypisanie do terenu (bo to ręczny rozkaz)
+        // Resetujemy przypisanie do terenu
         group.assignedFeature = null;
 
-        // Ustalmy środek formacji: albo tam gdzie kliknąłeś, albo tam gdzie stoją
+        // Ustalmy środek formacji
         Vector3 center = centerOverride.HasValue ? centerOverride.Value : group.groupCenter;
 
         int count = group.unitMatrices.Count;
-        int cols = 10; // Domyślna szerokość
+        int cols = 10;
         float spacing = 2.0f;
 
-        // Przykładowe definicje formacji
-        if (formationType.ToLower().Contains("line") || formationType.ToLower().Contains("linia"))
-        {
-            cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 2);
-            spacing = 1.5f;
-        }
-        else if (formationType.ToLower().Contains("turtle") || formationType.ToLower().Contains("żółw"))
-        {
-            cols = Mathf.CeilToInt(Mathf.Sqrt(count)); // Kwadrat
-            spacing = 1.2f; // Ciasno
-        }
-        else if (formationType.ToLower().Contains("double") || formationType.ToLower().Contains("dwuszereg"))
-        {
-            cols = count / 2;
-            spacing = 1.8f;
-        }
+        // Definicje formacji (bez zmian)
+        if (formationType.ToLower().Contains("line") || formationType.ToLower().Contains("linia")) { cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 2); spacing = 1.5f; }
+        else if (formationType.ToLower().Contains("turtle") || formationType.ToLower().Contains("żółw")) { cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 1.2f; }
+        else if (formationType.ToLower().Contains("double") || formationType.ToLower().Contains("dwuszereg")) { cols = count / 2; spacing = 1.8f; }
 
-        // Kierunek patrzenia:
-        // Jeśli wskazaliśmy cel kursorem -> patrzymy od obecnej pozycji w stronę celu
-        // Jeśli formujemy w miejscu -> patrzymy tam gdzie dotychczas (Forward grupy)
+        // --- LOGIKA ROTACJI (ZMODYFIKOWANA) ---
         Quaternion rotation = group.unitMatrices[0].rotation;
 
-        if (centerOverride.HasValue)
+        // PRIORYTET 1: Wymuszony kierunek (np. flankowanie - patrzenie na wroga)
+        if (lookDirectionOverride.HasValue && lookDirectionOverride.Value != Vector3.zero)
+        {
+            rotation = Quaternion.LookRotation(lookDirectionOverride.Value);
+        }
+        // PRIORYTET 2: Jeśli wskazano cel ruchu, ale nie kierunek -> patrz tam gdzie idziesz
+        else if (centerOverride.HasValue)
         {
             Vector3 directionToTarget = (center - group.groupCenter).normalized;
             if (directionToTarget != Vector3.zero)
@@ -1360,12 +1352,11 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         Vector3 right = rotation * Vector3.right;
-        Vector3 back = rotation * Vector3.back; // Szeregi idą do tyłu
+        Vector3 back = rotation * Vector3.back;
 
         float totalWidth = (cols - 1) * spacing;
         Vector3 startPos = center - (right * totalWidth * 0.5f);
 
-        // Upewniamy się, że lista celów jest wystarczająco długa
         while (group.formationTargets.Count < count) group.formationTargets.Add(Vector3.zero);
 
         for (int i = 0; i < count; i++)
@@ -1375,22 +1366,19 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 offset = (right * col * spacing) + (back * row * spacing);
             Vector3 finalPos = startPos + offset;
 
-            // Dopasowanie do terenu
-            if (terrain != null)
-                finalPos.y = terrain.SampleHeight(finalPos) + terrain.transform.position.y;
-            else
-                finalPos.y = center.y;
+            if (terrain != null) finalPos.y = terrain.SampleHeight(finalPos) + terrain.transform.position.y;
+            else finalPos.y = center.y;
 
             group.formationTargets[i] = finalPos;
         }
 
-        // Zapisujemy, że mają tam patrzeć
         group.targetFacingDirection = rotation * Vector3.forward;
-
-        group.isReforming = true;
+        group.isReforming = true; // To włącza precyzyjny ruch do formationTargets
         group.isMoving = true;
         group.currentDestination = center;
-        Debug.Log($"Grupa {group.groupName} formuje {formationType} w punkcie {center}");
+
+        // Debug info
+        // Debug.Log($"Grupa {group.groupName} formuje {formationType} w punkcie {center}");
     }
 
     public List<TacticalGroup> GetSelectedGroups()

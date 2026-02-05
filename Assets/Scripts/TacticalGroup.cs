@@ -172,24 +172,49 @@ public class TacticalGroup
     public void RecalculateCenter()
     {
         if (unitMatrices.Count == 0) return;
+
         Vector3 sum = Vector3.zero;
-        int step = Mathf.Max(1, unitMatrices.Count / 50);
-        int sampledCount = 0;
+        int validCount = 0;
+
+        // Zmienne do obliczania granic (Bounds)
         float minX = float.MaxValue, maxX = float.MinValue;
         float minZ = float.MaxValue, maxZ = float.MinValue;
+
+        int step = Mathf.Max(1, unitMatrices.Count / 50); // Optymalizacja: próbkowanie co X jednostek
 
         for (int i = 0; i < unitMatrices.Count; i += step)
         {
             Vector3 pos = (Vector3)unitMatrices[i].GetColumn(3);
+
+            // --- POPRAWKA: Ignorujemy jednostki w (0,0,0), chyba że to jedyna jednostka ---
+            // To naprawi problem "wielkiej czerwonej kuli", jeśli jakiś żołnierz się zbugował przy starcie
+            if (pos.sqrMagnitude < 0.1f && unitMatrices.Count > 1) continue;
+
             sum += pos;
-            if (pos.x < minX) minX = pos.x; if (pos.x > maxX) maxX = pos.x;
-            if (pos.z < minZ) minZ = pos.z; if (pos.z > maxZ) maxZ = pos.z;
-            sampledCount++;
+
+            if (pos.x < minX) minX = pos.x;
+            if (pos.x > maxX) maxX = pos.x;
+            if (pos.z < minZ) minZ = pos.z;
+            if (pos.z > maxZ) maxZ = pos.z;
+
+            validCount++;
         }
-        groupCenter = sum / sampledCount;
-        float sizeX = maxX - minX;
-        float sizeZ = maxZ - minZ;
-        groupRadius = (Mathf.Max(sizeX, sizeZ) * 0.5f) + 1.0f;
+
+        if (validCount > 0)
+        {
+            groupCenter = sum / validCount;
+            float sizeX = maxX - minX;
+            float sizeZ = maxZ - minZ;
+
+            // Promień to połowa większego boku + margines
+            groupRadius = (Mathf.Max(sizeX, sizeZ) * 0.5f) + 1.0f;
+        }
+        else
+        {
+            // Fallback, jeśli wszyscy są w 0,0,0
+            groupCenter = (Vector3)unitMatrices[0].GetColumn(3);
+            groupRadius = 2.0f;
+        }
     }
 
     public void RenderGroup()

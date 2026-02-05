@@ -389,18 +389,40 @@ public class LLMCommander : MonoBehaviour
 
         if (positionFound)
         {
+            Vector3 enemyCenter = GetEnemyArmyCenter();
+            bool isFlankingCommand = cmd.target_location.ToLower().Contains("flank");
+
             foreach (var group in selectedUnits)
             {
                 float clampedX = Mathf.Clamp(targetPosition.x, armyManager.minX, armyManager.maxX);
                 float clampedZ = Mathf.Clamp(targetPosition.z, armyManager.minZ, armyManager.maxZ);
+                Vector3 dest = new Vector3(clampedX, targetPosition.y, clampedZ);
 
-                group.currentDestination = new Vector3(clampedX, targetPosition.y, clampedZ);
+                // Ustawiamy ogólny cel (dla pewności)
+                group.currentDestination = dest;
 
-                // Dla zwykłego ruchu resetujemy wymuszony obrót (będą patrzeć tam gdzie idą)
-                group.targetFacingDirection = Vector3.zero;
+                if (isFlankingCommand)
+                {
+                    // --- LOGIKA FLANKOWANIA (POPRAWIONA) ---
+                    // Obliczamy wektor patrzenia NA WROGA
+                    Vector3 directionToEnemy = (enemyCenter - dest).normalized;
 
-                group.isMoving = true;
-                group.isReforming = false; // Zwykły marsz (luźniejszy)
+                    // Wywołujemy ApplyFormation:
+                    // 1. Idź do 'dest'
+                    // 2. Ustaw się w 'Line'
+                    // 3. Patrz w kierunku 'directionToEnemy'
+                    armyManager.ApplyFormation(group, "Line", dest, directionToEnemy);
+                }
+                else
+                {
+                    // --- ZWYKŁY RUCH ---
+                    // Tutaj używamy zwykłego ruchu "blob" (bez formationTargets),
+                    // bo jest płynniejszy na długie dystanse.
+                    group.targetFacingDirection = Vector3.zero;
+                    group.isReforming = false;
+                    group.isMoving = true;
+                }
+
                 Debug.Log($"Grupa {group.groupName} rusza do {group.currentDestination}");
             }
         }
@@ -509,6 +531,40 @@ public class LLMCommander : MonoBehaviour
             return true;
         }
 
+        if (loc.StartsWith("flank"))
+        {
+            Vector3 enemyCenter = GetEnemyArmyCenter();
+            float flankDistance = 50.0f; // Dystans od środka armii wroga (żeby nie wbiec w nich od razu)
+
+            if (loc.Contains("north"))
+            {
+                // Flanka północna = jesteśmy NA PÓŁNOC od wroga (Z+)
+                position = enemyCenter + new Vector3(0, 0, flankDistance);
+            }
+            else if (loc.Contains("south"))
+            {
+                // Flanka południowa = jesteśmy NA POŁUDNIE od wroga (Z-)
+                position = enemyCenter + new Vector3(0, 0, -flankDistance);
+            }
+            else if (loc.Contains("east"))
+            {
+                // Flanka wschodnia = jesteśmy NA WSCHÓD od wroga (X+)
+                position = enemyCenter + new Vector3(flankDistance, 0, 0);
+            }
+            else if (loc.Contains("west"))
+            {
+                // Flanka zachodnia = jesteśmy NA ZACHÓD od wroga (X-)
+                position = enemyCenter + new Vector3(-flankDistance, 0, 0);
+            }
+            else
+            {
+                // Domyślny flank (jeśli nie podano strony - np. z boku)
+                // Wybieramy stronę bliższą naszej bazy lub po prostu prawo
+                position = enemyCenter + new Vector3(flankDistance, 0, 0);
+            }
+            return true;
+        }
+
         // 3. Fallback dla zwykłych obiektów
         GameObject featureObj = GameObject.Find(locationName);
         if (featureObj != null)
@@ -572,6 +628,7 @@ ZASADY:
    - DLA PRZESUNIĘĆ (np. 100m w lewo): 'Relative_{{Kierunek}}_{{Metry}}'. Kierunki: Forward, Backward, Left, Right.
    - DLA 'FORM' (Formacje): 'Line' (Szereg), 'Double_Line' (Dwuszereg), 'Box' (Kwadrat), 'Turtle' (Żółw), 'Loose' (Luźna).
    - SPECJALNE: 'Cursor' - UŻYJ TEGO, gdy gracz mówi 'tam', 'tutaj', 'w miejscu kliknięcia', 'do znacznika' LUB wydaje rozkaz formacji bez podania miejsca (np. 'Uformuj linię').
+   - DLA FLANKOWANIA: 'Flank_North' (Od północy wroga), 'Flank_South', 'Flank_East', 'Flank_West'.
 4. action: 'MOVE', 'ATTACK', 'STOP', 'FORM'.
 
 PRZYKŁADY (Zawsze używaj tablicy 'commands'!):
@@ -584,6 +641,9 @@ AI:
   ],
   ""ai_thought"": ""Wysyłam piechotę na północny skraj lasu.""
 }}
+User: Zajdźcie ich od wschodu!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Flank_East"" }} ], ""ai_thought"": ""Wysyłam oddział na wschodnią flankę wroga."" }}
+
 
 User: Jazda ustawić się w dwuszeregu!
 AI:
