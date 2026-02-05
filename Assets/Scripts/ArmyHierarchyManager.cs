@@ -38,6 +38,8 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     [Header("Visuals")]
     public Material highlightMaterial;
+    public Material enemyHighlightMaterial;
+
     public Material directionArrowMaterial;
     public Mesh indicatorMeshInfantry;
     public Mesh indicatorMeshArcher;
@@ -158,32 +160,67 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (confirmNameButton != null) confirmNameButton.onClick.AddListener(OnMergeConfirmed);
     }
 
-    TacticalGroup FindGroupUnderCursor(Vector3 hitPoint, List<TacticalGroup> potentialGroups)
+    TacticalGroup FindGroupUnderCursor(Ray ray, List<TacticalGroup> potentialGroups)
     {
-        float minDistance = float.MaxValue;
         TacticalGroup bestCandidate = null;
+        float closestDistanceToCamera = float.MaxValue;
 
         foreach (var group in potentialGroups)
         {
             if (group.unitMatrices.Count == 0) continue;
 
-            // 1. Sprawdź dystans do centrum (2D - ignorując wysokość)
-            float dist = Vector2.Distance(
-                new Vector2(hitPoint.x, hitPoint.z),
-                new Vector2(group.groupCenter.x, group.groupCenter.z)
-            );
+            // --- FAZA 1: SZYBKI TEST (BROAD PHASE) ---
+            // Najpierw sprawdzamy, czy w ogóle celujemy w okolice grupy.
+            // Jeśli promień mija całą grupę o 5 metrów, nie ma sensu sprawdzać każdego żołnierza.
 
-            // ZABEZPIECZENIE: Jeśli radius jest absurdalnie duży (błąd danych), ogranicz go do np. 30 metrów
-            float effectiveRadius = Mathf.Min(group.groupRadius, 30.0f);
+            Vector3 toCenter = group.groupCenter - ray.origin;
+            float projection = Vector3.Dot(toCenter, ray.direction);
+            if (projection < 0) continue; // Grupa za kamerą
 
-            // Dodajemy mały margines kliknięcia (+2.0f)
-            if (dist <= effectiveRadius + 2.0f)
+            Vector3 pointOnRay = ray.origin + (ray.direction * projection);
+            float distFromRayToCenter = Vector3.Distance(pointOnRay, group.groupCenter);
+
+            // Jeśli kursor jest bardzo daleko od środka grupy -> pomiń
+            if (distFromRayToCenter > group.groupRadius + 5.0f) continue;
+
+
+            // --- FAZA 2: PRECYZYJNY TEST (NARROW PHASE) ---
+            // Sprawdzamy kolizję z każdym pojedynczym żołnierzem w tej grupie.
+
+            // Ustalamy wielkość hitboxa zależnie od typu jednostki
+            float unitHitRadius = 1.2f; // Domyślnie (piechota)
+            if (group.archetypes.Count > 0)
             {
-                // Jeśli kliknęliśmy w obszar kilku grup, wybieramy tę najbliższą kursora
-                if (dist < minDistance)
+                UnitType type = group.archetypes[0].type;
+                if (type == UnitType.Cavalry) unitHitRadius = 2.5f; // Konie są większe i łatwiej w nie trafić
+                else if (type == UnitType.Archer) unitHitRadius = 1.2f;
+            }
+
+            for (int i = 0; i < group.unitMatrices.Count; i++)
+            {
+                // Pobieramy pozycję konkretnego żołnierza
+                Vector3 unitPos = (Vector3)group.unitMatrices[i].GetColumn(3);
+
+                // Matematyka: Dystans punktu (żołnierza) od prostej (promienia myszki)
+                Vector3 toUnit = unitPos - ray.origin;
+                float t = Vector3.Dot(toUnit, ray.direction);
+
+                // Jeśli żołnierz jest za kamerą, pomiń
+                if (t < 0) continue;
+
+                Vector3 closestPointOnRay = ray.origin + (ray.direction * t);
+                float distToRay = Vector3.Distance(closestPointOnRay, unitPos);
+
+                // CZY TRAFILIŚMY W TEGO ŻOŁNIERZA?
+                if (distToRay <= unitHitRadius)
                 {
-                    minDistance = dist;
-                    bestCandidate = group;
+                    // Tak! Teraz sprawdzamy, czy ten żołnierz jest bliżej kamery niż poprzedni kandydaci.
+                    // 't' to odległość od kamery wzdłuż promienia.
+                    if (t < closestDistanceToCamera)
+                    {
+                        closestDistanceToCamera = t;
+                        bestCandidate = group;
+                    }
                 }
             }
         }
@@ -416,50 +453,48 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (EventSystem.current.IsPointerOverGameObject()) return;
 
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
 
+            // --- KROK 1: Najpierw sprawdzamy wrogów (Raycast 3D) ---
+            // Dzięki temu możemy kliknąć wroga, nawet jeśli Raycast w ziemię nie trafi idealnie pod nim
+            bool isPlayerA = (PlayerPrefs.GetString("PlayerSide", "SideA") == "SideA");
+            List<TacticalGroup> enemyGroups = isPlayerA ? factionBGroups : factionAGroups;
+
+            // TU ZMIANA: Przekazujemy 'ray' zamiast 'hit.point'
+            TacticalGroup hitEnemy = FindGroupUnderCursor(ray, enemyGroups);
+
+            if (hitEnemy != null)
+            {
+                // --- KLIKNIĘTO WROGA ---
+                if (selectedEnemyGroup != null && selectedEnemyGroup != hitEnemy)
+                {
+                    SetGroupHighlight(selectedEnemyGroup, false);
+                }
+
+                selectedEnemyGroup = hitEnemy;
+                // Podświetl na czerwono
+                SetGroupHighlight(selectedEnemyGroup, true, enemyHighlightMaterial);
+
+                Debug.Log($"Zaznaczono wroga: {selectedEnemyGroup.groupName}");
+                return; // Kończymy, żeby nie postawić kursora ruchu
+            }
+
+            // --- KROK 2: Jeśli nie trafiliśmy wroga, sprawdzamy ziemię ---
+            RaycastHit hit;
             if (Physics.Raycast(ray, out hit, 10000f, groundLayerMask))
             {
-                bool isPlayerA = (PlayerPrefs.GetString("PlayerSide", "SideA") == "SideA");
-                List<TacticalGroup> enemyGroups = isPlayerA ? factionBGroups : factionAGroups;
-
-                // 2. Szukamy wroga
-                TacticalGroup hitEnemy = FindGroupUnderCursor(hit.point, enemyGroups);
-
-                if (hitEnemy != null)
+                // --- KLIKNIĘTO ZIEMIĘ ---
+                if (selectedGroups.Count > 0)
                 {
-                    // --- KLIKNIĘTO WROGA ---
-                    if (selectedEnemyGroup != null && selectedEnemyGroup != hitEnemy)
-                    {
-                        SetGroupHighlight(selectedEnemyGroup, false);
-                    }
-
-                    selectedEnemyGroup = hitEnemy;
-                    SetGroupHighlight(selectedEnemyGroup, true);
-
-                    Debug.Log($"Zaznaczono wroga: {selectedEnemyGroup.groupName}");
-                    return;
+                    SetCursorPosition(hit.point);
                 }
                 else
                 {
-                    // --- KLIKNIĘTO ZIEMIĘ ---
-
-                    // ZMIANA: Pozwól na ruch TYLKO, jeśli masz zaznaczone własne jednostki
-                    if (selectedGroups.Count > 0)
+                    HideCursorMarker();
+                    // Opcjonalnie odznacz wroga przy kliknięciu w pustą ziemię
+                    if (selectedEnemyGroup != null)
                     {
-                        SetCursorPosition(hit.point);
-                    }
-                    else
-                    {
-                        // Jeśli nic nie masz zaznaczonego i klikasz w ziemię -> ukryj kursor (dla pewności)
-                        HideCursorMarker();
-
-                        // Opcjonalnie: Kliknięcie w puste pole może też odznaczać wroga
-                        if (selectedEnemyGroup != null)
-                        {
-                            SetGroupHighlight(selectedEnemyGroup, false);
-                            selectedEnemyGroup = null;
-                        }
+                        SetGroupHighlight(selectedEnemyGroup, false);
+                        selectedEnemyGroup = null;
                     }
                 }
             }
@@ -1109,18 +1144,22 @@ public class ArmyHierarchyManager : MonoBehaviour
         CheckWinCondition(totalA, totalB);
     }
 
-    void SetGroupHighlight(TacticalGroup group, bool highlight, Material overrideMaterial = null)
+    void SetGroupHighlight(TacticalGroup group, bool highlight, Material customMaterial = null)
     {
         if (group == null || group.unitMatrices.Count == 0) return;
 
-        Material targetMat = highlight ? (overrideMaterial ?? highlightMaterial) : null;
+        Material targetMat = (customMaterial != null) ? customMaterial : highlightMaterial;
 
         foreach (var arch in group.archetypes)
         {
-            if (highlight)
+            if (highlight && targetMat != null)
+            {
                 arch.unitMaterial = targetMat;
+            }
             else
-                arch.unitMaterial = arch.originalMaterial; // Powrót do oryginału
+            {
+                arch.unitMaterial = arch.originalMaterial;
+            }
         }
     }
 
