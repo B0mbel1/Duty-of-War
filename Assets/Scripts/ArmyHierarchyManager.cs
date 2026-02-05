@@ -125,6 +125,9 @@ public class ArmyHierarchyManager : MonoBehaviour
     private int nextGroupIdxB = 0;
     private int nextUnitIdxB = 0;
 
+
+    private TacticalGroup selectedEnemyGroup = null;
+
     struct UnitRef
     {
         public TacticalGroup group;
@@ -149,10 +152,42 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         PrepareIndicatorMeshes();
         Invoke(nameof(InitializeGroups), 0.5f);
-        
+
 
         if (namingPanel != null) namingPanel.SetActive(false);
         if (confirmNameButton != null) confirmNameButton.onClick.AddListener(OnMergeConfirmed);
+    }
+
+    TacticalGroup FindGroupUnderCursor(Vector3 hitPoint, List<TacticalGroup> potentialGroups)
+    {
+        float minDistance = float.MaxValue;
+        TacticalGroup bestCandidate = null;
+
+        foreach (var group in potentialGroups)
+        {
+            if (group.unitMatrices.Count == 0) continue;
+
+            // 1. Sprawdź dystans do centrum (2D - ignorując wysokość)
+            float dist = Vector2.Distance(
+                new Vector2(hitPoint.x, hitPoint.z),
+                new Vector2(group.groupCenter.x, group.groupCenter.z)
+            );
+
+            // ZABEZPIECZENIE: Jeśli radius jest absurdalnie duży (błąd danych), ogranicz go do np. 30 metrów
+            float effectiveRadius = Mathf.Min(group.groupRadius, 30.0f);
+
+            // Dodajemy mały margines kliknięcia (+2.0f)
+            if (dist <= effectiveRadius + 2.0f)
+            {
+                // Jeśli kliknęliśmy w obszar kilku grup, wybieramy tę najbliższą kursora
+                if (dist < minDistance)
+                {
+                    minDistance = dist;
+                    bestCandidate = group;
+                }
+            }
+        }
+        return bestCandidate;
     }
 
     void FindForestLayerIndex()
@@ -377,26 +412,58 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
-            // 2. OCHRONA UI: Sprawdzamy, czy kursor jest nad przyciskiem/interfejsem
-            if (EventSystem.current.IsPointerOverGameObject())
-            {
-                return; // Jeśli klikamy w UI, przerywamy funkcję (nie stawiamy kursora)
-            }
+            // 1. UI Block
+            if (EventSystem.current.IsPointerOverGameObject()) return;
 
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
-            // 3. Raycast (rzucamy promień w świat)
-            // Dodaliśmy 'groundLayerMask', żebyś mógł w Inspectorze wybrać, co jest podłogą
             if (Physics.Raycast(ray, out hit, 10000f, groundLayerMask))
             {
-                // Opcjonalnie: Jeśli klikniesz w inną jednostkę, też nie stawiaj kursora (żebyś mógł ją zaznaczyć)
-                // if (hit.collider.CompareTag("Unit")) return;
+                bool isPlayerA = (PlayerPrefs.GetString("PlayerSide", "SideA") == "SideA");
+                List<TacticalGroup> enemyGroups = isPlayerA ? factionBGroups : factionAGroups;
 
-                SetCursorPosition(hit.point);
+                // 2. Szukamy wroga
+                TacticalGroup hitEnemy = FindGroupUnderCursor(hit.point, enemyGroups);
+
+                if (hitEnemy != null)
+                {
+                    // --- KLIKNIĘTO WROGA ---
+                    if (selectedEnemyGroup != null && selectedEnemyGroup != hitEnemy)
+                    {
+                        SetGroupHighlight(selectedEnemyGroup, false);
+                    }
+
+                    selectedEnemyGroup = hitEnemy;
+                    SetGroupHighlight(selectedEnemyGroup, true);
+
+                    Debug.Log($"Zaznaczono wroga: {selectedEnemyGroup.groupName}");
+                    return;
+                }
+                else
+                {
+                    // --- KLIKNIĘTO ZIEMIĘ ---
+
+                    // ZMIANA: Pozwól na ruch TYLKO, jeśli masz zaznaczone własne jednostki
+                    if (selectedGroups.Count > 0)
+                    {
+                        SetCursorPosition(hit.point);
+                    }
+                    else
+                    {
+                        // Jeśli nic nie masz zaznaczonego i klikasz w ziemię -> ukryj kursor (dla pewności)
+                        HideCursorMarker();
+
+                        // Opcjonalnie: Kliknięcie w puste pole może też odznaczać wroga
+                        if (selectedEnemyGroup != null)
+                        {
+                            SetGroupHighlight(selectedEnemyGroup, false);
+                            selectedEnemyGroup = null;
+                        }
+                    }
+                }
             }
         }
-
         if (!isGameFrozen) ResolveCombatRoundRobin();
     }
     public void HideCursorMarker()
@@ -1042,16 +1109,18 @@ public class ArmyHierarchyManager : MonoBehaviour
         CheckWinCondition(totalA, totalB);
     }
 
-    void SetGroupHighlight(TacticalGroup group, bool highlight)
+    void SetGroupHighlight(TacticalGroup group, bool highlight, Material overrideMaterial = null)
     {
         if (group == null || group.unitMatrices.Count == 0) return;
 
+        Material targetMat = highlight ? (overrideMaterial ?? highlightMaterial) : null;
+
         foreach (var arch in group.archetypes)
         {
-            if (highlight && highlightMaterial != null)
-                arch.unitMaterial = highlightMaterial;
+            if (highlight)
+                arch.unitMaterial = targetMat;
             else
-                arch.unitMaterial = arch.originalMaterial;
+                arch.unitMaterial = arch.originalMaterial; // Powrót do oryginału
         }
     }
 
@@ -1073,6 +1142,11 @@ public class ArmyHierarchyManager : MonoBehaviour
             selectedGroups.Clear(); selectedGroups.Add(group); SetGroupHighlight(group, true); lastSelectedGroup = group;
         }
         UpdateUISelectionVisuals();
+
+        if (selectedGroups.Count == 0)
+        {
+            HideCursorMarker();
+        }
     }
 
     void HandleShiftSelection(TacticalGroup currentGroup)
@@ -1103,18 +1177,31 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void OnDrawGizmos()
     {
-        Gizmos.color = Color.red;
-        Vector3 center = new Vector3((minX + maxX) / 2, 50, (minZ + maxZ) / 2);
-        Vector3 size = new Vector3(maxX - minX, 100, maxZ - minZ);
-        Gizmos.DrawWireCube(center, size);
-
-        if (factionAGroups.Count > 0 && factionAGroups[0].unitMatrices.Count > 0)
+        // Rysowanie obszarów detekcji wrogów (Czerwone kule)
+        Gizmos.color = new Color(1, 0, 0, 0.3f); // Półprzezroczysty czerwony
+        if (factionBGroups != null)
         {
-            Matrix4x4 mat = factionAGroups[0].unitMatrices[0];
-            Vector3 pos = (Vector3)mat.GetColumn(3);
-            Vector3 dir = (factionAGroups[0].currentDestination - factionAGroups[0].groupCenter).normalized;
+            foreach (var group in factionBGroups)
+            {
+                if (group.unitMatrices.Count > 0)
+                {
+                    // Rysujemy sferę w miejscu, gdzie kod "myśli", że jest środek grupy
+                    Gizmos.DrawSphere(group.groupCenter, group.groupRadius);
+
+                    // Rysujemy drut dla dokładności
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawWireSphere(group.groupCenter, group.groupRadius);
+                    Gizmos.color = new Color(1, 0, 0, 0.3f);
+                }
+            }
+        }
+
+        // Debug Raycasta - zobacz gdzie trafiasz myszką
+        if (hasCursorPosition)
+        {
             Gizmos.color = Color.blue;
-            Gizmos.DrawLine(pos, pos + dir * slopeCheckDistance);
+            Gizmos.DrawSphere(lastCursorPosition, 1.0f);
+            Gizmos.DrawLine(Camera.main.transform.position, lastCursorPosition);
         }
     }
 
