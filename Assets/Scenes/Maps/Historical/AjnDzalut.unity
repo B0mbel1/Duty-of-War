@@ -1065,6 +1065,7 @@ MonoBehaviour:
   startBattleButton: {fileID: 1231769809}
   tacticalPauseIndicator: {fileID: 1122401782}
   highlightMaterial: {fileID: 2100000, guid: 2f5a5901c9d229748acd400c9bf58d52, type: 2}
+  enemyHighlightMaterial: {fileID: 2100000, guid: 0f2fb540e795e1948b7f43e0df49c3be, type: 2}
   directionArrowMaterial: {fileID: 2100000, guid: 61d2d4f0016c8c04297999153128b13f, type: 2}
   indicatorMeshInfantry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   indicatorMeshArcher: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
