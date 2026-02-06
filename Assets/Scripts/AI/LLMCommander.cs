@@ -247,12 +247,25 @@ public class LLMCommander : MonoBehaviour
         {
             TacticalGroup targetEnemy = null;
 
-            // 1. Sprawdzamy czy AI podało nazwę konkretnej grupy w target_location
+            // 1. Próba znalezienia po nazwie (z Promptu)
             targetEnemy = armyManager.GetGroupByName(cmd.target_location);
 
-            // 2. Jeśli nie, sprawdzamy czy gracz ma kogoś zaznaczonego myszką
+            // 2. Próba znalezienia zaznaczonego myszką
             if (targetEnemy == null)
                 targetEnemy = armyManager.selectedEnemyGroup;
+
+            // 3. --- NOWOŚĆ: Jeśli nadal brak celu, znajdź NAJBLIŻSZEGO wroga ---
+            if (targetEnemy == null && selectedUnits.Count > 0)
+            {
+                // Ustalamy, kto jest wrogiem
+                var enemies = (playerSide == "SideA") ? armyManager.factionBGroups : armyManager.factionAGroups;
+
+                // Szukamy najbliższego wroga względem pierwszej zaznaczonej jednostki
+                targetEnemy = armyManager.FindClosestEnemy(selectedUnits[0].groupCenter, enemies);
+
+                Debug.Log($"[AI] Rozkaz ataku bez celu. Wybrano najbliższego: {targetEnemy?.groupName}");
+            }
+            // -------------------------------------------------------------------
 
             if (targetEnemy != null && targetEnemy.unitMatrices.Count > 0)
             {
@@ -260,18 +273,16 @@ public class LLMCommander : MonoBehaviour
                 {
                     group.assignedFeature = null;
 
-                    // Obliczamy kierunek do wroga
+                    // --- NOWOŚĆ: Ustawiamy cel POŚCIGU ---
+                    group.chaseTarget = targetEnemy;
+                    // -------------------------------------
+
+                    // Inicjujemy ruch (ApplyFormation ustawi isMoving=true i wstępne pozycje)
+                    // Celujemy w sam środek wroga (jak ustaliliśmy wcześniej)
                     Vector3 directionToEnemy = (targetEnemy.groupCenter - group.groupCenter).normalized;
+                    armyManager.ApplyFormation(group, "Line", targetEnemy.groupCenter, directionToEnemy);
 
-                    // Celujemy nieco przed środek wroga, by formacja uderzyła w pierwszą linię
-                    Vector3 attackPos = targetEnemy.groupCenter - (directionToEnemy * 2.0f);
-
-                    // Używamy ApplyFormation, by jednostki szły w szyku bojowym
-                    armyManager.ApplyFormation(group, "Line", attackPos, directionToEnemy);
-
-                    // Wymuszamy, by celem był konkretny punkt wroga
-                    group.currentDestination = attackPos;
-                    Debug.Log($"[BATTLE] {group.groupName} atakuje cel: {targetEnemy.groupName}");
+                    Debug.Log($"[BATTLE] {group.groupName} rozpoczyna pościg za: {targetEnemy.groupName}");
                 }
                 return;
             }
@@ -281,6 +292,7 @@ public class LLMCommander : MonoBehaviour
         {
             foreach (var group in selectedUnits)
             {
+                group.chaseTarget = null; // Przestań gonić, bo masz stać
                 group.isMoving = false;
                 group.isReforming = false;
                 group.currentDestination = group.groupCenter;
@@ -307,6 +319,7 @@ public class LLMCommander : MonoBehaviour
 
             foreach (var g in selectedUnits)
             {
+                g.chaseTarget = null; // Formowanie przerywa pościg
                 // Wywołujemy zmodyfikowaną funkcję z punktem docelowym
                 armyManager.ApplyFormation(g, formType, targetCursorPos);
             }
@@ -317,13 +330,8 @@ public class LLMCommander : MonoBehaviour
         {
             foreach (var group in selectedUnits)
             {
-                group.assignedFeature = null; // Resetujemy przypisanie do terenu
-
-                // Prosta logika ruchu do punktu (ArmyManager ustawi formację 'Default' w locie w Update, 
-                // lub możemy wymusić ApplyFormation("Line", pos) żeby szli ładnie).
-
-                // Użyjmy ApplyFormation jako metody ruchu, bo to zapewnia, że nie zrobią bloba, 
-                // tylko pójdą uformowani w linię w tamto miejsce.
+                group.assignedFeature = null;
+                group.chaseTarget = null;
                 armyManager.ApplyFormation(group, "Line", targetCursorPos.Value);
             }
             return;
@@ -380,7 +388,7 @@ public class LLMCommander : MonoBehaviour
                         // Clamp (ograniczenie do mapy)
                         float clampedX = Mathf.Clamp(newPos.x, armyManager.minX, armyManager.maxX);
                         float clampedZ = Mathf.Clamp(newPos.z, armyManager.minZ, armyManager.maxZ);
-
+                        group.chaseTarget = null;
                         group.currentDestination = new Vector3(clampedX, group.groupCenter.y, clampedZ);
                         group.isMoving = true;
                         group.isReforming = true; // Włączamy reforming, żeby użyli precyzyjnego ruchu
@@ -436,6 +444,8 @@ public class LLMCommander : MonoBehaviour
                 Vector3 finalDest = new Vector3(Mathf.Clamp(targetPosition.x, armyManager.minX, armyManager.maxX),
                                                 targetPosition.y,
                                                 Mathf.Clamp(targetPosition.z, armyManager.minZ, armyManager.maxZ));
+
+                group.chaseTarget = null;
 
                 if (isFlankingCommand)
                 {

@@ -43,6 +43,7 @@ public class TacticalGroup
     public bool isReforming = false;
     public Vector3 currentDestination;
     public bool isMoving = false;
+    public TacticalGroup chaseTarget = null; // Kogo gonimy?
     public Vector3 groupCenter;
     public float groupRadius = 5.0f;
     public Vector3 targetFacingDirection = Vector3.forward;

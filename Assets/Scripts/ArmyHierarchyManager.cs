@@ -410,6 +410,9 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Return) && isDeploymentPhase) StartBattle();
         }
 
+        foreach (var g in factionAGroups) UpdateChaseLogic(g);
+        foreach (var g in factionBGroups) UpdateChaseLogic(g);
+
         // --- LOGIKA FAZ GRY (TOTAL WAR STYLE) ---
 
         // 1. Czy Gracz może ruszać jednostki? 
@@ -1027,11 +1030,18 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void ProcessSingleAttacker(TacticalGroup attackerGroup, List<TacticalGroup> enemyFaction, int idx)
     {
+        // Zabezpieczenia indeksów
         if (idx >= attackerGroup.attackCooldowns.Count || idx >= attackerGroup.unitMatrices.Count) return;
 
+        // Obsługa Cooldownu (przeładowania ataku)
         float dt = Time.deltaTime;
-        if (attackerGroup.attackCooldowns[idx] > 0) { attackerGroup.attackCooldowns[idx] -= dt; return; }
+        if (attackerGroup.attackCooldowns[idx] > 0)
+        {
+            attackerGroup.attackCooldowns[idx] -= dt;
+            return;
+        }
 
+        // Pobranie danych atakującego
         Matrix4x4 myMat = attackerGroup.unitMatrices[idx];
         Vector3 myPos = (Vector3)myMat.GetColumn(3);
         Vector3 myForward = (Vector3)myMat.GetColumn(2);
@@ -1044,31 +1054,101 @@ public class ArmyHierarchyManager : MonoBehaviour
         float rangeSq = range * range;
         float cooldownTime = isArcher ? archerAttackCooldown : attackCooldown;
 
+        // Szukanie celu (Łucznicy globalnie, Melee w siatce przestrzennej)
         UnitRef target = new UnitRef { group = null };
         if (isArcher) target = FindTargetGlobal(myPos, range, rangeSq, enemyFaction);
         else target = FindTargetInGrid(myPos, rangeSq);
 
+        // Jeśli znaleziono cel
         if (target.group != null)
         {
             if (target.index >= target.group.unitMatrices.Count) return;
 
             Vector3 dirToTarget = (target.position - myPos).normalized;
             float angleDot = Vector3.Dot(myForward, dirToTarget);
-            if (angleDot < 0.2f) return;
 
+            // --- POPRAWKA: KĄT WIDZENIA ---
+            // Wcześniej było sztywne 0.2f (ok. 80 stopni), co blokowało ataki w tłumie.
+            // Teraz: Melee bije szeroko (nawet wrogów z boku), Łucznik musi celować prosto.
+
+            float requiredAngle = 0.5f; // Domyślnie dla łucznika (wąski kąt ok. 60 stopni)
+
+            if (!isArcher)
+            {
+                // Dla zwarcia (Piechota/Konie) pozwalamy bić prawie wszystko przed sobą i z boku.
+                // -0.2f oznacza ok. 100 stopni w lewo/prawo (prawie wszystko poza plecami).
+                requiredAngle = -0.2f;
+            }
+
+            if (angleDot < requiredAngle) return; // Jeśli wróg jest poza kątem ataku, nic nie rób
+
+            // Obliczanie obrażeń
             Matrix4x4 targetMat = target.group.unitMatrices[target.index];
             Vector3 targetForward = (Vector3)targetMat.GetColumn(2);
+
+            // Czy atakujemy w plecy?
             float orientationDot = Vector3.Dot(myForward, targetForward);
-            bool isBackstab = (orientationDot > 0.5f);
+            bool isBackstab = (orientationDot > 0.5f); // Jeśli obaj patrzą w tę samą stronę -> cios w plecy
 
             float dmg = 0f;
-            if (isBackstab) dmg = 10000f;
+            if (isBackstab) dmg = 10000f; // Instant kill w plecy
             else dmg = CalculateDamage(attackerGroup, target.group, idx, target.index, myPos, target.position);
 
+            // Zadawanie obrażeń
             target.group.unitHealth[target.index] -= dmg;
+
+            // Ustawienie losowego cooldownu (żeby nie atakowali wszyscy co do milisekundy równo)
             attackerGroup.attackCooldowns[idx] = cooldownTime * Random.Range(0.8f, 1.2f);
 
-            if (target.group.unitHealth[target.index] <= 0) KillUnit(target.group, target.index);
+            // Śmierć celu
+            if (target.group.unitHealth[target.index] <= 0)
+                KillUnit(target.group, target.index);
+        }
+    }
+
+    public TacticalGroup FindClosestEnemy(Vector3 searchPos, List<TacticalGroup> enemyList)
+    {
+        TacticalGroup best = null;
+        float closestDist = float.MaxValue;
+
+        foreach (var enemy in enemyList)
+        {
+            if (enemy.unitMatrices.Count == 0) continue; // Martwych pomijamy
+
+            float d = Vector3.Distance(searchPos, enemy.groupCenter);
+            if (d < closestDist)
+            {
+                closestDist = d;
+                best = enemy;
+            }
+        }
+        return best;
+    }
+
+    // 2. Dodaj metodę aktualizującą pościg:
+    void UpdateChaseLogic(TacticalGroup group)
+    {
+        if (group.chaseTarget != null)
+        {
+            // Jeśli cel umarł -> przestań gonić
+            if (group.chaseTarget.unitMatrices.Count == 0)
+            {
+                group.chaseTarget = null;
+                group.isMoving = false;
+            }
+            else
+            {
+                // Aktualizuj cel podróży na ŚRODEK wroga
+                group.currentDestination = group.chaseTarget.groupCenter;
+                group.isMoving = true;
+
+                // Wyłączamy reformowanie (chodzenie do slotów), żeby grupa szła jak czołg
+                // prosto na wroga jako zwarta masa (szybciej i agresywniej)
+                group.isReforming = false;
+
+                // Opcjonalnie: Patrz na wroga
+                group.targetFacingDirection = (group.chaseTarget.groupCenter - group.groupCenter).normalized;
+            }
         }
     }
 
