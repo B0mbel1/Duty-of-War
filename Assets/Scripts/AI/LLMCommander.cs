@@ -390,40 +390,55 @@ public class LLMCommander : MonoBehaviour
         if (positionFound)
         {
             Vector3 enemyCenter = GetEnemyArmyCenter();
+            // Jeśli mamy zaznaczonego konkretnego wroga, bierzemy jego pozycję jako centrum
+            if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
+            {
+                enemyCenter = armyManager.selectedEnemyGroup.groupCenter;
+            }
+
             bool isFlankingCommand = cmd.target_location.ToLower().Contains("flank");
 
             foreach (var group in selectedUnits)
             {
-                float clampedX = Mathf.Clamp(targetPosition.x, armyManager.minX, armyManager.maxX);
-                float clampedZ = Mathf.Clamp(targetPosition.z, armyManager.minZ, armyManager.maxZ);
-                Vector3 dest = new Vector3(clampedX, targetPosition.y, clampedZ);
-
-                // Ustawiamy ogólny cel (dla pewności)
-                group.currentDestination = dest;
+                // Domyślny cel to punkt obliczony (np. 50m od wroga)
+                Vector3 finalDest = new Vector3(Mathf.Clamp(targetPosition.x, armyManager.minX, armyManager.maxX),
+                                                targetPosition.y,
+                                                Mathf.Clamp(targetPosition.z, armyManager.minZ, armyManager.maxZ));
 
                 if (isFlankingCommand)
                 {
-                    // --- LOGIKA FLANKOWANIA (POPRAWIONA) ---
-                    // Obliczamy wektor patrzenia NA WROGA
-                    Vector3 directionToEnemy = (enemyCenter - dest).normalized;
+                    // --- POPRAWKA AGRESYWNOŚCI ---
 
-                    // Wywołujemy ApplyFormation:
-                    // 1. Idź do 'dest'
-                    // 2. Ustaw się w 'Line'
-                    // 3. Patrz w kierunku 'directionToEnemy'
-                    armyManager.ApplyFormation(group, "Line", dest, directionToEnemy);
+                    // 1. Obliczamy wektor, w którą stronę musimy patrzeć, żeby widzieć wroga
+                    Vector3 directionToEnemy = (enemyCenter - finalDest).normalized;
+
+                    // 2. Zamiast iść w "puste miejsce" obok wroga (finalDest), 
+                    //    każemy im iść BEZPOŚREDNIO NA WROGA, ale zachowując formację.
+                    //    Dzięki temu wejdą w zasięg ataku (3.5f) i kolizje ich zatrzymają na styku armii.
+
+                    // Nadpisujemy cel podróży na środek wroga
+                    Vector3 attackDest = enemyCenter;
+
+                    // Opcjonalnie: Cofamy cel o 2-3 metry od środka wroga w naszą stronę, 
+                    // żeby nie próbowali przeniknąć na drugą stronę oddziału, tylko uderzyli w pierwszą linię.
+                    attackDest -= directionToEnemy * 2.0f;
+
+                    // Wywołujemy formację celującą we wroga
+                    armyManager.ApplyFormation(group, "Line", attackDest, directionToEnemy);
+
+                    // Wymuszamy odświeżenie destination (na wypadek gdyby ApplyFormation coś nadpisało)
+                    group.currentDestination = attackDest;
                 }
                 else
                 {
-                    // --- ZWYKŁY RUCH ---
-                    // Tutaj używamy zwykłego ruchu "blob" (bez formationTargets),
-                    // bo jest płynniejszy na długie dystanse.
+                    // Zwykły ruch (nie flankujący)
+                    group.currentDestination = finalDest;
                     group.targetFacingDirection = Vector3.zero;
                     group.isReforming = false;
                     group.isMoving = true;
                 }
 
-                Debug.Log($"Grupa {group.groupName} rusza do {group.currentDestination}");
+                Debug.Log($"Grupa {group.groupName} rusza do {group.currentDestination} (Flank: {isFlankingCommand})");
             }
         }
     }
@@ -457,9 +472,7 @@ public class LLMCommander : MonoBehaviour
 
         float centerX = (armyManager.minX + armyManager.maxX) / 2;
         float centerZ = (armyManager.minZ + armyManager.maxZ) / 2;
-
-        bool isSideA = (playerSide == "SideA");
-        Vector3 myBasePos = isSideA ? new Vector3(centerX, 0, armyManager.minZ) : new Vector3(centerX, 0, armyManager.maxZ);
+        float mapMargin = 150f; // Margines od krawędzi mapy
 
         // 1. Sprawdzanie dokładnych nazw (TerrainFeature)
         TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
@@ -475,103 +488,72 @@ public class LLMCommander : MonoBehaviour
         // 2. Komendy ogólne
         if (loc.Contains("center")) { position = new Vector3(centerX, 0, centerZ); return true; }
         if (loc.Contains("enemy") || loc.Contains("attack")) { position = GetEnemyArmyCenter(); return true; }
+
+        // Baza - tu logika jest zależna od gracza, bo "baza" to pojęcie relatywne
         if (loc.Contains("base") || loc.Contains("retreat"))
         {
+            bool isSideA = (playerSide == "SideA"); // SideA ma bazę na dole (MinZ)
             float retreatZ = isSideA ? (armyManager.minZ + 150) : (armyManager.maxZ - 150);
             position = new Vector3(centerX, 0, retreatZ);
             return true;
         }
 
-        // B. Flanki (Lewa/Prawa - Zależne od tego, w którą stronę patrzymy)
-        if (loc == "left flank" || loc == "left")
+        // --- ABSOLUTNE STRONY ŚWIATA (KOMPAS) ---
+        // Niezależnie od tego gdzie patrzy kamera:
+        // North = MAX Z
+        // South = MIN Z
+        // East  = MAX X
+        // West  = MIN X
+
+        if (loc == "north")
         {
-            float xPos = isSideA ? (armyManager.minX + 250) : (armyManager.maxX - 250);
-            position = new Vector3(xPos, 0, centerZ);
+            position = new Vector3(centerX, 0, armyManager.maxZ - mapMargin);
             return true;
         }
-        if (loc == "right flank" || loc == "right")
+        if (loc == "south")
         {
-            float xPos = isSideA ? (armyManager.maxX - 250) : (armyManager.minX + 250);
-            position = new Vector3(xPos, 0, centerZ);
+            position = new Vector3(centerX, 0, armyManager.minZ + mapMargin);
             return true;
         }
-
-        // C. GLOBALNE STRONY ŚWIATA
-        float mapMargin = 200f;
-
-        if (loc.Contains("north")) // Północ
-        {
-            float targetX = centerX;
-            if (loc.Contains("east")) targetX = armyManager.maxX - mapMargin;
-            else if (loc.Contains("west")) targetX = armyManager.minX + mapMargin;
-
-            position = new Vector3(targetX, 0, armyManager.maxZ - mapMargin);
-            return true;
-        }
-
-        if (loc.Contains("south")) // Południe
-        {
-            float targetX = centerX;
-            if (loc.Contains("east")) targetX = armyManager.maxX - mapMargin;
-            else if (loc.Contains("west")) targetX = armyManager.minX + mapMargin;
-
-            position = new Vector3(targetX, 0, armyManager.minZ + mapMargin);
-            return true;
-        }
-
-        if (loc.Contains("east")) // Wschód
+        if (loc == "east")
         {
             position = new Vector3(armyManager.maxX - mapMargin, 0, centerZ);
             return true;
         }
-
-        if (loc.Contains("west")) // Zachód
+        if (loc == "west")
         {
             position = new Vector3(armyManager.minX + mapMargin, 0, centerZ);
             return true;
         }
 
+        // --- FLANKOWANIE (ABSOLUTNE) ---
         if (loc.StartsWith("flank"))
         {
-            Vector3 enemyCenter = GetEnemyArmyCenter();
-            float flankDistance = 50.0f; // Dystans od środka armii wroga (żeby nie wbiec w nich od razu)
+            // 1. Ustalamy cel (Wroga)
+            Vector3 targetPoint = GetEnemyArmyCenter();
+            if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
+            {
+                targetPoint = armyManager.selectedEnemyGroup.groupCenter;
+            }
 
-            if (loc.Contains("north"))
-            {
-                // Flanka północna = jesteśmy NA PÓŁNOC od wroga (Z+)
-                position = enemyCenter + new Vector3(0, 0, flankDistance);
-            }
-            else if (loc.Contains("south"))
-            {
-                // Flanka południowa = jesteśmy NA POŁUDNIE od wroga (Z-)
-                position = enemyCenter + new Vector3(0, 0, -flankDistance);
-            }
-            else if (loc.Contains("east"))
-            {
-                // Flanka wschodnia = jesteśmy NA WSCHÓD od wroga (X+)
-                position = enemyCenter + new Vector3(flankDistance, 0, 0);
-            }
-            else if (loc.Contains("west"))
-            {
-                // Flanka zachodnia = jesteśmy NA ZACHÓD od wroga (X-)
-                position = enemyCenter + new Vector3(-flankDistance, 0, 0);
-            }
-            else
-            {
-                // Domyślny flank (jeśli nie podano strony - np. z boku)
-                // Wybieramy stronę bliższą naszej bazy lub po prostu prawo
-                position = enemyCenter + new Vector3(flankDistance, 0, 0);
-            }
+            // 2. Ustalamy offset (Dystans flankowania) - zmniejszony, aby byli blisko walki
+            float offset = 15.0f; // Blisko, żeby od razu atakować
+
+            // 3. Sztywna matematyka wektorów świata
+            if (loc.Contains("north")) position = targetPoint + new Vector3(0, 0, offset);  // +Z
+            else if (loc.Contains("south")) position = targetPoint + new Vector3(0, 0, -offset); // -Z
+            else if (loc.Contains("east")) position = targetPoint + new Vector3(offset, 0, 0);  // +X
+            else if (loc.Contains("west")) position = targetPoint + new Vector3(-offset, 0, 0); // -X
+            else position = targetPoint + new Vector3(offset, 0, 0); // Domyślnie wschód
+
             return true;
         }
 
-        // 3. Fallback dla zwykłych obiektów
+        // Fallback dla obiektów nazwanych (np. "Góra Czaszki")
         GameObject featureObj = GameObject.Find(locationName);
         if (featureObj != null)
         {
-            Vector3 objPos = featureObj.transform.position;
-            Vector3 directionToMe = (myBasePos - objPos).normalized;
-            position = objPos + (directionToMe * 45.0f);
+            position = featureObj.transform.position;
             return true;
         }
 
@@ -621,17 +603,25 @@ ZASADY:
 2. unit_tags: 'Infantry', 'Archer', 'Cavalry', 'All', 'Selected'{dynamicNames}.
    - 'Selected' oznacza jednostki aktualnie wybrane przez gracza (myszką).
 3. target_location:
-   - KIERUNKI: 'North' (Góra), 'South' (Dół), 'East' (Prawo), 'West' (Lewo).
-   - RELATYWNE: 'Left_Flank', 'Right_Flank', 'Center', 'Enemy_Army', 'My_Base'.
-   - TERENOWE (Preferowane): {mapLocations}.
+   - STRONY ŚWIATA (Absolutne): 'North' (Mapa Z+), 'South' (Mapa Z-), 'East' (Mapa X+), 'West' (Mapa X-).
+     Użyj ich, gdy gracz mówi: 'na północ', 'od wschodu', 'na południu'.
+   - RELATYWNE (Z perspektywy oddziału): 'Relative_Forward', 'Relative_Backward', 'Relative_Left', 'Relative_Right'.
+     Użyj ich TYLKO, gdy gracz mówi: 'naprzód', 'do tyłu', 'w lewo', 'w prawo'.
+   - TERENOWE: {mapLocations}.
    - DLA KOMENDY STOP: 'None'.
    - DLA PRZESUNIĘĆ (np. 100m w lewo): 'Relative_{{Kierunek}}_{{Metry}}'. Kierunki: Forward, Backward, Left, Right.
    - DLA 'FORM' (Formacje): 'Line' (Szereg), 'Double_Line' (Dwuszereg), 'Box' (Kwadrat), 'Turtle' (Żółw), 'Loose' (Luźna).
    - SPECJALNE: 'Cursor' - UŻYJ TEGO, gdy gracz mówi 'tam', 'tutaj', 'w miejscu kliknięcia', 'do znacznika' LUB wydaje rozkaz formacji bez podania miejsca (np. 'Uformuj linię').
-   - DLA FLANKOWANIA: 'Flank_North' (Od północy wroga), 'Flank_South', 'Flank_East', 'Flank_West'.
+   - FLANKOWANIE (Absolutne): 'Flank_North' (Podejdź od strony Z+), 'Flank_South' (Od Z-), 'Flank_East' (Od X+), 'Flank_West' (Od X-).
+   - 'Cursor' - gdy gracz wskazuje 'tam', 'tutaj'.
 4. action: 'MOVE', 'ATTACK', 'STOP', 'FORM'.
 
 PRZYKŁADY (Zawsze używaj tablicy 'commands'!):
+User: Atakujcie od wschodu!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Flank_East"" }} ] }}
+
+User: Idźcie do przodu!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Relative_Forward_50"" }} ] }}
 
 User: Piechota do lasu na północy!
 AI:
@@ -692,6 +682,15 @@ User: Zaznaczone jednostki do lasu!
         var myUnits = (playerSide == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
         foreach (var g in myUnits) myCount += g.unitMatrices.Count;
 
-        return $"My Units Count: {myCount}. Map Size: {armyManager.maxX}x{armyManager.maxZ}.";
+        // NOWOŚĆ: Sprawdzamy czy mamy zaznaczonego konkretnego wroga
+        string enemyInfo = "No specific enemy unit targeted.";
+        // Musisz dodać publiczny getter w ArmyHierarchyManager lub zmienić selectedEnemyGroup na public
+        var selectedEnemy = armyManager.selectedEnemyGroup;
+        if (selectedEnemy != null && selectedEnemy.unitMatrices.Count > 0)
+        {
+            enemyInfo = $"TARGETED ENEMY: '{selectedEnemy.groupName}' (or '{selectedEnemy.customName}') at position {selectedEnemy.groupCenter}.";
+        }
+
+        return $"My Units Count: {myCount}. Map Size: {armyManager.maxX}x{armyManager.maxZ}. {enemyInfo}";
     }
 }

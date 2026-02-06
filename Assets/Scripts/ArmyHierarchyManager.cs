@@ -128,7 +128,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     private int nextUnitIdxB = 0;
 
 
-    private TacticalGroup selectedEnemyGroup = null;
+    public TacticalGroup selectedEnemyGroup = null;
 
     struct UnitRef
     {
