@@ -643,11 +643,7 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void ProcessMovement(TacticalGroup group)
     {
-        if (isDeploymentPhase)
-        {
-            TeleportGroupInstant(group);
-            return; // Kończymy funkcję, nie wykonujemy normalnego ruchu
-        }
+      
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
@@ -801,63 +797,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.RecalculateCenter();
     }
 
-    void TeleportGroupInstant(TacticalGroup group)
-    {
-        int count = group.unitMatrices.Count;
-        if (count == 0) return;
-
-        Vector3 scale = group.unitMatrices[0].lossyScale;
-
-        // Ustalmy docelową rotację (zgodnie z rozkazem)
-        Quaternion finalRot = (group.targetFacingDirection != Vector3.zero)
-            ? Quaternion.LookRotation(group.targetFacingDirection)
-            : group.unitMatrices[0].rotation;
-
-        for (int i = 0; i < count; i++)
-        {
-            Vector3 finalPos;
-
-            // SCENARIUSZ A: Mamy wyliczone sloty formacji (np. Linia, Żółw)
-            if (group.isReforming && i < group.formationTargets.Count)
-            {
-                finalPos = group.formationTargets[i];
-            }
-            // SCENARIUSZ B: Zwykły ruch (przesunięcie całej grupy o wektor)
-            else
-            {
-                Matrix4x4 mat = group.unitMatrices[i];
-                Vector3 currentPos = mat.GetColumn(3);
-                Vector3 offset = group.currentDestination - group.groupCenter;
-                finalPos = currentPos + offset;
-            }
-
-            // WAŻNE: Przyklejamy do terenu (żeby nie teleportowali się pod ziemię)
-            if (terrain != null)
-            {
-                // Pobieramy wysokość terenu w nowym punkcie X, Z
-                float y = terrain.SampleHeight(finalPos) + terrain.transform.position.y;
-                finalPos.y = y;
-            }
-            else
-            {
-                finalPos.y = 0; // Płaska podłoga jako fallback
-            }
-
-            // Aktualizujemy macierz jednostki (Pozycja, Rotacja, Skala)
-            group.unitMatrices[i] = Matrix4x4.TRS(finalPos, finalRot, scale);
-        }
-
-        // Kończymy ruch natychmiast
-        group.isMoving = false;
-        group.isReforming = false;
-
-        // Aktualizujemy bufory graficzne i środek grupy
-        group.UpdateBatchData();
-        group.RecalculateCenter();
-
-        // Debug (opcjonalnie)
-        // Debug.Log($"Grupa {group.groupName} przeteleportowana na pozycję.");
-    }
+    
     void ApplyFinalFormationRotation(TacticalGroup group)
     {
         if (group.unitMatrices.Count == 0) return;
