@@ -54,16 +54,23 @@ public class UnitsSpawnCustom : MonoBehaviour
     public string waterTag = "Water";
     public float swimmingDepth = 0.5f;
 
-    // --- USTAWIENIA ROTACJI ---
-    [Header("Spawn Orientation Fix")]
+    // --- USTAWIENIA ROTACJI I WYMIARÓW ---
+    [Header("Spawn Orientation & Logic")]
     public SpawnShape factionAShape = SpawnShape.Rectangle;
     public SpawnShape factionBShape = SpawnShape.Rectangle;
     
-    [Tooltip("PRIORYTET 1 (MANUAL): Jeśli zaznaczone, jednostki ZAWSZE patrzą tam, gdzie niebieska oś Z Cube'a.")]
+    [Tooltip("PRIORYTET 1: Użyj rotacji Cube'a.")]
     public bool useSpawnBoxRotation = true;
 
-    [Tooltip("PRIORYTET 2 (AUTO-ALIGN): Jeśli zaznaczone, GŁÓWNA armia wroga ustawi się idealnie równolegle do gracza (twarzą w twarz). UWAGA: Secondary spawn to zignoruje i wyceluje w gracza automatycznie, żeby nie stać tyłem.")]
+    [Tooltip("PRIORYTET 2: Główny wróg równolegle do gracza (Fix dla Jarmuk).")]
     public bool forceEnemyAlignmentToPlayer = true;
+
+    [Space(10)]
+    [Tooltip("Zaznacz na Orlim Gnieździe (Wąwozy). Odznacz na płaskim.")]
+    public bool useSmartWidthProjection = true;
+
+    [Tooltip("RATUNEK: Jeśli jednostki są sklejone, wpisz tu szerokość w metrach (np. 500, 800). Jeśli 0 - liczy automat.")]
+    public float manualFormationWidth = 0f;
 
     [Header("Camera Start Settings")]
     public Camera battleCamera;
@@ -106,10 +113,10 @@ public class UnitsSpawnCustom : MonoBehaviour
         LoadCustomSettings();
         DetectWater();
 
-        // 1. Spawnujemy Frakcję A (Gracz)
+        // 1. Spawnujemy Frakcję A
         HandleFactionSpawning(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true, factionAShape, null);
         
-        // 2. Spawnujemy Frakcję B (Wróg)
+        // 2. Spawnujemy Frakcję B
         HandleFactionSpawning(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false, factionBShape, spawnAreaA);
 
         RebuildAllBatches();
@@ -124,14 +131,12 @@ public class UnitsSpawnCustom : MonoBehaviour
         mainArea.GetComponent<Renderer>().enabled = false;
         if (secArea != null) secArea.GetComponent<Renderer>().enabled = false;
 
-        // Cel domyślny (środek głównego spawnu przeciwnika)
         Vector3 defaultTarget = Vector3.zero;
         if (isFactionA && spawnAreaB != null) defaultTarget = spawnAreaB.transform.position;
         if (!isFactionA && spawnAreaA != null) defaultTarget = spawnAreaA.transform.position;
 
         if (secArea != null)
         {
-            // Dzielenie armii
             ArmyComposition army1 = new ArmyComposition();
             army1.name = fullArmy.name + "_Part1";
             army1.infantryCount = fullArmy.infantryCount / 2;
@@ -153,7 +158,6 @@ public class UnitsSpawnCustom : MonoBehaviour
         }
     }
 
-    // --- GŁÓWNA LOGIKA ROZMIESZCZANIA ---
     void ProcessFactionSpawns(ArmyComposition army, GameObject spawnArea, bool isFactionA, SpawnShape shape, Vector3 autoLookTarget, GameObject alignmentReference)
     {
         if (spawnArea == null) return;
@@ -164,52 +168,73 @@ public class UnitsSpawnCustom : MonoBehaviour
         Vector3 forwardDir;
         Vector3 rightDir;
 
-        // --- 1. LOGIKA KIERUNKU (FIX DLA PLECY/BOKI) ---
-        
-        // PRIORYTET A: Manualna rotacja z Cube'a (zawsze wygrywa)
+        // --- 1. USTALANIE KIERUNKU ---
         if (useSpawnBoxRotation)
         {
             forwardDir = spawnArea.transform.forward;
         }
-        // PRIORYTET B: Wymuszenie równoległości (TYLKO DLA GŁÓWNEGO SPAWNU WROGA)
-        // To naprawia Jarmuk, ale nie psuje Secondary Spawnu na Orlim Gnieździe
         else if (!isFactionA && forceEnemyAlignmentToPlayer && alignmentReference != null && spawnArea == spawnAreaB)
         {
             Vector3 playerForward = alignmentReference.transform.forward;
-            forwardDir = -playerForward; // Odwróć o 180 stopni
+            forwardDir = -playerForward;
         }
-        // PRIORYTET C: Auto-Aim (Dla Gracza ORAZ dla Secondary Spawnu Wroga)
-        // Dzięki temu posiłki zawsze patrzą w stronę wroga, niezależnie gdzie stoją
         else
         {
             forwardDir = (autoLookTarget - areaCenter).normalized;
             if (forwardDir == Vector3.zero) forwardDir = Vector3.forward;
         }
 
-        // --- 2. ORTOGONALIZACJA (Fix dla rombów) ---
+        // Zabezpieczenie przed zerowym wektorem (zapobiega sklejaniu w punkcie 0,0,0)
         forwardDir.y = 0;
+        if (forwardDir.sqrMagnitude < 0.001f) forwardDir = Vector3.forward;
         forwardDir.Normalize();
+
         rightDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
 
-        // --- 3. OBLICZANIE SZEROKOŚCI (FIX DLA "POŁĄCZONYCH" JEDNOSTEK) ---
-        // Zamiast brać Max(x, z), rzutujemy wymiary Cube'a na wektor 'Prawo'.
-        // Dzięki temu, jeśli obrócisz Cube'a w poprzek wąwozu, szerokość będzie mała (tak jak trzeba),
-        // a jednostki ułożą się w głąb (kolumną), zamiast rozlewać się na boki i łączyć z innymi.
-        float projectedWidthX = Mathf.Abs(Vector3.Dot(spawnArea.transform.right * areaSize.x, rightDir));
-        float projectedWidthZ = Mathf.Abs(Vector3.Dot(spawnArea.transform.forward * areaSize.z, rightDir));
-        float usableWidth = (projectedWidthX + projectedWidthZ) * 0.9f; // 90% marginesu
-        
-        if (usableWidth < 20) usableWidth = 50.0f; // Minimalne zabezpieczenie
+        // --- 2. USTALANIE SZEROKOŚCI (FIX dla Pal Galur) ---
+        float usableWidth = 100f;
+        float depthSize = 100f;
 
-        // Głębokość też rzutujemy (dla punktu startu)
-        float projectedDepthX = Mathf.Abs(Vector3.Dot(spawnArea.transform.right * areaSize.x, forwardDir));
-        float projectedDepthZ = Mathf.Abs(Vector3.Dot(spawnArea.transform.forward * areaSize.z, forwardDir));
-        float depthSize = projectedDepthX + projectedDepthZ;
+        // A) Manual Override - Ostateczne rozwiązanie
+        if (manualFormationWidth > 10f)
+        {
+            usableWidth = manualFormationWidth;
+            depthSize = 50f; // Domyślna głębokość punktu startu
+        }
+        // B) Smart Projection - Dobre na góry/wąwozy
+        else if (useSmartWidthProjection)
+        {
+            float projectedWidthX = Mathf.Abs(Vector3.Dot(spawnArea.transform.right * areaSize.x, rightDir));
+            float projectedWidthZ = Mathf.Abs(Vector3.Dot(spawnArea.transform.forward * areaSize.z, rightDir));
+            usableWidth = (projectedWidthX + projectedWidthZ) * 0.9f;
 
-        // Startujemy lekko przesunięci w stronę "przodu" formacji
+            float projectedDepthX = Mathf.Abs(Vector3.Dot(spawnArea.transform.right * areaSize.x, forwardDir));
+            float projectedDepthZ = Mathf.Abs(Vector3.Dot(spawnArea.transform.forward * areaSize.z, forwardDir));
+            depthSize = projectedDepthX + projectedDepthZ;
+        }
+        // C) Standard Mode - Dobre na płaskie (poprawiona logika)
+        else
+        {
+            // Sprawdzamy, która oś lokalna Boxa jest bardziej równoległa do naszej linii frontu (rightDir)
+            float alignmentX = Mathf.Abs(Vector3.Dot(spawnArea.transform.right, rightDir));
+            
+            if (alignmentX > 0.5f) // Box jest ustawiony bokiem wzdłuż frontu
+            {
+                usableWidth = areaSize.x * 0.9f;
+                depthSize = areaSize.z;
+            }
+            else // Box jest ustawiony głębokością wzdłuż frontu (albo obrócony o 90 stopni)
+            {
+                usableWidth = areaSize.z * 0.9f;
+                depthSize = areaSize.x;
+            }
+        }
+
+        // --- ZABEZPIECZENIE ANTI-GLUE ---
+        // Jeśli z jakiegoś powodu szerokość wyszła mikroskopijna, wymuś minimum.
+        if (usableWidth < 50f) usableWidth = 50f;
+
         Vector3 frontLineCenter = areaCenter + (forwardDir * (depthSize * 0.4f));
-
-        // Startujemy od lewej strony
         Vector3 rowStart = frontLineCenter - (rightDir * (usableWidth * 0.5f));
 
         float gapBetweenGroups = 15.0f;
@@ -217,6 +242,8 @@ public class UnitsSpawnCustom : MonoBehaviour
 
         void SpawnTypeSequence(UnitType type, int totalCount)
         {
+            if (totalCount <= 0) return;
+
             int groupSize = 150;
             int unitsSpawned = 0;
             float dynamicBlockSize = 40.0f;
@@ -229,17 +256,15 @@ public class UnitsSpawnCustom : MonoBehaviour
             {
                 int countInThisGroup = Mathf.Min(groupSize, totalCount - unitsSpawned);
 
-                // Czy mieścimy się w szerokości?
+                // Sprawdzamy czy mieścimy się w rzędzie
                 if (currentXOffset + dynamicBlockSize > usableWidth)
                 {
                     currentXOffset = 0;
-                    // Nowa linia - cofamy się
                     rowStart -= forwardDir * (blockDepth + gapBetweenGroups);
                 }
 
                 Vector3 groupCenter = rowStart + (rightDir * (currentXOffset + dynamicBlockSize * 0.5f));
                 
-                // Spawn z poprawnymi wektorami
                 SpawnTightGroupRect(type, countInThisGroup, groupCenter, isFactionA, rightDir, forwardDir);
 
                 currentXOffset += (dynamicBlockSize + gapBetweenGroups);
@@ -320,7 +345,6 @@ public class UnitsSpawnCustom : MonoBehaviour
         }
     }
 
-    // --- GIZMOS ---
     void OnDrawGizmos()
     {
         if (spawnAreaA != null) DrawSpawnGizmo(spawnAreaA, true, Color.blue);
@@ -333,9 +357,8 @@ public class UnitsSpawnCustom : MonoBehaviour
     {
         Gizmos.color = c;
         Vector3 center = area.transform.position;
-        Vector3 forward = Vector3.forward;
+        Vector3 forward = area.transform.forward;
 
-        // Logika wizualizacji taka sama jak w kodzie
         if (useSpawnBoxRotation)
         {
             forward = area.transform.forward;
@@ -348,23 +371,37 @@ public class UnitsSpawnCustom : MonoBehaviour
         }
         else
         {
-            Vector3 target = isFactionA ? (spawnAreaB ? spawnAreaB.transform.position : Vector3.zero) 
-                                        : (spawnAreaA ? spawnAreaA.transform.position : Vector3.zero);
-            forward = (target - center).normalized;
-            if (forward == Vector3.zero) forward = area.transform.forward;
+             forward = area.transform.forward;
         }
 
-        forward.y = 0; forward.Normalize();
+        forward.y = 0; 
+        if(forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
+        forward.Normalize();
         Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
 
-        // Rysuj kierunek i SZEROKOŚĆ (zgodnie z nową logiką)
         Gizmos.DrawLine(center, center + forward * 30f);
         Gizmos.DrawSphere(center + forward * 30f, 2f);
         
-        Vector3 areaSize = area.transform.localScale;
-        float projectedWidthX = Mathf.Abs(Vector3.Dot(area.transform.right * areaSize.x, right));
-        float projectedWidthZ = Mathf.Abs(Vector3.Dot(area.transform.forward * areaSize.z, right));
-        float vizWidth = (projectedWidthX + projectedWidthZ) * 0.9f;
+        // Wizualizacja szerokości
+        float vizWidth = 100f;
+        if (manualFormationWidth > 10f) vizWidth = manualFormationWidth;
+        else
+        {
+            Vector3 areaSize = area.transform.localScale;
+            if (useSmartWidthProjection)
+            {
+                float projectedWidthX = Mathf.Abs(Vector3.Dot(area.transform.right * areaSize.x, right));
+                float projectedWidthZ = Mathf.Abs(Vector3.Dot(area.transform.forward * areaSize.z, right));
+                vizWidth = (projectedWidthX + projectedWidthZ) * 0.9f;
+            }
+            else
+            {
+                // Simple logic visualization
+                float alignmentX = Mathf.Abs(Vector3.Dot(area.transform.right, right));
+                vizWidth = (alignmentX > 0.5f) ? areaSize.x : areaSize.z;
+                vizWidth *= 0.9f;
+            }
+        }
 
         Gizmos.color = Color.yellow;
         Gizmos.DrawLine(center, center + right * (vizWidth * 0.5f));

@@ -973,6 +973,14 @@ PrefabInstance:
       propertyPath: factionBText
       value: 
       objectReference: {fileID: 24725120}
+    - target: {fileID: 6990999978236238867, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: manualFormationWidth
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6990999978236238867, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
+      propertyPath: useSmartWidthProjection
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7286001271577634509, guid: 495af937e7c9164489b39e0bd5c683e9, type: 3}
       propertyPath: m_Name
       value: SpawnAreaCustom
@@ -1213,8 +1221,8 @@ Transform:
   m_GameObject: {fileID: 1798806000}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 499.6154, y: 0, z: 131.6113}
-  m_LocalScale: {x: 971.39154, y: 1.8244275, z: 244.53847}
+  m_LocalPosition: {x: 499.6154, y: 0, z: 108.9332}
+  m_LocalScale: {x: 971.39154, y: 1.8244275, z: 199.17657}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
