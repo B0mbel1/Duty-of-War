@@ -387,119 +387,104 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (!groupsInitialized) return;
 
         // --- ZABEZPIECZENIE PRZED PISANIEM ---
-        // Sprawdzamy, czy kursor jest w polu tekstowym (Input Field)
         bool isTyping = false;
         if (EventSystem.current != null)
         {
             GameObject selectedObj = EventSystem.current.currentSelectedGameObject;
             if (selectedObj != null && selectedObj.GetComponent<TMP_InputField>() != null)
-            {
                 isTyping = true;
-            }
         }
 
-        // --- SKRÓTY KLAWISZOWE (Działają tylko gdy NIE piszemy) ---
+        // --- SKRÓTY KLAWISZOWE ---
         if (!isTyping)
         {
             if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
             if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
             if (Input.GetKeyDown(KeyCode.Space)) ToggleTacticalPause();
-
-            // Tutaj jest poprawka dla klawisza 'M':
             if (Input.GetKeyDown(KeyCode.M))
             {
-                // Jeśli panel jest otwarty -> ZAMKNIJ GO
-                if (namingPanel != null && namingPanel.activeSelf)
-                {
-                    namingPanel.SetActive(false);
-                }
-                // Jeśli zamknięty i mamy zaznaczone > 1 grupy -> OTWÓRZ GO
-                else if (selectedGroups.Count > 1)
-                {
-                    OpenNamingPanel();
-                }
+                if (namingPanel != null && namingPanel.activeSelf) namingPanel.SetActive(false);
+                else if (selectedGroups.Count > 1) OpenNamingPanel();
             }
+            // SKRÓT ENTER DO ROZPOCZĘCIA BITWY (Opcjonalnie)
+            if (Input.GetKeyDown(KeyCode.Return) && isDeploymentPhase) StartBattle();
         }
 
-        // --- LOGIKA GRY (Ruch i Walka działają zawsze) ---
+        // --- LOGIKA FAZ GRY (TOTAL WAR STYLE) ---
 
-        // USUNIĘTO OBSŁUGĘ MYSZKI DLA ROZKAZÓW (HandleMouseInput) - zgodnie z poprzednią prośbą
+        // 1. Czy Gracz może ruszać jednostki? 
+        // TAK, jeśli nie ma PAUZY TAKTYCZNEJ (w Deployment Phase też może!)
+        bool canMovePlayer = !isTacticalPause;
 
-        bool isGameFrozen = isDeploymentPhase || isTacticalPause;
+        // 2. Czy Wróg może ruszać jednostki?
+        // TYLKO jeśli bitwa się zaczęła i nie ma pauzy
+        bool canMoveEnemy = !isDeploymentPhase && !isTacticalPause;
 
+        // 3. Czy walka jest aktywna?
+        // TYLKO jeśli bitwa się zaczęła i nie ma pauzy
+        bool isCombatActive = !isDeploymentPhase && !isTacticalPause;
+
+
+        // --- AKTUALIZACJA JEDNOSTEK GRACZA (Faction A) ---
         foreach (var group in factionAGroups)
         {
             if (group.unitMatrices.Count > 0)
             {
-                if (!isGameFrozen && group.isMoving) ProcessMovement(group);
+                // Jeśli nie ma pauzy (isTacticalPause), przetwarzamy ruch.
+                // (W deployment phase wejdzie do ProcessMovement i od razu zrobi teleport).
+                if (!isTacticalPause && group.isMoving)
+                {
+                    ProcessMovement(group);
+                }
+
                 group.RenderGroup();
                 group.RenderIndicators();
             }
         }
 
+        // --- AKTUALIZACJA JEDNOSTEK WROGA (Faction B) ---
         foreach (var group in factionBGroups)
         {
             if (group.unitMatrices.Count > 0)
             {
-                if (!isGameFrozen && group.isMoving) ProcessMovement(group);
+                if (canMoveEnemy && group.isMoving) ProcessMovement(group);
                 group.RenderGroup();
                 group.RenderIndicators();
             }
         }
 
+        // --- OBSŁUGA KLIKNIĘCIA MYSZKĄ (Bez zmian) ---
         if (Input.GetMouseButtonDown(0))
         {
-            // 1. UI Block
             if (EventSystem.current.IsPointerOverGameObject()) return;
 
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-            // --- KROK 1: Najpierw sprawdzamy wrogów (Raycast 3D) ---
-            // Dzięki temu możemy kliknąć wroga, nawet jeśli Raycast w ziemię nie trafi idealnie pod nim
             bool isPlayerA = (PlayerPrefs.GetString("PlayerSide", "SideA") == "SideA");
             List<TacticalGroup> enemyGroups = isPlayerA ? factionBGroups : factionAGroups;
-
-            // TU ZMIANA: Przekazujemy 'ray' zamiast 'hit.point'
             TacticalGroup hitEnemy = FindGroupUnderCursor(ray, enemyGroups);
 
             if (hitEnemy != null)
             {
-                // --- KLIKNIĘTO WROGA ---
-                if (selectedEnemyGroup != null && selectedEnemyGroup != hitEnemy)
-                {
-                    SetGroupHighlight(selectedEnemyGroup, false);
-                }
-
+                if (selectedEnemyGroup != null && selectedEnemyGroup != hitEnemy) SetGroupHighlight(selectedEnemyGroup, false);
                 selectedEnemyGroup = hitEnemy;
-                // Podświetl na czerwono
                 SetGroupHighlight(selectedEnemyGroup, true, enemyHighlightMaterial);
-
-                Debug.Log($"Zaznaczono wroga: {selectedEnemyGroup.groupName}");
-                return; // Kończymy, żeby nie postawić kursora ruchu
+                return;
             }
 
-            // --- KROK 2: Jeśli nie trafiliśmy wroga, sprawdzamy ziemię ---
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit, 10000f, groundLayerMask))
             {
-                // --- KLIKNIĘTO ZIEMIĘ ---
-                if (selectedGroups.Count > 0)
-                {
-                    SetCursorPosition(hit.point);
-                }
+                if (selectedGroups.Count > 0) SetCursorPosition(hit.point);
                 else
                 {
                     HideCursorMarker();
-                    // Opcjonalnie odznacz wroga przy kliknięciu w pustą ziemię
-                    if (selectedEnemyGroup != null)
-                    {
-                        SetGroupHighlight(selectedEnemyGroup, false);
-                        selectedEnemyGroup = null;
-                    }
+                    if (selectedEnemyGroup != null) { SetGroupHighlight(selectedEnemyGroup, false); selectedEnemyGroup = null; }
                 }
             }
         }
-        if (!isGameFrozen) ResolveCombatRoundRobin();
+
+        // --- WALKA (Tylko gdy bitwa trwa) ---
+        if (isCombatActive) ResolveCombatRoundRobin();
     }
     public void HideCursorMarker()
     {
@@ -643,6 +628,11 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void ProcessMovement(TacticalGroup group)
     {
+        if (isDeploymentPhase)
+        {
+            TeleportGroupInstant(group);
+            return; // Kończymy funkcję, nie wykonujemy normalnego ruchu
+        }
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
@@ -794,6 +784,64 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
         group.UpdateBatchData();
         group.RecalculateCenter();
+    }
+
+    void TeleportGroupInstant(TacticalGroup group)
+    {
+        int count = group.unitMatrices.Count;
+        if (count == 0) return;
+
+        Vector3 scale = group.unitMatrices[0].lossyScale;
+
+        // Ustalmy docelową rotację (zgodnie z rozkazem)
+        Quaternion finalRot = (group.targetFacingDirection != Vector3.zero)
+            ? Quaternion.LookRotation(group.targetFacingDirection)
+            : group.unitMatrices[0].rotation;
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 finalPos;
+
+            // SCENARIUSZ A: Mamy wyliczone sloty formacji (np. Linia, Żółw)
+            if (group.isReforming && i < group.formationTargets.Count)
+            {
+                finalPos = group.formationTargets[i];
+            }
+            // SCENARIUSZ B: Zwykły ruch (przesunięcie całej grupy o wektor)
+            else
+            {
+                Matrix4x4 mat = group.unitMatrices[i];
+                Vector3 currentPos = mat.GetColumn(3);
+                Vector3 offset = group.currentDestination - group.groupCenter;
+                finalPos = currentPos + offset;
+            }
+
+            // WAŻNE: Przyklejamy do terenu (żeby nie teleportowali się pod ziemię)
+            if (terrain != null)
+            {
+                // Pobieramy wysokość terenu w nowym punkcie X, Z
+                float y = terrain.SampleHeight(finalPos) + terrain.transform.position.y;
+                finalPos.y = y;
+            }
+            else
+            {
+                finalPos.y = 0; // Płaska podłoga jako fallback
+            }
+
+            // Aktualizujemy macierz jednostki (Pozycja, Rotacja, Skala)
+            group.unitMatrices[i] = Matrix4x4.TRS(finalPos, finalRot, scale);
+        }
+
+        // Kończymy ruch natychmiast
+        group.isMoving = false;
+        group.isReforming = false;
+
+        // Aktualizujemy bufory graficzne i środek grupy
+        group.UpdateBatchData();
+        group.RecalculateCenter();
+
+        // Debug (opcjonalnie)
+        // Debug.Log($"Grupa {group.groupName} przeteleportowana na pozycję.");
     }
     void ApplyFinalFormationRotation(TacticalGroup group)
     {
