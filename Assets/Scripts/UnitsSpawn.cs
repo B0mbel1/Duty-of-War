@@ -94,8 +94,8 @@ public class UnitsSpawn : MonoBehaviour
         DetectWater();
 
         // 2. Spawnowanie
-        ProcessFactionSpawns(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true);
-        ProcessFactionSpawns(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false);
+        HandleFactionSpawning(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true);
+        HandleFactionSpawning(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false);
 
         // 3. Batche
         RebuildAllBatches();
@@ -158,65 +158,96 @@ public class UnitsSpawn : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.C)) KillRandomUnit(false);
     }
 
-    void ProcessFactionSpawns(ArmyComposition army, GameObject mainArea, GameObject secArea, bool isFactionA)
+    void HandleFactionSpawning(ArmyComposition fullArmy, GameObject mainArea, GameObject secArea, bool isFactionA)
     {
         if (mainArea == null) return;
+
+        // Ukryj renderery stref spawnu
         mainArea.GetComponent<Renderer>().enabled = false;
         if (secArea != null) secArea.GetComponent<Renderer>().enabled = false;
 
-        // Cel patrzenia
-        Vector3 enemyTargetPos = isFactionA ? spawnAreaB.transform.position : spawnAreaA.transform.position;
+        // Cel patrzenia (zawsze główny spawn wroga)
+        GameObject enemyMainSpawn = isFactionA ? spawnAreaB : spawnAreaA;
+        // Jeśli nie ma spawnu wroga, patrz w stronę środka mapy (0,0,0) jako fallback
+        Vector3 enemyPos = enemyMainSpawn != null ? enemyMainSpawn.transform.position : Vector3.zero;
 
-        Vector3 startPos = mainArea.transform.position;
-        Vector3 areaSize = mainArea.transform.localScale;
+        if (secArea != null)
+        {
+            // --- RĘCZNE DZIELENIE ARMII ---
+            // Tworzymy tymczasowe obiekty składu armii dla obu stref
+            
+            // Armia 1 (Połowa sił)
+            ArmyComposition army1 = new ArmyComposition();
+            army1.name = fullArmy.name + "_Part1";
+            army1.infantryCount = fullArmy.infantryCount / 2;
+            army1.archerCount = fullArmy.archerCount / 2;
+            army1.cavalryCount = fullArmy.cavalryCount / 2;
 
-        // --- POPRAWKA 1: WYMUSZENIE MINIMALNEJ SZEROKOŚCI ---
-        // Jeśli Cube jest mały (np. marker), uznajemy że mamy do dyspozycji 500m szerokości
-        float usableWidth = Mathf.Max(areaSize.x * 0.9f, 500.0f);
+            // Armia 2 (Reszta sił - odejmujemy, żeby nie zgubić nieparzystych jednostek)
+            ArmyComposition army2 = new ArmyComposition();
+            army2.name = fullArmy.name + "_Part2";
+            army2.infantryCount = fullArmy.infantryCount - army1.infantryCount;
+            army2.archerCount = fullArmy.archerCount - army1.archerCount;
+            army2.cavalryCount = fullArmy.cavalryCount - army1.cavalryCount;
 
-        // --- POPRAWKA 2: KIERUNEK UKŁADANIA ---
-        // Frakcja A (Dół): Zaczynamy od górnej krawędzi spawnu (najbliżej wroga) i cofamy się (Z-)
-        // Frakcja B (Góra): Zaczynamy od dolnej krawędzi spawnu (najbliżej wroga) i cofamy się (Z+) w głąb bazy
-        float zDirection = isFactionA ? -1.0f : 1.0f;
+            // Spawnuj w obu strefach
+            ProcessFactionSpawns(army1, mainArea, isFactionA, enemyPos);
+            ProcessFactionSpawns(army2, secArea, isFactionA, enemyPos);
+        }
+        else
+        {
+            // Spawnuj całość w głównej strefie
+            ProcessFactionSpawns(fullArmy, mainArea, isFactionA, enemyPos);
+        }
+    }
 
-        // Punkt startowy (Front Center spawnu)
-        // Zamiast lewego rogu, zacznijmy bardziej od środka lewej strony
-        float startZ = isFactionA ? (startPos.z + areaSize.z * 0.4f) : (startPos.z - areaSize.z * 0.4f);
-        // Startujemy od lewej krawędzi (X)
-        Vector3 cursor = new Vector3(startPos.x - (usableWidth * 0.5f), startPos.y, startZ);
+    void ProcessFactionSpawns(ArmyComposition army, GameObject spawnArea, bool isFactionA, Vector3 enemyTargetPos)
+    {
+        Vector3 areaCenter = spawnArea.transform.position;
+        Vector3 areaSize = spawnArea.transform.localScale;
+
+        // Obliczamy wektor "DO PRZODU" (w stronę wroga)
+        Vector3 forwardDir = (enemyTargetPos - areaCenter).normalized;
+        forwardDir.y = 0;
+        forwardDir.Normalize();
+
+        if (forwardDir == Vector3.zero) forwardDir = Vector3.forward;
+
+        // Obliczamy wektor "W PRAWO" (prostopadły do przodu)
+        Vector3 rightDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
+
+        // Ustalamy szerokość dostępną dla formacji (rzutujemy wymiary Area na nasz wektor rightDir)
+        // Dla uproszczenia bierzemy większy wymiar boxa jako szerokość, jeśli box jest "płaski"
+        // Ale bezpieczniej przyjąć "szerokość logiczną"
+        float usableWidth = Mathf.Max(areaSize.x, areaSize.z) * 0.9f;
+        if (usableWidth < 100) usableWidth = 500f; // Fallback dla małych markerów
+
+        // Punkt startowy: Front boxa (najbliżej wroga)
+        // Przesuwamy się od środka boxa w stronę wroga o połowę "głębokości" boxa wzdłuż osi Forward
+        // Tutaj prosta aproksymacja: startujemy po prostu od środka obszaru + lekki offset w stronę wroga
+        // Żeby było idealnie na krawędzi, trzeba by rzutować boxa, ale dla uproszczenia:
+        Vector3 frontLineCenter = areaCenter + (forwardDir * (Mathf.Min(areaSize.x, areaSize.z) * 0.4f));
+
+        // Zaczynamy układać od lewej strony (patrząc w stronę wroga)
+        Vector3 rowStart = frontLineCenter - (rightDir * (usableWidth * 0.5f));
 
         float gapBetweenGroups = 25.0f;
-        float currentXOffset = 0f;
-
-        // Kopia kursora dla rzędów
-        Vector3 rowStart = cursor;
+        float currentXOffset = 0f; // Przesunięcie wzdłuż wektora rightDir
 
         void SpawnTypeSequence(UnitType type, int totalCount)
         {
             int groupSize = 150;
             int unitsSpawned = 0;
 
-            // --- KONFIGURACJA ODSTĘPÓW ---
+            float groupWidth = 40.0f;
+            float groupDepth = 20.0f;
+            float horizontalGap = 5.0f;
+            float verticalGap = 2.0f;
 
-            // 1. WYMIARY POJEDYNCZEGO ODDZIAŁU
-            float groupWidth = 40.0f;  // Ile miejsca zajmuje na szerokość
-            float groupDepth = 20.0f;  // Ile miejsca zajmuje na głębokość (To decyduje o odległości linii!)
-
-            // 2. PRZERWY MIĘDZY ODDZIAŁAMI
-            float horizontalGap = 5.0f; // Odstęp między oddziałami w tym samym rzędzie (lewo-prawo)
-            float verticalGap = 2.0f;   // Odstęp między liniami oddziałów (góra-dół)
-
-            // --- SPECJALNE USTAWIENIA DLA JAZDY ---
             if (type == UnitType.Cavalry)
             {
-                // SZEROKOŚĆ: Zmniejszamy, bo oddziały są wąskie
                 groupWidth = 35.0f;
-
-                // ODSTĘP POZIOMY: Zwiększamy, żeby oddziały były odseparowane
                 horizontalGap = 25.0f;
-
-                // GŁĘBOKOŚĆ (To naprawi Twój problem z odległością linii):
-                // Ustawiamy mało (np. 15m), żeby następny rząd zaczynał się blisko pleców poprzedniego.
                 groupDepth = 15.0f;
             }
             else if (type == UnitType.Archer)
@@ -230,80 +261,73 @@ public class UnitsSpawn : MonoBehaviour
             {
                 int countInThisGroup = Mathf.Min(groupSize, totalCount - unitsSpawned);
 
-                // Sprawdzamy, czy mieścimy się w poziomie
+                // Czy mieścimy się w szerokości?
                 if (currentXOffset + groupWidth > usableWidth)
                 {
                     currentXOffset = 0;
-
-                    // --- TWORZENIE NOWEJ LINII ---
-                    // Przesuwamy się w głąb tylko o (głębokość oddziału + mała przerwa)
-                    rowStart.z += (groupDepth + verticalGap) * zDirection;
+                    // Nowa linia - cofamy się (przeciwnie do forwardDir)
+                    rowStart -= forwardDir * (groupDepth + verticalGap);
                 }
 
-                Vector3 groupCenter = rowStart + new Vector3(currentXOffset, 0, 0);
+                // Środek grupy to: StartRzędu + (W Prawo * offset)
+                Vector3 groupCenter = rowStart + (rightDir * currentXOffset);
 
-                SpawnTightGroupRect(type, countInThisGroup, groupCenter, isFactionA, enemyTargetPos);
+                // Ważne: Przekazujemy forwardDir jako kierunek patrzenia grupy
+                SpawnTightGroupRect(type, countInThisGroup, groupCenter, isFactionA, enemyTargetPos, rightDir, forwardDir);
 
-                // Przesuwamy w bok o (szerokość oddziału + duża przerwa pozioma)
                 currentXOffset += (groupWidth + horizontalGap);
                 unitsSpawned += countInThisGroup;
             }
         }
 
-        // Kolejność linii bojowych (od frontu do tyłu)
-
         // 1. LINIA: Piechota
         SpawnTypeSequence(UnitType.Infantry, army.infantryCount);
 
-        // Odstęp między liniami
+        // Odstęp między liniami (cofamy się)
         currentXOffset = 0;
-        rowStart.z += (30.0f) * zDirection;
+        rowStart -= forwardDir * 30.0f;
 
-        // 2. LINIA: Łucznicy (za piechotą)
+        // 2. LINIA: Łucznicy
         SpawnTypeSequence(UnitType.Archer, army.archerCount);
 
         // Odstęp
         currentXOffset = 0;
-        rowStart.z += (20.0f) * zDirection;
+        rowStart -= forwardDir * 20.0f;
 
-        // 3. LINIA: Jazda (na tyłach lub skrzydłach - tu dajemy na tyłach szeroko)
+        // 3. LINIA: Jazda
         SpawnTypeSequence(UnitType.Cavalry, army.cavalryCount);
     }
 
     // --- DODAJ TO DO UnitsSpawn.cs ---
-    void SpawnTightGroupRect(UnitType type, int count, Vector3 center, bool isFactionA, Vector3 lookTarget)
+    void SpawnTightGroupRect(UnitType type, int count, Vector3 center, bool isFactionA, Vector3 lookTarget, Vector3 rightDir, Vector3 forwardDir)
     {
-        // 1. JESZCZE WIĘKSZY LUZ (Drastyczne zwiększenie odstępów)
-        float spacingMultiplier = 1.4f; // Piechota luźniej
+        float spacingMultiplier = 1.4f;
         float widthRatio = 2.5f;
         float rowSpacingMultiplier = 1.0f;
 
         if (type == UnitType.Cavalry)
         {
-            spacingMultiplier = 2.0f; // Odstęp: Większy niż piechota, ale mniejszy niż poprzednio (było 6.0)
-            widthRatio = 2.2f;        // Bardzo szeroki szereg (szarża)
+            spacingMultiplier = 2.0f;
+            widthRatio = 2.2f;
             rowSpacingMultiplier = 0.6f;
         }
         else if (type == UnitType.Archer)
         {
-            spacingMultiplier = 1.4f; // Łucznicy luźno
+            spacingMultiplier = 1.4f;
             widthRatio = 2.5f;
         }
 
-        // Zabezpieczenie: jeśli unitSpacing jest ustawiony na 0 w inspectorze
         float baseSpacing = Mathf.Max(unitSpacing, 1.0f);
         float spacingX = baseSpacing * spacingMultiplier;
-
-        // Obliczamy odstęp rzędów (na głębokość)
         float spacingZ = spacingX * rowSpacingMultiplier;
 
-        // Obliczamy liczbę kolumn
         int cols = Mathf.CeilToInt(Mathf.Sqrt(count) * widthRatio);
 
-        // Centrowanie (tylko w osi X, bo Z rośnie w tył)
-        Vector3 startOffset = new Vector3(-(cols * spacingX) / 2f, 0, 0);
+        // Offset startowy wewnątrz grupy (żeby center był na środku)
+        // Przesuwamy w lewo o połowę szerokości
+        Vector3 startOffset = -(rightDir * (cols * spacingX) / 2f);
 
-        // --- GRANICE MAPY ---
+        // Granice mapy
         float mapMinX = terrain.transform.position.x + 20.0f;
         float mapMaxX = terrain.transform.position.x + terrain.terrainData.size.x - 20.0f;
         float mapMinZ = terrain.transform.position.z + 20.0f;
@@ -311,18 +335,17 @@ public class UnitsSpawn : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            int x = i % cols;
-            int z = i / cols;
+            int col = i % cols;
+            int row = i / cols;
 
-            // Tworzymy pozycję lokalną
-            Vector3 localPos = startOffset + new Vector3(x * spacingX, 0, -z * spacingZ);
+            // Pozycja jednostki: Start + (Prawo * kolumna) - (Przód * rząd) -> bo rzędy rosną w głąb (do tyłu)
+            Vector3 localPos = startOffset + (rightDir * col * spacingX) - (forwardDir * row * spacingZ);
             Vector3 rawPos = center + localPos;
 
             // Clamp do mapy
             rawPos.x = Mathf.Clamp(rawPos.x, mapMinX, mapMaxX);
             rawPos.z = Mathf.Clamp(rawPos.z, mapMinZ, mapMaxZ);
 
-            // Wysokość
             float terrainY = terrain.SampleHeight(rawPos) + terrain.transform.position.y;
             float finalY = terrainY + (unitDiameter * 0.5f);
 
@@ -333,11 +356,8 @@ public class UnitsSpawn : MonoBehaviour
 
             Vector3 finalPos = new Vector3(rawPos.x, finalY, rawPos.z);
 
-            // Obrót w stronę wroga
-            Vector3 directionToEnemy = (lookTarget - finalPos).normalized;
-            directionToEnemy.y = 0;
-            if (directionToEnemy == Vector3.zero) directionToEnemy = Vector3.forward;
-            Quaternion finalRotation = Quaternion.LookRotation(directionToEnemy);
+            // Obrót w stronę wroga (globalny dla grupy)
+            Quaternion finalRotation = Quaternion.LookRotation(forwardDir);
 
             Matrix4x4 matrix = Matrix4x4.TRS(finalPos, finalRotation, Vector3.one * unitDiameter);
 
