@@ -643,30 +643,37 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void ProcessMovement(TacticalGroup group)
     {
-
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
+        // --- 1. Czy gonimy wroga? ---
+        bool isChasing = (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count > 0);
         float distToTargetSq = Vector3.SqrMagnitude(flatTarget - flatCenter);
 
-        if (!group.isReforming && distToTargetSq < 0.5f)
+        // Jeśli NIE gonimy (zwykły ruch) i dotarliśmy -> stop
+        if (!isChasing && !group.isReforming && distToTargetSq < 0.5f)
         {
             group.isMoving = false;
             return;
         }
-        float globalBaseSpeed = moveSpeed * Time.deltaTime;
-        int unitsReachedTarget = 0;
 
+        // --- 2. Kierunek grupy ---
         Vector3 groupDirection = (flatTarget - flatCenter).normalized;
-        Quaternion targetRot = Quaternion.LookRotation(groupDirection != Vector3.zero ? groupDirection : Vector3.forward);
+        if (groupDirection == Vector3.zero) groupDirection = group.targetFacingDirection;
+        if (groupDirection == Vector3.zero) groupDirection = Vector3.forward;
 
+        // Bazowa rotacja grupy
+        Quaternion targetRot = Quaternion.LookRotation(groupDirection);
         if (group.isReforming && group.unitMatrices.Count > 0)
             targetRot = group.unitMatrices[0].rotation;
 
         Quaternion currentRot = group.unitMatrices.Count > 0 ? group.unitMatrices[0].rotation : Quaternion.identity;
         Quaternion nextRot = Quaternion.Slerp(currentRot, targetRot, rotationSpeed * Time.deltaTime);
 
+        float globalBaseSpeed = moveSpeed * Time.deltaTime;
+        int unitsReachedTarget = 0;
 
+        // Cache terenu
         int alphaWidth = 0, alphaHeight = 0;
         if (terrainData != null) { alphaWidth = terrainData.alphamapWidth; alphaHeight = terrainData.alphamapHeight; }
 
@@ -677,122 +684,133 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 scaleVec = mat.lossyScale;
             UnitArchetype arch = group.GetUnitArchetype(i);
 
-            Vector3 moveDirection;
-            float distToSlot = 0f;
+            // --- 3. Logika Walki (Płynna) ---
+            bool isFighting = (Time.time - group.lastCombatTimes[i] < 0.5f);
 
+            // Domyślna prędkość
+            float currentMoveSpeed = globalBaseSpeed;
+            if (arch != null) currentMoveSpeed *= arch.speedMultiplier;
+
+            // ZMIANA: Jeśli walczysz, prędkość = 0, ALE nie przerywamy pętli (nie ma continue).
+            // Pozwalamy kodowi niżej obliczyć rotację.
+            if (isFighting && arch.type != UnitType.Cavalry)
+            {
+                currentMoveSpeed = 0f;
+            }
+
+            Vector3 moveDirection = Vector3.zero;
+
+            // --- 4. Wyznaczanie wektora ruchu ---
             if (group.isReforming)
             {
-                // Jeśli formujemy, idziemy do SWOJEGO celu
                 if (i < group.formationTargets.Count)
                 {
                     Vector3 targetPos = group.formationTargets[i];
                     Vector3 diff = targetPos - currentPos;
-                    // Ignorujemy oś Y dla kierunku ruchu
                     Vector3 flatDiff = new Vector3(diff.x, 0, diff.z);
-                    distToSlot = flatDiff.magnitude;
-
-                    if (distToSlot < 0.2f)
-                    {
-                        moveDirection = Vector3.zero; // Jesteś na miejscu
-                        unitsReachedTarget++;
-                    }
-                    else
-                    {
-                        moveDirection = flatDiff.normalized;
-                    }
+                    if (flatDiff.magnitude < 0.2f) { moveDirection = Vector3.zero; unitsReachedTarget++; }
+                    else moveDirection = flatDiff.normalized;
                 }
-                else
-                {
-                    moveDirection = Vector3.zero; // Fallback
-                    unitsReachedTarget++;
-                }
+                else unitsReachedTarget++;
             }
             else
             {
-                // Zwykły ruch grupy
+                // Idziemy ławą
                 moveDirection = groupDirection;
             }
-            if (moveDirection == Vector3.zero) continue;
 
+            // --- 5. Aplikowanie RUCHU (Pozycja) ---
+            Vector3 newPos = currentPos;
 
-            float mySpeedMultiplier = (arch != null) ? arch.speedMultiplier : 1.0f;
-            float myBaseSpeed = globalBaseSpeed * mySpeedMultiplier;
-
-            // --- Reszta fizyki terenu bez zmian ---
-            float terrainY = currentPos.y;
-            if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
-            bool inWater = false;
-            float waterHeight = -1000f;
-
-            RaycastHit hit;
-            if (Physics.Raycast(currentPos + Vector3.up * 50f, Vector3.down, out hit, 100f, waterLayerMask))
+            // Ruszamy się tylko jeśli mamy prędkość (czyli nie walczymy) i mamy gdzie iść
+            if (moveDirection != Vector3.zero && currentMoveSpeed > 0.001f)
             {
-                if (hit.point.y > terrainY - 0.1f) { inWater = true; waterHeight = hit.point.y; }
-            }
-
-            float slopeMod = 1.0f;
-            if (terrain != null && !inWater)
-            {
-                Vector3 probePos = currentPos + (moveDirection * slopeCheckDistance);
-                float nextY = terrain.SampleHeight(probePos) + terrain.transform.position.y;
-                float angle = Mathf.Atan2(nextY - terrainY, slopeCheckDistance) * Mathf.Rad2Deg;
-
-                if (angle > steepSlopeAngle) slopeMod = uphillSteepMult;
-                else if (angle > lightSlopeAngle) slopeMod = uphillLightMult;
-                else if (angle < -steepSlopeAngle) slopeMod = downhillSteepMult;
-                else if (angle < -lightSlopeAngle) slopeMod = downhillLightMult;
-            }
-
-            float forestMod = 1.0f;
-            if (forestLayerIndex != -1 && !inWater && terrainData != null)
-            {
-                int mapX = Mathf.RoundToInt(((currentPos.x - terrain.transform.position.x) / terrainData.size.x) * alphaWidth);
-                int mapZ = Mathf.RoundToInt(((currentPos.z - terrain.transform.position.z) / terrainData.size.z) * alphaHeight);
-
-                if (mapX >= 0 && mapX < alphaWidth && mapZ >= 0 && mapZ < alphaHeight)
+                // -- Fizyka Terenu (Skrócona) --
+                float terrainY = currentPos.y;
+                if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
+                bool inWater = false;
+                float waterHeight = -1000f;
+                RaycastHit hit;
+                if (Physics.Raycast(currentPos + Vector3.up * 50f, Vector3.down, out hit, 100f, waterLayerMask))
                 {
-                    float[,,] splat = terrainData.GetAlphamaps(mapX, mapZ, 1, 1);
-                    if (splat[0, 0, forestLayerIndex] > 0.5f)
+                    if (hit.point.y > terrainY - 0.1f) { inWater = true; waterHeight = hit.point.y; }
+                }
+
+                float slopeMod = 1.0f;
+                if (terrain != null && !inWater)
+                {
+                    Vector3 probePos = currentPos + (moveDirection * slopeCheckDistance);
+                    float nextY = terrain.SampleHeight(probePos) + terrain.transform.position.y;
+                    float angle = Mathf.Atan2(nextY - terrainY, slopeCheckDistance) * Mathf.Rad2Deg;
+                    if (angle > steepSlopeAngle) slopeMod = uphillSteepMult;
+                    else if (angle > lightSlopeAngle) slopeMod = uphillLightMult;
+                    else if (angle < -steepSlopeAngle) slopeMod = downhillSteepMult;
+                    else if (angle < -lightSlopeAngle) slopeMod = downhillLightMult;
+                }
+                float forestMod = 1.0f;
+                if (forestLayerIndex != -1 && !inWater && terrainData != null)
+                {
+                    int mapX = Mathf.RoundToInt(((currentPos.x - terrain.transform.position.x) / terrainData.size.x) * alphaWidth);
+                    int mapZ = Mathf.RoundToInt(((currentPos.z - terrain.transform.position.z) / terrainData.size.z) * alphaHeight);
+                    if (mapX >= 0 && mapX < alphaWidth && mapZ >= 0 && mapZ < alphaHeight)
                     {
-                        if (arch != null)
-                            forestMod = (arch.type == UnitType.Cavalry) ? forestCavalryPenalty : forestInfantryPenalty;
+                        if (terrainData.GetAlphamaps(mapX, mapZ, 1, 1)[0, 0, forestLayerIndex] > 0.5f)
+                        {
+                            if (arch != null) forestMod = (arch.type == UnitType.Cavalry) ? forestCavalryPenalty : forestInfantryPenalty;
+                        }
                     }
                 }
+
+                float finalMod = slopeMod * forestMod;
+                if (inWater) finalMod *= waterSpeedPenalty;
+
+                newPos = currentPos + (moveDirection * currentMoveSpeed * finalMod);
+                newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
+                newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
+
+                if (inWater) newPos.y = waterHeight - swimmingDepth;
+                else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y + 0.5f;
+                else newPos.y = terrainY;
             }
 
-            float finalMod = slopeMod * forestMod;
-            if (inWater) finalMod *= waterSpeedPenalty;
+            // --- 6. Aplikowanie ROTACJI (Wygładzona) ---
+            Quaternion targetUnitRot;
 
-            Vector3 newPos = currentPos + (moveDirection * myBaseSpeed * finalMod);
-
-            newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
-            newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
-
-            if (inWater) newPos.y = waterHeight - swimmingDepth;
-            else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y + 0.5f;
-            else newPos.y = terrainY;
-
-            Quaternion unitRot = nextRot;
-            if (group.isReforming && moveDirection.sqrMagnitude > 0.1f)
-                unitRot = Quaternion.Lerp(mat.rotation, Quaternion.LookRotation(moveDirection), 10f * Time.deltaTime);
+            if (isFighting)
+            {
+                // Jeśli walczymy, patrzymy na WROGA (kierunek grupy).
+                // Ale robimy to PŁYNNIE (Slerp), a nie skokowo.
+                targetUnitRot = Quaternion.LookRotation(groupDirection);
+            }
+            else if (isChasing)
+            {
+                // W biegu też patrzymy na cel
+                targetUnitRot = Quaternion.LookRotation(groupDirection);
+            }
+            else if (group.isReforming && moveDirection.sqrMagnitude > 0.1f)
+            {
+                // W formowaniu patrzymy tam gdzie idziemy
+                targetUnitRot = Quaternion.LookRotation(moveDirection);
+            }
             else
             {
-                if (group.targetFacingDirection != Vector3.zero)
-                {
-                    Quaternion idealRot = Quaternion.LookRotation(group.targetFacingDirection);
-                    unitRot = Quaternion.Slerp(mat.rotation, idealRot, 5f * Time.deltaTime);
-                }
+                // W spoczynku patrzymy tam gdzie cała grupa
+                targetUnitRot = nextRot;
             }
 
-            group.unitMatrices[i] = Matrix4x4.TRS(newPos, unitRot, scaleVec);
+            // Klucz do płynności: Zawsze używamy Slerp
+            Quaternion finalRot = Quaternion.Slerp(mat.rotation, targetUnitRot, 10f * Time.deltaTime);
+
+            group.unitMatrices[i] = Matrix4x4.TRS(newPos, finalRot, scaleVec);
         }
+
         if (group.isReforming && unitsReachedTarget >= group.unitMatrices.Count)
         {
             group.isReforming = false;
             group.isMoving = false;
-            // Wyrównaj idealnie rotację na koniec
             ApplyFinalFormationRotation(group);
         }
+
         group.UpdateBatchData();
         group.RecalculateCenter();
     }
@@ -1036,7 +1054,13 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
 
             if (angleDot < requiredAngle) return; // Jeśli wróg jest poza kątem ataku, nic nie rób
+            attackerGroup.lastCombatTimes[idx] = Time.time;
 
+            // Aktualizujemy czas walki dla OFIARY (ofiara też powinna się zatrzymać, żeby się bronić!)
+            if (target.index < target.group.lastCombatTimes.Count)
+            {
+                target.group.lastCombatTimes[target.index] = Time.time;
+            }
             // Obliczanie obrażeń
             Matrix4x4 targetMat = target.group.unitMatrices[target.index];
             Vector3 targetForward = (Vector3)targetMat.GetColumn(2);
@@ -1057,7 +1081,16 @@ public class ArmyHierarchyManager : MonoBehaviour
 
             // Śmierć celu
             if (target.group.unitHealth[target.index] <= 0)
+            {
                 KillUnit(target.group, target.index);
+
+                // --- NOWOŚĆ: ODBLOKOWANIE RUCHU ---
+                // Resetujemy czas walki atakującego na "bardzo dawno temu".
+                // Dzięki temu w funkcji ProcessMovement warunek (Time.time - lastCombat < 0.5f) będzie fałszywy
+                // i żołnierz natychmiast zacznie biec dalej w tej samej klatce.
+                attackerGroup.lastCombatTimes[idx] = -100f;
+                // ----------------------------------
+            }
         }
     }
 
@@ -1084,27 +1117,35 @@ public class ArmyHierarchyManager : MonoBehaviour
     void UpdateChaseLogic(TacticalGroup group)
     {
         if (isDeploymentPhase) return;
-        if (group.chaseTarget != null)
+
+        // Scenariusz A: Mamy cel, ale on już nie żyje (oddział wybity do nogi)
+        if (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count == 0)
         {
-            // Jeśli cel umarł -> przestań gonić
-            if (group.chaseTarget.unitMatrices.Count == 0)
+            // Zamiast się zatrzymywać (group.chaseTarget = null), szukamy nowego celu!
+            List<TacticalGroup> enemies = (factionAGroups.Contains(group)) ? factionBGroups : factionAGroups;
+
+            // Znajdź najbliższego żywego wroga
+            TacticalGroup newTarget = FindClosestEnemy(group.groupCenter, enemies);
+
+            if (newTarget != null)
             {
-                group.chaseTarget = null;
-                group.isMoving = false;
+                group.chaseTarget = newTarget;
+                // Debug.Log($"Grupa {group.groupName} zniszczyła cel i zmienia cel na: {newTarget.groupName}");
             }
             else
             {
-                // Aktualizuj cel podróży na ŚRODEK wroga
-                group.currentDestination = group.chaseTarget.groupCenter;
-                group.isMoving = true;
-
-                // Wyłączamy reformowanie (chodzenie do slotów), żeby grupa szła jak czołg
-                // prosto na wroga jako zwarta masa (szybciej i agresywniej)
-                group.isReforming = false;
-
-                // Opcjonalnie: Patrz na wroga
-                group.targetFacingDirection = (group.chaseTarget.groupCenter - group.groupCenter).normalized;
+                // Dopiero gdy nie ma już NIKOGO na mapie, zatrzymujemy się
+                group.chaseTarget = null;
+                group.isMoving = false;
             }
+        }
+
+        // Scenariusz B: Mamy żywy cel -> gonimy go
+        if (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count > 0)
+        {
+            group.currentDestination = group.chaseTarget.groupCenter;
+            group.isMoving = true;
+            group.isReforming = false;
         }
     }
 
@@ -1164,6 +1205,10 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         int cx = Mathf.FloorToInt(pos.x / cellSize);
         int cz = Mathf.FloorToInt(pos.z / cellSize);
+
+        UnitRef bestTarget = new UnitRef { group = null };
+        float closestDistSq = rangeSq; // Szukamy tylko w zasięgu
+
         for (int x = -1; x <= 1; x++)
         {
             for (int z = -1; z <= 1; z++)
@@ -1172,11 +1217,19 @@ public class ArmyHierarchyManager : MonoBehaviour
                 if (spatialGrid.TryGetValue(key, out List<UnitRef> list))
                 {
                     foreach (var u in list)
-                        if ((u.position - pos).sqrMagnitude < rangeSq) return u;
+                    {
+                        float dSq = (u.position - pos).sqrMagnitude;
+                        // Jeśli ten wróg jest bliżej niż poprzedni znaleziony ORAZ jest w zasięgu
+                        if (dSq < closestDistSq)
+                        {
+                            closestDistSq = dSq;
+                            bestTarget = u;
+                        }
+                    }
                 }
             }
         }
-        return new UnitRef { group = null };
+        return bestTarget;
     }
 
     float CalculateDamage(TacticalGroup attGroup, TacticalGroup defGroup, int attIdx, int defIdx, Vector3 attPos, Vector3 defPos)

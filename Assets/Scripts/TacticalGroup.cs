@@ -58,6 +58,7 @@ public class TacticalGroup
     public List<Matrix4x4> unitMatrices = new List<Matrix4x4>();
     public List<float> unitHealth = new List<float>();
     public List<float> attackCooldowns = new List<float>();
+    public List<float> lastCombatTimes = new List<float>();
     public List<Vector3> lastPositions = new List<Vector3>();
     public List<Vector3> formationTargets = new List<Vector3>();
     public bool isReforming = false;
@@ -93,6 +94,7 @@ public class TacticalGroup
         unitMatrices.Add(matrix);
         unitHealth.Add(hp);
         attackCooldowns.Add(0f);
+        lastCombatTimes.Add(-100f); // -100 oznacza, że dawno nie walczył
         lastPositions.Add((Vector3)matrix.GetColumn(3));
         unitArchetypeIndices.Add(archetypeIndex);
         formationTargets.Add((Vector3)matrix.GetColumn(3));
@@ -106,6 +108,7 @@ public class TacticalGroup
             unitMatrices[index] = unitMatrices[lastIndex];
             unitHealth[index] = unitHealth[lastIndex];
             attackCooldowns[index] = attackCooldowns[lastIndex];
+            lastCombatTimes[index] = lastCombatTimes[lastIndex];
             lastPositions[index] = lastPositions[lastIndex];
             unitArchetypeIndices[index] = unitArchetypeIndices[lastIndex];
             if (formationTargets.Count > lastIndex)
@@ -114,6 +117,7 @@ public class TacticalGroup
         unitMatrices.RemoveAt(lastIndex);
         unitHealth.RemoveAt(lastIndex);
         attackCooldowns.RemoveAt(lastIndex);
+        lastCombatTimes.RemoveAt(lastIndex);
         lastPositions.RemoveAt(lastIndex);
         unitArchetypeIndices.RemoveAt(lastIndex);
 

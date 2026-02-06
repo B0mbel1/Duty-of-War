@@ -247,42 +247,76 @@ public class LLMCommander : MonoBehaviour
         {
             TacticalGroup targetEnemy = null;
 
-            // 1. Próba znalezienia po nazwie (z Promptu)
-            targetEnemy = armyManager.GetGroupByName(cmd.target_location);
+            // 1. Sprawdzamy, czy to ogólny rozkaz ataku na całą armię
+            // Jeśli AI zwróciło "Enemy_Army" LUB jeśli gracz nie wskazał konkretu
+            bool isGeneralAttack = (cmd.target_location == "Enemy_Army");
 
-            // 2. Próba znalezienia zaznaczonego myszką
-            if (targetEnemy == null)
-                targetEnemy = armyManager.selectedEnemyGroup;
-
-            // 3. --- NOWOŚĆ: Jeśli nadal brak celu, znajdź NAJBLIŻSZEGO wroga ---
-            if (targetEnemy == null && selectedUnits.Count > 0)
+            if (!isGeneralAttack)
             {
-                // Ustalamy, kto jest wrogiem
-                var enemies = (playerSide == "SideA") ? armyManager.factionBGroups : armyManager.factionAGroups;
+                // Próba znalezienia konkretnego celu po nazwie
+                targetEnemy = armyManager.GetGroupByName(cmd.target_location);
 
-                // Szukamy najbliższego wroga względem pierwszej zaznaczonej jednostki
-                targetEnemy = armyManager.FindClosestEnemy(selectedUnits[0].groupCenter, enemies);
-
-                Debug.Log($"[AI] Rozkaz ataku bez celu. Wybrano najbliższego: {targetEnemy?.groupName}");
+                // Próba znalezienia celu zaznaczonego myszką (jeśli AI nie podało nazwy, ale gracz coś kliknął)
+                if (targetEnemy == null)
+                    targetEnemy = armyManager.selectedEnemyGroup;
             }
-            // -------------------------------------------------------------------
 
+            // --- SCENARIUSZ 1: OGÓLNY ATAK (Attack Move na środek wroga) ---
+            if (isGeneralAttack || targetEnemy == null)
+            {
+                // 1. Pobieramy listę wszystkich wrogów, żeby nie szukać jej dla każdego oddziału osobno
+                List<TacticalGroup> allEnemies = (playerSide == "SideA") ? armyManager.factionBGroups : armyManager.factionAGroups;
+
+                Debug.Log($"[AI] Rozkaz ogólnego ataku! Każdy oddział szuka najbliższego celu.");
+
+                foreach (var group in selectedUnits)
+                {
+                    group.assignedFeature = null;
+                    group.chaseTarget = null;
+
+                    // 2. Znajdź najbliższego wroga DLA TEGO KONKRETNEGO ODDZIAŁU
+                    TacticalGroup myPersonalTarget = armyManager.FindClosestEnemy(group.groupCenter, allEnemies);
+
+                    if (myPersonalTarget != null)
+                    {
+                        // Mamy cel! Ustawiamy go jako cel pościgu.
+                        // Dzięki temu oddział nie pójdzie w centrum mapy, tylko do tego konkretnego wroga.
+                        group.chaseTarget = myPersonalTarget;
+
+                        Vector3 directionToTarget = (myPersonalTarget.groupCenter - group.groupCenter).normalized;
+
+                        // Wydajemy rozkaz ruchu na pozycję tego wroga.
+                        // Ponieważ ustawiliśmy chaseTarget, jednostka będzie korygować kurs, jeśli wróg ucieknie.
+                        armyManager.ApplyFormation(group, "Line", myPersonalTarget.groupCenter, directionToTarget);
+                    }
+                    else
+                    {
+                        // FALLBACK: Jeśli nie ma żadnych żywych wrogów (np. koniec bitwy), 
+                        // idź po prostu przed siebie (w stronę środka mapy wroga/bazy wroga).
+                        Vector3 fallbackPos = GetEnemyArmyCenter();
+                        Vector3 dir = (fallbackPos - group.groupCenter).normalized;
+                        armyManager.ApplyFormation(group, "Line", fallbackPos, dir);
+                    }
+                }
+                return;
+            }
+
+            // --- SCENARIUSZ 2: ATAK NA KONKRETNY CEL (Targeted Charge) ---
             if (targetEnemy != null && targetEnemy.unitMatrices.Count > 0)
             {
                 foreach (var group in selectedUnits)
                 {
                     group.assignedFeature = null;
 
-                    // --- NOWOŚĆ: Ustawiamy cel POŚCIGU ---
+                    // Ustawiamy cel POŚCIGU - jednostki będą gonić TEN KONKRETNY oddział
                     group.chaseTarget = targetEnemy;
-                    // -------------------------------------
 
-                    // Inicjujemy ruch (ApplyFormation ustawi isMoving=true i wstępne pozycje)
-                    // Celujemy w sam środek wroga (jak ustaliliśmy wcześniej)
                     Vector3 directionToEnemy = (targetEnemy.groupCenter - group.groupCenter).normalized;
+
+                    // ApplyFormation zaktualizuje pozycje, a chaseTarget sprawi, że w Update() będą korygować kurs
                     armyManager.ApplyFormation(group, "Line", targetEnemy.groupCenter, directionToEnemy);
 
-                    Debug.Log($"[BATTLE] {group.groupName} rozpoczyna pościg za: {targetEnemy.groupName}");
+                    Debug.Log($"[BATTLE] {group.groupName} szarżuje na: {targetEnemy.groupName}");
                 }
                 return;
             }
@@ -657,6 +691,7 @@ ZASADY:
    - FLANKOWANIE (Absolutne): 'Flank_North' (Podejdź od strony Z+), 'Flank_South' (Od Z-), 'Flank_East' (Od X+), 'Flank_West' (Od X-).
    - 'Cursor' - gdy gracz wskazuje 'tam', 'tutaj'.
    - KONKRETNY CEL: Jeśli w CONTEXT jest 'TARGETED ENEMY TAG' (np. 'B_Infantry_1'), użyj tego TAGU jako target_location przy rozkazie ataku na 'tego wroga'.
+   - 'Enemy_Army' - UŻYJ TEGO, gdy gracz mówi 'Do ataku', 'Atakować', 'Zniszczyć wroga', a nie wskazał konkretnego oddziału ani nie kliknął na nikogo.
 4. action: 'MOVE', 'ATTACK' - użyj, gdy gracz mówi 'bij', 'atakuj', 'szarżuj'., 'STOP', 'FORM'.
 
 PRZYKŁADY (Zawsze używaj tablicy 'commands'!):
@@ -684,6 +719,15 @@ AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""ATTACK"",
 User: Zajdźcie ich od wschodu!
 AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Flank_East"" }} ], ""ai_thought"": ""Wysyłam oddział na wschodnią flankę wroga."" }}
 
+
+User: Wszyscy do ataku!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""All""], ""action"": ""ATTACK"", ""target_location"": ""Enemy_Army"" }} ] }}
+
+User: Jazda zniszczyć łuczników! (Context: TARGETED ENEMY TAG: 'B_Archers_2')
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Cavalry""], ""action"": ""ATTACK"", ""target_location"": ""B_Archers_2"" }} ] }}
+
+User: Zaznaczone jednostki atakować!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""ATTACK"", ""target_location"": ""Enemy_Army"" }} ] }}
 
 User: Jazda ustawić się w dwuszeregu!
 AI:
