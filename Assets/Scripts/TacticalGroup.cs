@@ -2,7 +2,27 @@ using UnityEngine;
 using System.Collections.Generic;
 
 public enum UnitType { Infantry, Archer, Cavalry }
+public enum PendingOrderType
+{
+    None,
+    MoveOrForm, // Zwykły ruch lub zmiana formacji
+    FeatureMove // Ruch do lasu/rzeki
+}
 
+[System.Serializable]
+public struct PendingOrderData
+{
+    public PendingOrderType type;
+
+    // Dane dla ruchu/formacji
+    public string formationName;
+    public Vector3 destination;
+    public Vector3 lookDirection;
+    public TacticalGroup chaseTarget; // Jeśli to był atak
+
+    // Dane dla terenu
+    public TerrainFeature feature;
+}
 [System.Serializable]
 public class UnitArchetype
 {
@@ -44,6 +64,7 @@ public class TacticalGroup
     public Vector3 currentDestination;
     public bool isMoving = false;
     public TacticalGroup chaseTarget = null; // Kogo gonimy?
+    public PendingOrderData pendingOrder;
     public Vector3 groupCenter;
     public float groupRadius = 5.0f;
     public Vector3 targetFacingDirection = Vector3.forward;

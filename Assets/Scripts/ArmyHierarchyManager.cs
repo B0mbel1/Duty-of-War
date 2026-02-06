@@ -643,7 +643,7 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void ProcessMovement(TacticalGroup group)
     {
-      
+
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
@@ -797,7 +797,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.RecalculateCenter();
     }
 
-    
+
     void ApplyFinalFormationRotation(TacticalGroup group)
     {
         if (group.unitMatrices.Count == 0) return;
@@ -817,6 +817,21 @@ public class ArmyHierarchyManager : MonoBehaviour
     // --- NOWA FUNKCJA: Ustawianie na linii terenu ---
     public void MoveGroupToLineFeature(TacticalGroup group, TerrainFeature feature)
     {
+        if (isDeploymentPhase)
+        {
+            group.pendingOrder = new PendingOrderData
+            {
+                type = PendingOrderType.FeatureMove,
+                feature = feature,
+                chaseTarget = null
+            };
+
+            group.isMoving = false;
+            group.isReforming = false;
+            Debug.Log($"[PLANOWANIE] Rozkaz terenowy dla {group.groupName} zapamiętany: {feature.featureName}");
+            return;
+        }
+
         if (group.unitMatrices.Count == 0) return;
 
         // 1. Przypisujemy grupę do terenu (ważne dla kolejkowania!)
@@ -1068,6 +1083,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     // 2. Dodaj metodę aktualizującą pościg:
     void UpdateChaseLogic(TacticalGroup group)
     {
+        if (isDeploymentPhase) return;
         if (group.chaseTarget != null)
         {
             // Jeśli cel umarł -> przestań gonić
@@ -1370,7 +1386,11 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         isDeploymentPhase = false;
         if (startBattleButton != null) startBattleButton.SetActive(false);
-        Debug.Log("Faza rozstawiania zakończona. Bitwa rozpoczęta!");
+        Debug.Log("Faza rozstawiania zakończona. Wykonywanie zaplanowanych rozkazów...");
+
+        // Wykonaj rozkazy dla obu frakcji
+        ExecutePendingOrdersForFaction(factionAGroups);
+        ExecutePendingOrdersForFaction(factionBGroups);
     }
 
     void ToggleTacticalPause()
@@ -1378,6 +1398,35 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (isDeploymentPhase || isBattleOver) return;
         isTacticalPause = !isTacticalPause;
         if (tacticalPauseIndicator != null) tacticalPauseIndicator.SetActive(isTacticalPause);
+    }
+
+    void ExecutePendingOrdersForFaction(List<TacticalGroup> faction)
+    {
+        foreach (var group in faction)
+        {
+            if (group.pendingOrder.type == PendingOrderType.None) continue;
+
+            var order = group.pendingOrder;
+
+            // Czyścimy pending order przed wykonaniem (żeby nie zapętlić)
+            group.pendingOrder.type = PendingOrderType.None;
+
+            if (order.type == PendingOrderType.MoveOrForm)
+            {
+                // Przywracamy cel ataku (jeśli był)
+                group.chaseTarget = order.chaseTarget;
+
+                // Wywołujemy ApplyFormation (teraz isDeploymentPhase jest false, więc wykona się fizyka)
+                ApplyFormation(group, order.formationName, order.destination, order.lookDirection);
+            }
+            else if (order.type == PendingOrderType.FeatureMove)
+            {
+                if (order.feature != null)
+                {
+                    MoveGroupToLineFeature(group, order.feature);
+                }
+            }
+        }
     }
 
     bool IsNameTaken(string nameToCheck)
@@ -1398,13 +1447,49 @@ public class ArmyHierarchyManager : MonoBehaviour
     // --- NOWOŚĆ: SYSTEM FORMACJI ---
     public void ApplyFormation(TacticalGroup group, string formationType, Vector3? centerOverride = null, Vector3? lookDirectionOverride = null)
     {
+
+        // Ustalmy cel i kierunek (tak jak było wcześniej)
+        Vector3 center = centerOverride.HasValue ? centerOverride.Value : group.groupCenter;
+
+        // Logika kierunku (skopiowana z oryginału dla spójności)
+        Quaternion rotation = (group.unitMatrices.Count > 0) ? group.unitMatrices[0].rotation : Quaternion.identity;
+        if (lookDirectionOverride.HasValue && lookDirectionOverride.Value != Vector3.zero)
+            rotation = Quaternion.LookRotation(lookDirectionOverride.Value);
+        else if (centerOverride.HasValue)
+        {
+            Vector3 directionToTarget = (center - group.groupCenter).normalized;
+            if (directionToTarget != Vector3.zero) rotation = Quaternion.LookRotation(directionToTarget);
+        }
+        Vector3 finalLookDir = rotation * Vector3.forward;
+
+
+        // --- NOWOŚĆ: JEŚLI FAZA PLANOWANIA -> ZAPISZ I WYJDŹ ---
+        if (isDeploymentPhase)
+        {
+            group.pendingOrder = new PendingOrderData
+            {
+                type = PendingOrderType.MoveOrForm,
+                formationName = formationType,
+                destination = center,
+                lookDirection = finalLookDir,
+                // Zapamiętujemy cel ataku, jeśli został ustawiony w LLMCommander przed wywołaniem tej funkcji
+                chaseTarget = group.chaseTarget
+            };
+
+            // WAŻNE: Anulujemy natychmiastowy pościg, żeby jednostka nie ruszyła w Update()
+            group.chaseTarget = null;
+            group.isMoving = false;
+            group.isReforming = false;
+
+            Debug.Log($"[PLANOWANIE] Rozkaz dla {group.groupName} zapamiętany: {formationType}");
+            return;
+        }
         if (group.unitMatrices.Count == 0) return;
 
         // Resetujemy przypisanie do terenu
         group.assignedFeature = null;
 
         // Ustalmy środek formacji
-        Vector3 center = centerOverride.HasValue ? centerOverride.Value : group.groupCenter;
 
         int count = group.unitMatrices.Count;
         int cols = 10;
@@ -1416,7 +1501,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         else if (formationType.ToLower().Contains("double") || formationType.ToLower().Contains("dwuszereg")) { cols = count / 2; spacing = 1.8f; }
 
         // --- LOGIKA ROTACJI (ZMODYFIKOWANA) ---
-        Quaternion rotation = group.unitMatrices[0].rotation;
 
         // PRIORYTET 1: Wymuszony kierunek (np. flankowanie - patrzenie na wroga)
         if (lookDirectionOverride.HasValue && lookDirectionOverride.Value != Vector3.zero)
@@ -1452,7 +1536,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             group.formationTargets[i] = finalPos;
         }
 
-        group.targetFacingDirection = rotation * Vector3.forward;
+        group.targetFacingDirection = finalLookDir; // Używamy obliczonego wcześniej
         group.isReforming = true; // To włącza precyzyjny ruch do formationTargets
         group.isMoving = true;
         group.currentDestination = center;
