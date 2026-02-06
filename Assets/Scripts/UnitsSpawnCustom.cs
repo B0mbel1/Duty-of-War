@@ -2,10 +2,8 @@ using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
 
-
 public class UnitsSpawnCustom : MonoBehaviour
 {
-    // --- KONFIGURACJA SK�ADU ARMII ---
     [System.Serializable]
     public class ArmyComposition
     {
@@ -15,7 +13,6 @@ public class UnitsSpawnCustom : MonoBehaviour
         public int cavalryCount = 0;
     }
 
-    // Definicja dost�pnych kszta�t�w spawnu
     public enum SpawnShape
     {
         Rectangle,
@@ -53,15 +50,20 @@ public class UnitsSpawnCustom : MonoBehaviour
     [Range(0f, 1f)]
     public float randomness = 0.8f;
 
-    // --- NOWO��: USTAWIENIA WODY DLA SPAWNU ---
-    [Header("Water Settings (Spawn Correction)")]
+    [Header("Water Settings")]
     public string waterTag = "Water";
     public float swimmingDepth = 0.5f;
-    // -------------------------------------------
 
-    [Header("Spawn Area Shapes")]
+    // --- USTAWIENIA ROTACJI ---
+    [Header("Spawn Orientation Fix")]
     public SpawnShape factionAShape = SpawnShape.Rectangle;
     public SpawnShape factionBShape = SpawnShape.Rectangle;
+    
+    [Tooltip("PRIORYTET 1 (MANUAL): Jeśli zaznaczone, jednostki ZAWSZE patrzą tam, gdzie niebieska oś Z Cube'a.")]
+    public bool useSpawnBoxRotation = true;
+
+    [Tooltip("PRIORYTET 2 (AUTO-ALIGN): Jeśli zaznaczone, GŁÓWNA armia wroga ustawi się idealnie równolegle do gracza (twarzą w twarz). UWAGA: Secondary spawn to zignoruje i wyceluje w gracza automatycznie, żeby nie stać tyłem.")]
+    public bool forceEnemyAlignmentToPlayer = true;
 
     [Header("Camera Start Settings")]
     public Camera battleCamera;
@@ -69,6 +71,7 @@ public class UnitsSpawnCustom : MonoBehaviour
     public float cameraDistanceBack = 40f;
     public float cameraAngle = 55f;
 
+    // Listy macierzy
     public List<Matrix4x4> listA_Inf = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Arc = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Cav = new List<Matrix4x4>();
@@ -89,7 +92,6 @@ public class UnitsSpawnCustom : MonoBehaviour
     private const int batchSize = 1023;
     enum UnitType { Infantry, Archer, Cavalry }
 
-    // Zmienne wody
     private float waterSurfaceY;
     private bool waterFound = false;
 
@@ -102,20 +104,271 @@ public class UnitsSpawnCustom : MonoBehaviour
         if (terrain == null) return;
 
         LoadCustomSettings();
-
-        // 1. Wykryj wod�
         DetectWater();
 
-        // 2. Spawnuj
-        ProcessFactionSpawns(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true, factionAShape);
-        ProcessFactionSpawns(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false, factionBShape);
+        // 1. Spawnujemy Frakcję A (Gracz)
+        HandleFactionSpawning(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true, factionAShape, null);
+        
+        // 2. Spawnujemy Frakcję B (Wróg)
+        HandleFactionSpawning(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false, factionBShape, spawnAreaA);
 
-        // 3. Batche i UI
         RebuildAllBatches();
         UpdateUICounters();
-
-        // 4. Kamera
         SetupCameraPosition();
+    }
+
+    void HandleFactionSpawning(ArmyComposition fullArmy, GameObject mainArea, GameObject secArea, bool isFactionA, SpawnShape shape, GameObject alignmentReference)
+    {
+        if (mainArea == null) return;
+
+        mainArea.GetComponent<Renderer>().enabled = false;
+        if (secArea != null) secArea.GetComponent<Renderer>().enabled = false;
+
+        // Cel domyślny (środek głównego spawnu przeciwnika)
+        Vector3 defaultTarget = Vector3.zero;
+        if (isFactionA && spawnAreaB != null) defaultTarget = spawnAreaB.transform.position;
+        if (!isFactionA && spawnAreaA != null) defaultTarget = spawnAreaA.transform.position;
+
+        if (secArea != null)
+        {
+            // Dzielenie armii
+            ArmyComposition army1 = new ArmyComposition();
+            army1.name = fullArmy.name + "_Part1";
+            army1.infantryCount = fullArmy.infantryCount / 2;
+            army1.archerCount = fullArmy.archerCount / 2;
+            army1.cavalryCount = fullArmy.cavalryCount / 2;
+
+            ArmyComposition army2 = new ArmyComposition();
+            army2.name = fullArmy.name + "_Part2";
+            army2.infantryCount = fullArmy.infantryCount - army1.infantryCount;
+            army2.archerCount = fullArmy.archerCount - army1.archerCount;
+            army2.cavalryCount = fullArmy.cavalryCount - army1.cavalryCount;
+
+            ProcessFactionSpawns(army1, mainArea, isFactionA, shape, defaultTarget, alignmentReference);
+            ProcessFactionSpawns(army2, secArea, isFactionA, shape, defaultTarget, alignmentReference);
+        }
+        else
+        {
+            ProcessFactionSpawns(fullArmy, mainArea, isFactionA, shape, defaultTarget, alignmentReference);
+        }
+    }
+
+    // --- GŁÓWNA LOGIKA ROZMIESZCZANIA ---
+    void ProcessFactionSpawns(ArmyComposition army, GameObject spawnArea, bool isFactionA, SpawnShape shape, Vector3 autoLookTarget, GameObject alignmentReference)
+    {
+        if (spawnArea == null) return;
+
+        Vector3 areaCenter = spawnArea.transform.position;
+        Vector3 areaSize = spawnArea.transform.localScale;
+
+        Vector3 forwardDir;
+        Vector3 rightDir;
+
+        // --- 1. LOGIKA KIERUNKU (FIX DLA PLECY/BOKI) ---
+        
+        // PRIORYTET A: Manualna rotacja z Cube'a (zawsze wygrywa)
+        if (useSpawnBoxRotation)
+        {
+            forwardDir = spawnArea.transform.forward;
+        }
+        // PRIORYTET B: Wymuszenie równoległości (TYLKO DLA GŁÓWNEGO SPAWNU WROGA)
+        // To naprawia Jarmuk, ale nie psuje Secondary Spawnu na Orlim Gnieździe
+        else if (!isFactionA && forceEnemyAlignmentToPlayer && alignmentReference != null && spawnArea == spawnAreaB)
+        {
+            Vector3 playerForward = alignmentReference.transform.forward;
+            forwardDir = -playerForward; // Odwróć o 180 stopni
+        }
+        // PRIORYTET C: Auto-Aim (Dla Gracza ORAZ dla Secondary Spawnu Wroga)
+        // Dzięki temu posiłki zawsze patrzą w stronę wroga, niezależnie gdzie stoją
+        else
+        {
+            forwardDir = (autoLookTarget - areaCenter).normalized;
+            if (forwardDir == Vector3.zero) forwardDir = Vector3.forward;
+        }
+
+        // --- 2. ORTOGONALIZACJA (Fix dla rombów) ---
+        forwardDir.y = 0;
+        forwardDir.Normalize();
+        rightDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
+
+        // --- 3. OBLICZANIE SZEROKOŚCI (FIX DLA "POŁĄCZONYCH" JEDNOSTEK) ---
+        // Zamiast brać Max(x, z), rzutujemy wymiary Cube'a na wektor 'Prawo'.
+        // Dzięki temu, jeśli obrócisz Cube'a w poprzek wąwozu, szerokość będzie mała (tak jak trzeba),
+        // a jednostki ułożą się w głąb (kolumną), zamiast rozlewać się na boki i łączyć z innymi.
+        float projectedWidthX = Mathf.Abs(Vector3.Dot(spawnArea.transform.right * areaSize.x, rightDir));
+        float projectedWidthZ = Mathf.Abs(Vector3.Dot(spawnArea.transform.forward * areaSize.z, rightDir));
+        float usableWidth = (projectedWidthX + projectedWidthZ) * 0.9f; // 90% marginesu
+        
+        if (usableWidth < 20) usableWidth = 50.0f; // Minimalne zabezpieczenie
+
+        // Głębokość też rzutujemy (dla punktu startu)
+        float projectedDepthX = Mathf.Abs(Vector3.Dot(spawnArea.transform.right * areaSize.x, forwardDir));
+        float projectedDepthZ = Mathf.Abs(Vector3.Dot(spawnArea.transform.forward * areaSize.z, forwardDir));
+        float depthSize = projectedDepthX + projectedDepthZ;
+
+        // Startujemy lekko przesunięci w stronę "przodu" formacji
+        Vector3 frontLineCenter = areaCenter + (forwardDir * (depthSize * 0.4f));
+
+        // Startujemy od lewej strony
+        Vector3 rowStart = frontLineCenter - (rightDir * (usableWidth * 0.5f));
+
+        float gapBetweenGroups = 15.0f;
+        float currentXOffset = 0f;
+
+        void SpawnTypeSequence(UnitType type, int totalCount)
+        {
+            int groupSize = 150;
+            int unitsSpawned = 0;
+            float dynamicBlockSize = 40.0f;
+            float blockDepth = 20.0f;
+
+            if (type == UnitType.Cavalry) { dynamicBlockSize = 65.0f; blockDepth = 25.0f; }
+            else if (type == UnitType.Archer) { dynamicBlockSize = 55.0f; blockDepth = 20.0f; }
+
+            while (unitsSpawned < totalCount)
+            {
+                int countInThisGroup = Mathf.Min(groupSize, totalCount - unitsSpawned);
+
+                // Czy mieścimy się w szerokości?
+                if (currentXOffset + dynamicBlockSize > usableWidth)
+                {
+                    currentXOffset = 0;
+                    // Nowa linia - cofamy się
+                    rowStart -= forwardDir * (blockDepth + gapBetweenGroups);
+                }
+
+                Vector3 groupCenter = rowStart + (rightDir * (currentXOffset + dynamicBlockSize * 0.5f));
+                
+                // Spawn z poprawnymi wektorami
+                SpawnTightGroupRect(type, countInThisGroup, groupCenter, isFactionA, rightDir, forwardDir);
+
+                currentXOffset += (dynamicBlockSize + gapBetweenGroups);
+                unitsSpawned += countInThisGroup;
+            }
+        }
+
+        SpawnTypeSequence(UnitType.Infantry, army.infantryCount);
+        if (army.infantryCount > 0) { currentXOffset = 0; rowStart -= forwardDir * 40.0f; }
+        
+        SpawnTypeSequence(UnitType.Archer, army.archerCount);
+        if (army.archerCount > 0) { currentXOffset = 0; rowStart -= forwardDir * 30.0f; }
+        
+        SpawnTypeSequence(UnitType.Cavalry, army.cavalryCount);
+    }
+
+    void SpawnTightGroupRect(UnitType type, int count, Vector3 center, bool isFactionA, Vector3 rightDir, Vector3 forwardDir)
+    {
+        float spacingMultiplier = 1.4f;
+        float widthRatio = 3.0f;
+        float rowSpacingMult = 1.0f;
+
+        if (type == UnitType.Cavalry) { spacingMultiplier = 3.5f; widthRatio = 1.6f; rowSpacingMult = 0.8f; }
+        else if (type == UnitType.Archer) { spacingMultiplier = 2.2f; widthRatio = 2.5f; }
+
+        float baseSpacing = Mathf.Max(unitSpacing, 1.0f);
+        float spacingX = baseSpacing * spacingMultiplier;
+        float spacingZ = spacingX * rowSpacingMult;
+
+        int cols = Mathf.CeilToInt(Mathf.Sqrt(count) * widthRatio);
+        if (cols < 1) cols = 1;
+
+        Vector3 startOffset = -(rightDir * (cols * spacingX) * 0.5f);
+
+        float mapMinX = terrain.transform.position.x + 15.0f;
+        float mapMaxX = terrain.transform.position.x + terrain.terrainData.size.x - 15.0f;
+        float mapMinZ = terrain.transform.position.z + 15.0f;
+        float mapMaxZ = terrain.transform.position.z + terrain.terrainData.size.z - 15.0f;
+
+        for (int i = 0; i < count; i++)
+        {
+            int col = i % cols;
+            int row = i / cols;
+
+            Vector3 localPos = startOffset + (rightDir * col * spacingX) - (forwardDir * row * spacingZ);
+            
+            if (randomness > 0)
+            {
+                 localPos += (rightDir * Random.Range(-randomness, randomness) * 0.2f) +
+                             (forwardDir * Random.Range(-randomness, randomness) * 0.2f);
+            }
+
+            Vector3 rawPos = center + localPos;
+            rawPos.x = Mathf.Clamp(rawPos.x, mapMinX, mapMaxX);
+            rawPos.z = Mathf.Clamp(rawPos.z, mapMinZ, mapMaxZ);
+
+            float terrainY = terrain.SampleHeight(rawPos) + terrain.transform.position.y;
+            float finalY = terrainY + (unitDiameter * 0.5f);
+            if (waterFound && terrainY < waterSurfaceY) finalY = waterSurfaceY - swimmingDepth;
+
+            Vector3 finalPos = new Vector3(rawPos.x, finalY, rawPos.z);
+            Quaternion finalRotation = Quaternion.LookRotation(forwardDir);
+
+            Matrix4x4 matrix = Matrix4x4.TRS(finalPos, finalRotation, Vector3.one * unitDiameter);
+
+            if (isFactionA)
+            {
+                if (type == UnitType.Infantry) listA_Inf.Add(matrix);
+                else if (type == UnitType.Archer) listA_Arc.Add(matrix);
+                else listA_Cav.Add(matrix);
+            }
+            else
+            {
+                if (type == UnitType.Infantry) listB_Inf.Add(matrix);
+                else if (type == UnitType.Archer) listB_Arc.Add(matrix);
+                else listB_Cav.Add(matrix);
+            }
+        }
+    }
+
+    // --- GIZMOS ---
+    void OnDrawGizmos()
+    {
+        if (spawnAreaA != null) DrawSpawnGizmo(spawnAreaA, true, Color.blue);
+        if (spawnAreaB != null) DrawSpawnGizmo(spawnAreaB, false, Color.red);
+        if (spawnAreaA_Secondary != null) DrawSpawnGizmo(spawnAreaA_Secondary, true, Color.cyan);
+        if (spawnAreaB_Secondary != null) DrawSpawnGizmo(spawnAreaB_Secondary, false, Color.magenta);
+    }
+
+    void DrawSpawnGizmo(GameObject area, bool isFactionA, Color c)
+    {
+        Gizmos.color = c;
+        Vector3 center = area.transform.position;
+        Vector3 forward = Vector3.forward;
+
+        // Logika wizualizacji taka sama jak w kodzie
+        if (useSpawnBoxRotation)
+        {
+            forward = area.transform.forward;
+        }
+        else if (!isFactionA && forceEnemyAlignmentToPlayer && area == spawnAreaB && spawnAreaA != null)
+        {
+             Vector3 playerFwd = spawnAreaA.transform.forward;
+             playerFwd.y = 0; playerFwd.Normalize();
+             forward = -playerFwd;
+        }
+        else
+        {
+            Vector3 target = isFactionA ? (spawnAreaB ? spawnAreaB.transform.position : Vector3.zero) 
+                                        : (spawnAreaA ? spawnAreaA.transform.position : Vector3.zero);
+            forward = (target - center).normalized;
+            if (forward == Vector3.zero) forward = area.transform.forward;
+        }
+
+        forward.y = 0; forward.Normalize();
+        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+
+        // Rysuj kierunek i SZEROKOŚĆ (zgodnie z nową logiką)
+        Gizmos.DrawLine(center, center + forward * 30f);
+        Gizmos.DrawSphere(center + forward * 30f, 2f);
+        
+        Vector3 areaSize = area.transform.localScale;
+        float projectedWidthX = Mathf.Abs(Vector3.Dot(area.transform.right * areaSize.x, right));
+        float projectedWidthZ = Mathf.Abs(Vector3.Dot(area.transform.forward * areaSize.z, right));
+        float vizWidth = (projectedWidthX + projectedWidthZ) * 0.9f;
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(center, center + right * (vizWidth * 0.5f));
+        Gizmos.DrawLine(center, center - right * (vizWidth * 0.5f));
     }
 
     void DetectWater()
@@ -155,8 +408,7 @@ public class UnitsSpawnCustom : MonoBehaviour
         if (battleCamera == null) battleCamera = Camera.main;
         if (battleCamera == null) return;
 
-        GameObject mySpawn = spawnAreaA; // Custom = Zawsze Frakcja A
-
+        GameObject mySpawn = spawnAreaA;
         if (mySpawn == null || spawnAreaA == null || spawnAreaB == null) return;
 
         Vector3 mapCenter = (spawnAreaA.transform.position + spawnAreaB.transform.position) / 2f;
@@ -189,277 +441,6 @@ public class UnitsSpawnCustom : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
         if (Input.GetKeyDown(KeyCode.C)) KillRandomUnit(false);
-    }
-
-    void ProcessFactionSpawns(ArmyComposition army, GameObject mainArea, GameObject secArea, bool isFactionA, SpawnShape shape)
-    {
-        if (mainArea == null) return;
-        mainArea.GetComponent<Renderer>().enabled = false;
-        if (secArea != null) secArea.GetComponent<Renderer>().enabled = false;
-
-        // Cel patrzenia
-        Vector3 enemyTargetPos = isFactionA ? spawnAreaB.transform.position : spawnAreaA.transform.position;
-
-        Vector3 startPos = mainArea.transform.position;
-        Vector3 areaSize = mainArea.transform.localScale;
-
-        // --- POPRAWKA 1: WYMUSZENIE MINIMALNEJ SZEROKOŚCI ---
-        // Jeśli Cube jest mały (np. marker), uznajemy że mamy do dyspozycji 500m szerokości
-        float usableWidth = Mathf.Max(areaSize.x * 0.9f, 500.0f);
-
-        // --- POPRAWKA 2: KIERUNEK UKŁADANIA ---
-        // Frakcja A (Dół): Zaczynamy od górnej krawędzi spawnu (najbliżej wroga) i cofamy się (Z-)
-        // Frakcja B (Góra): Zaczynamy od dolnej krawędzi spawnu (najbliżej wroga) i cofamy się (Z+) w głąb bazy
-        float zDirection = isFactionA ? -1.0f : 1.0f;
-
-        // Punkt startowy (Front Center spawnu)
-        // Zamiast lewego rogu, zacznijmy bardziej od środka lewej strony
-        float startZ = isFactionA ? (startPos.z + areaSize.z * 0.4f) : (startPos.z - areaSize.z * 0.4f);
-        // Startujemy od lewej krawędzi (X)
-        Vector3 cursor = new Vector3(startPos.x - (usableWidth * 0.5f), startPos.y, startZ);
-
-        float gapBetweenGroups = 15.0f;
-        float currentXOffset = 0f;
-
-        // Kopia kursora dla rzędów
-        Vector3 rowStart = cursor;
-
-        void SpawnTypeSequence(UnitType type, int totalCount)
-        {
-            int groupSize = 150;
-            int unitsSpawned = 0;
-
-            // Zwiększamy odstępy dla jazdy
-            float dynamicBlockSize = 40.0f;
-            if (type == UnitType.Cavalry) dynamicBlockSize = 65.0f;
-            else if (type == UnitType.Archer) dynamicBlockSize = 55.0f;
-
-            while (unitsSpawned < totalCount)
-            {
-                int countInThisGroup = Mathf.Min(groupSize, totalCount - unitsSpawned);
-
-                // Sprawdzamy czy mieścimy się w rzędzie
-                if (currentXOffset + dynamicBlockSize > usableWidth)
-                {
-                    currentXOffset = 0;
-                    // Nowy rząd: Cofamy się w głąb bazy (zależnie od frakcji)
-                    rowStart.z += (dynamicBlockSize + gapBetweenGroups) * zDirection;
-                }
-
-                Vector3 groupCenter = rowStart + new Vector3(currentXOffset, 0, 0);
-
-                SpawnTightGroupRect(type, countInThisGroup, groupCenter, isFactionA, enemyTargetPos);
-
-                currentXOffset += (dynamicBlockSize + gapBetweenGroups);
-                unitsSpawned += countInThisGroup;
-            }
-        }
-
-        // Kolejność linii bojowych (od frontu do tyłu)
-
-        // 1. LINIA: Piechota
-        SpawnTypeSequence(UnitType.Infantry, army.infantryCount);
-
-        // Odstęp między liniami
-        currentXOffset = 0;
-        rowStart.z += (60.0f) * zDirection;
-
-        // 2. LINIA: Łucznicy (za piechotą)
-        SpawnTypeSequence(UnitType.Archer, army.archerCount);
-
-        // Odstęp
-        currentXOffset = 0;
-        rowStart.z += (60.0f) * zDirection;
-
-        // 3. LINIA: Jazda (na tyłach lub skrzydłach - tu dajemy na tyłach szeroko)
-        SpawnTypeSequence(UnitType.Cavalry, army.cavalryCount);
-    }
-
-    // --- DODAJ TĘ NOWĄ METODĘ W UnitsSpawnCustom.cs ---
-    void SpawnTightGroupRect(UnitType type, int count, Vector3 center, bool isFactionA, Vector3 lookTarget)
-    {
-        // 1. JESZCZE WIĘKSZY LUZ (Drastyczne zwiększenie odstępów)
-        float spacingMultiplier = 1.4f; // Piechota luźniej
-        float widthRatio = 3.0f;
-
-        if (type == UnitType.Cavalry)
-        {
-           spacingMultiplier = 3.5f; // Odstęp: Większy niż piechota, ale mniejszy niż poprzednio (było 6.0)
-            widthRatio = 1.6f;      // Bardzo szeroki szereg (szarża)
-        }
-        else if (type == UnitType.Archer)
-        {
-            spacingMultiplier = 2.2f; // Łucznicy luźno
-            widthRatio = 2.5f;
-        }
-
-        // Zabezpieczenie: jeśli unitSpacing jest ustawiony na 0 w inspectorze
-        float baseSpacing = Mathf.Max(unitSpacing, 1.0f);
-        float spacing = baseSpacing * spacingMultiplier;
-
-        // Obliczamy kolumny
-        int cols = Mathf.CeilToInt(Mathf.Sqrt(count) * widthRatio);
-
-        Vector3 startOffset = new Vector3(-(cols * spacing) / 2f, 0, 0);
-
-        // --- GRANICE MAPY ---
-        float mapMinX = terrain.transform.position.x + 15.0f;
-        float mapMaxX = terrain.transform.position.x + terrain.terrainData.size.x - 15.0f;
-        float mapMinZ = terrain.transform.position.z + 15.0f;
-        float mapMaxZ = terrain.transform.position.z + terrain.terrainData.size.z - 15.0f;
-
-        for (int i = 0; i < count; i++)
-        {
-            int x = i % cols;
-            int z = i / cols;
-
-            // Tworzymy pozycję lokalną
-            Vector3 localPos = startOffset + new Vector3(x * spacing, 0, -z * spacing);
-            Vector3 rawPos = center + localPos;
-
-            // Clamp do mapy
-            rawPos.x = Mathf.Clamp(rawPos.x, mapMinX, mapMaxX);
-            rawPos.z = Mathf.Clamp(rawPos.z, mapMinZ, mapMaxZ);
-
-            // Wysokość
-            float terrainY = terrain.SampleHeight(rawPos) + terrain.transform.position.y;
-            float finalY = terrainY + (unitDiameter * 0.5f);
-
-            if (waterFound && terrainY < waterSurfaceY)
-            {
-                finalY = waterSurfaceY - swimmingDepth;
-            }
-
-            Vector3 finalPos = new Vector3(rawPos.x, finalY, rawPos.z);
-
-            // Obrót w stronę wroga
-            Vector3 directionToEnemy = (lookTarget - finalPos).normalized;
-            directionToEnemy.y = 0;
-            if (directionToEnemy == Vector3.zero) directionToEnemy = Vector3.forward;
-            Quaternion finalRotation = Quaternion.LookRotation(directionToEnemy);
-
-            Matrix4x4 matrix = Matrix4x4.TRS(finalPos, finalRotation, Vector3.one * unitDiameter);
-
-            if (isFactionA)
-            {
-                if (type == UnitType.Infantry) listA_Inf.Add(matrix);
-                else if (type == UnitType.Archer) listA_Arc.Add(matrix);
-                else listA_Cav.Add(matrix);
-            }
-            else
-            {
-                if (type == UnitType.Infantry) listB_Inf.Add(matrix);
-                else if (type == UnitType.Archer) listB_Arc.Add(matrix);
-                else listB_Cav.Add(matrix);
-            }
-        }
-    }
-    void SplitAndSpawn(UnitType type, int totalCount, Queue<Vector3> q1, Queue<Vector3> q2, System.Random rand, bool isFactionA, Vector3 lookTarget)
-    {
-        int count1 = totalCount / 2;
-        int count2 = totalCount - count1;
-        SpawnUnitGroup(type, count1, q1, rand, isFactionA, lookTarget);
-        SpawnUnitGroup(type, count2, q2, rand, isFactionA, lookTarget);
-    }
-
-    void SpawnUnitGroup(UnitType type, int count, Queue<Vector3> positionQueue, System.Random rand, bool isFactionA, Vector3 lookTarget)
-    {
-        for (int i = 0; i < count; i++)
-        {
-            if (positionQueue.Count == 0) break;
-            Vector3 rawPos = positionQueue.Dequeue();
-
-            float terrainY = terrain.SampleHeight(rawPos) + terrain.transform.position.y;
-            float finalY = terrainY + (unitDiameter * 0.5f);
-
-            if (waterFound)
-            {
-                if (terrainY < waterSurfaceY)
-                {
-                    finalY = waterSurfaceY - swimmingDepth;
-                }
-            }
-
-            Vector3 finalPos = new Vector3(rawPos.x, finalY, rawPos.z);
-
-            // --- NOWOŚĆ: Obrót w stronę wroga ---
-            Vector3 directionToEnemy = (lookTarget - finalPos).normalized;
-            directionToEnemy.y = 0;
-
-            if (directionToEnemy == Vector3.zero) directionToEnemy = Vector3.forward;
-
-            Quaternion baseRotation = Quaternion.LookRotation(directionToEnemy);
-            // float randomJitter = (float)(rand.NextDouble() * 20.0 - 10.0); 
-            // Quaternion finalRotation = baseRotation * Quaternion.Euler(0, randomJitter, 0);
-            // ------------------------------------
-            Quaternion finalRotation = baseRotation; // TERAZ PATRZĄ IDEALNIE PROSTO
-            Matrix4x4 matrix = Matrix4x4.TRS(finalPos, finalRotation, Vector3.one * unitDiameter);
-
-            if (isFactionA)
-            {
-                if (type == UnitType.Infantry) listA_Inf.Add(matrix);
-                else if (type == UnitType.Archer) listA_Arc.Add(matrix);
-                else listA_Cav.Add(matrix);
-            }
-            else
-            {
-                if (type == UnitType.Infantry) listB_Inf.Add(matrix);
-                else if (type == UnitType.Archer) listB_Arc.Add(matrix);
-                else listB_Cav.Add(matrix);
-            }
-        }
-    }
-
-    Queue<Vector3> GenerateSafeGrid(GameObject area, SpawnShape shape)
-    {
-        List<Vector3> points = new List<Vector3>();
-        if (area == null) return new Queue<Vector3>();
-
-        Vector3 center = area.transform.position;
-        Vector3 size = area.transform.localScale;
-
-        float radiusX = size.x * 0.5f;
-        float radiusZ = size.z * 0.5f;
-
-        if (unitSpacing <= unitDiameter) unitSpacing = unitDiameter + 0.1f;
-
-        int cols = Mathf.FloorToInt(size.x / unitSpacing);
-        int rows = Mathf.FloorToInt(size.z / unitSpacing);
-
-        float freeSpace = unitSpacing - unitDiameter;
-        float maxJitter = (freeSpace * 0.5f) * randomness;
-
-        Vector3 startPos = center - new Vector3(size.x * 0.5f, 0, size.z * 0.5f);
-
-        for (int x = 0; x < cols; x++)
-        {
-            for (int z = 0; z < rows; z++)
-            {
-                float posX = startPos.x + (x * unitSpacing) + (unitSpacing * 0.5f);
-                float posZ = startPos.z + (z * unitSpacing) + (unitSpacing * 0.5f);
-
-                float offX = Random.Range(-maxJitter, maxJitter);
-                float offZ = Random.Range(-maxJitter, maxJitter);
-
-                Vector3 candidatePos = new Vector3(posX + offX, 0, posZ + offZ);
-
-                if (shape == SpawnShape.Ellipse)
-                {
-                    float dx = candidatePos.x - center.x;
-                    float dz = candidatePos.z - center.z;
-                    float distNormalized = (dx * dx) / (radiusX * radiusX) + (dz * dz) / (radiusZ * radiusZ);
-                    if (distNormalized > 1.0f) continue;
-                }
-
-                points.Add(candidatePos);
-            }
-        }
-
-        var rand = new System.Random();
-        int n = points.Count;
-        while (n > 1) { n--; int k = rand.Next(n + 1); Vector3 value = points[k]; points[k] = points[n]; points[n] = value; }
-
-        return new Queue<Vector3>(points);
     }
 
     void KillRandomUnit(bool isFactionA)

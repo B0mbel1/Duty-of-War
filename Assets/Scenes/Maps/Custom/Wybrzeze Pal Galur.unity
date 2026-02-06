@@ -630,6 +630,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TerrainFeature
   featureName: Rzeka
   description: "Rzeka, przez kt\xF3r\u0105 mo\u017Cna przej\u015B\u0107."
+  lineLength: 20
+  lineOrientation: {x: 1, y: 0, z: 0}
+  isRiver: 0
+  riverBankOffset: 10
   debugColor: {r: 0, g: 1, b: 0, a: 1}
   radius: 5
 --- !u!114 &838863743 stripped
@@ -891,8 +895,8 @@ Transform:
   m_GameObject: {fileID: 1146834176}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 504.3268, y: 0, z: 865.4997}
-  m_LocalScale: {x: 954.5907, y: 1.8244275, z: 204.70142}
+  m_LocalPosition: {x: 495.2906, y: -0, z: 867.4334}
+  m_LocalScale: {x: 972.6325, y: 1.8244275, z: 251.95993}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -1209,8 +1213,8 @@ Transform:
   m_GameObject: {fileID: 1798806000}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 508, y: 0, z: 132}
-  m_LocalScale: {x: 954.5907, y: 1.8244275, z: 204.70142}
+  m_LocalPosition: {x: 499.6154, y: 0, z: 131.6113}
+  m_LocalScale: {x: 971.39154, y: 1.8244275, z: 244.53847}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
