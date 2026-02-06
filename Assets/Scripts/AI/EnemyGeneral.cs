@@ -1,98 +1,232 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq; // Potrzebne do sortowania i filtrowania
+
+// Typy osobowości bota (Realizacja punktu: Odgrywanie scenariuszy)
+public enum GeneralPersonality
+{
+    Balanced,   // Zrównoważony: Atakuje, gdy ma przewagę
+    Aggressive, // Rusher: Cała naprzód, ignoruje straty
+    Defensive,  // Camper: Trzyma pozycję, kontratakuje tylko gdy wróg blisko
+    Flanker     // Taktyk: Próbuje zajść od boków
+}
 
 public class EnemyGeneral : MonoBehaviour
 {
-    [Header("Ustawienia")]
+    [Header("Główne Zależności")]
     public ArmyHierarchyManager armyManager;
     public GeminiNetwork geminiNetwork;
-    public string myFaction = "SideB"; // Komputer gra stroną B
-    public float decisionInterval = 15.0f; // Co ile sekund AI podejmuje decyzję?
+
+    [Header("Ustawienia Bota")]
+    public string myFaction = "SideB"; // Zwykle SideB to wróg (Góra mapy)
+    public float decisionInterval = 10.0f; // Co ile sekund myśli?
     
+    [Header("Scenariusz i Osobowość")]
+    public GeneralPersonality personality = GeneralPersonality.Balanced;
+    [TextArea] public string scenarioInstruction = ""; // Np. "Broń rzeki za wszelką cenę."
+
     [Header("Stan")]
     public bool isAiActive = false;
+    public bool isWaitingForResponse = false;
     private float timer = 0f;
+
+    // Cache
+    private List<TacticalGroup> myUnits;
+    private List<TacticalGroup> enemyUnits;
 
     void Start()
     {
-        // Jeśli chcemy, żeby bot grał od razu po starcie bitwy
-        if (geminiNetwork != null)
-        {
-            // Podpinamy się pod to samo zdarzenie co gracz, 
-            // ale musimy uważać, żeby nie wykonywać rozkazów gracza jako swoje!
-            // Dlatego stworzymy osobny handler dla bota w GeminiNetwork lub tutaj przefiltrujemy.
-            // PROSTSZE ROZWIĄZANIE: Bot używa osobnej metody Callback.
-        }
+        // Inicjalizacja list
+        RefreshUnitLists();
     }
 
     public void StartAI()
     {
         isAiActive = true;
-        Debug.Log($"<color=red>Generał Frakcji {myFaction} przejmuje dowodzenie!</color>");
+        Debug.Log($"<color=red>Generał AI ({personality}) przejmuje dowodzenie!</color>");
+        // Pierwsza decyzja od razu po starcie (z małym opóźnieniem żeby wszystko się załadowało)
+        timer = decisionInterval - 2.0f; 
     }
 
     void Update()
     {
-        if (!isAiActive) return;
+        if (!isAiActive || isWaitingForResponse) return;
 
         timer += Time.deltaTime;
         if (timer >= decisionInterval)
         {
             timer = 0;
+            RefreshUnitLists();
+            
+            // Jeśli nie mam wojska, nie mam czym dowodzić
+            if (myUnits.Count == 0) return;
+
             MakeStrategicDecision();
         }
     }
 
+    void RefreshUnitLists()
+    {
+        if (myFaction == "SideA")
+        {
+            myUnits = armyManager.factionAGroups;
+            enemyUnits = armyManager.factionBGroups;
+        }
+        else
+        {
+            myUnits = armyManager.factionBGroups;
+            enemyUnits = armyManager.factionAGroups;
+        }
+        
+        // Czyścimy martwe jednostki z listy lokalnej (dla pewności)
+        myUnits = myUnits.Where(g => g.unitMatrices.Count > 0).ToList();
+        enemyUnits = enemyUnits.Where(g => g.unitMatrices.Count > 0).ToList();
+    }
+
+    // --- 1. MÓZG: GENEROWANIE RAPORTU I PROMPTU ---
+
     void MakeStrategicDecision()
     {
-        // 1. Zbieramy dane o bitwie (Co widzi bot?)
-        string battleReport = GenerateBattleReport();
+        isWaitingForResponse = true;
 
-        // 2. Budujemy prompt dla Generała AI
-        string systemPrompt = ConstructEnemySystemPrompt();
-        string fullPrompt = systemPrompt + "\n\nSITUATION REPORT:\n" + battleReport;
+        // A. Analiza Pola Bitwy (Gdzie jest gracz?)
+        string battleReport = GenerateDetailedBattleReport();
 
-        // 3. Wysyłamy do Gemini
-        // UWAGA: Musimy zmodyfikować GeminiNetwork, żeby obsługiwało callbacki (odpowiedź do konkretnej osoby),
-        // albo zrobimy to "na piechotę" tutaj, tworząc jednorazowe żądanie.
-        // Najbezpieczniej dla Ciebie teraz: Użyjmy istniejącego GeminiNetwork, 
-        // ale dodajmy flagę, że to zapytanie od Bota.
+        // B. Budowanie Promptu w zależności od OSOBOWOŚCI
+        string systemPrompt = ConstructSystemPrompt();
         
+        string fullPrompt = systemPrompt + "\n\nCURRENT BATTLE REPORT:\n" + battleReport + "\n\nGive me JSON orders.";
+
+        // C. Wysyłka
         StartCoroutine(SendBotRequest(fullPrompt));
     }
 
-    // Kopia logiki wysyłania z GeminiNetwork, ale z obsługą odpowiedzi TUTAJ
+    string GenerateDetailedBattleReport()
+    {
+        // 1. Policz moje siły
+        int myInf = 0, myArc = 0, myCav = 0;
+        foreach (var g in myUnits)
+        {
+            if (g.groupName.Contains("Infantry")) myInf++;
+            else if (g.groupName.Contains("Archer")) myArc++;
+            else if (g.groupName.Contains("Cavalry")) myCav++;
+        }
+
+        // 2. Znajdź centrum armii gracza i jego flanki
+        Vector3 enemyCenter = Vector3.zero;
+        if (enemyUnits.Count > 0)
+        {
+            foreach (var e in enemyUnits) enemyCenter += e.groupCenter;
+            enemyCenter /= enemyUnits.Count;
+        }
+        else
+        {
+            // Jeśli nie widzę wroga, zakładam, że jest w swojej bazie (dół mapy dla SideA)
+            enemyCenter = new Vector3((armyManager.minX + armyManager.maxX) / 2, 0, armyManager.minZ + 100);
+        }
+
+        // 3. Status
+        string status = $"My Forces: {myInf} Infantry Groups, {myArc} Archer Groups, {myCav} Cavalry Groups.";
+        status += $"\nEnemy Center Position: {enemyCenter}.";
+        
+        // Dodaj informację o odległości (czy jesteśmy blisko walki?)
+        float distToEnemy = Vector3.Distance(GetMyArmyCenter(), enemyCenter);
+        status += $"\nDistance to Enemy: {distToEnemy:F0} meters.";
+
+        return status;
+    }
+
+    Vector3 GetMyArmyCenter()
+    {
+        if (myUnits.Count == 0) return Vector3.zero;
+        Vector3 center = Vector3.zero;
+        foreach (var u in myUnits) center += u.groupCenter;
+        return center / myUnits.Count;
+    }
+
+    string ConstructSystemPrompt()
+    {
+        string personaDesc = "";
+        switch (personality)
+        {
+            case GeneralPersonality.Aggressive:
+                personaDesc = "Jesteś BRUTALNYM generałem. Twoim celem jest natychmiastowa szarża. Nie cofasz się. Atakuj 'Enemy_Center' wszystkimi siłami.";
+                break;
+            case GeneralPersonality.Defensive:
+                personaDesc = "Jesteś OSTROŻNYM generałem. Trzymaj pozycję ('HOLD'). Atakuj tylko, gdy wróg podejdzie bardzo blisko (< 100m). Używaj łuczników.";
+                break;
+            case GeneralPersonality.Flanker:
+                personaDesc = "Jesteś SPRYTNYM taktykiem. Wysyłaj Piechotę ('Infantry') na środek ('Enemy_Center'), ale Kawalerię ('Cavalry') wyślij na flanki ('Flank_Left' lub 'Flank_Right').";
+                break;
+            case GeneralPersonality.Balanced:
+            default:
+                personaDesc = "Jesteś DOŚWIADCZONYM generałem. Dostosuj się. Używaj formacji.";
+                break;
+        }
+
+        if (!string.IsNullOrEmpty(scenarioInstruction))
+        {
+            personaDesc += $" DODATKOWY ROZKAZ SCENARIUSZA: {scenarioInstruction}";
+        }
+
+        return $@"Wcielasz się w Generała AI w grze RTS.
+{personaDesc}
+Mapa: X(0-2000), Z(0-2000). Ty jesteś '{myFaction}'.
+ZASADY:
+1. Odpowiadaj TYLKO JSON (format AICommandResponse).
+2. target_location (Możliwe wartości):
+   - 'Enemy_Center' (Główne siły wroga)
+   - 'Flank_Left' (Lewa flanka wroga)
+   - 'Flank_Right' (Prawa flanka wroga)
+   - 'My_Base' (Wycofanie)
+   - 'Hold_Position' (Stanie w miejscu)
+3. action: 'ATTACK' (Ruch ofensywny), 'MOVE' (Manewr), 'STOP'.
+4. unit_tags: 'Infantry', 'Archer', 'Cavalry', 'All'.
+
+Przykład JSON:
+{{ ""commands"": [ {{ ""unit_tags"": [""Cavalry""], ""action"": ""ATTACK"", ""target_location"": ""Flank_Left"" }} ], ""ai_thought"": ""Jazda flankuje wroga."" }}";
+    }
+
+    // --- 2. KOMUNIKACJA (PLUMBING) ---
+
     IEnumerator SendBotRequest(string prompt)
     {
-        Debug.Log($"<color=orange>Generał {myFaction} analizuje pole bitwy...</color>");
-        
-        // Wywołujemy publiczną metodę GeminiNetwork, ale musimy przechwycić wynik.
-        // Ponieważ GeminiNetwork w Twojej wersji wysyła event globalnie, 
-        // zrobimy mały "hack" - tymczasowo podepniemy się pod event i zaraz odepniemy.
-        
-        System.Action<string> tempHandler = null;
-        tempHandler = (response) => 
+        // Hack: Podpinamy się pod event GeminiNetwork tylko na chwilę, żeby złapać odpowiedź dla bota
+        System.Action<string> botHandler = null;
+        bool received = false;
+
+        botHandler = (responseJson) =>
         {
-            ExecuteBotOrders(response);
-            geminiNetwork.OnResponseReceived -= tempHandler; // Sprzątamy po sobie
+            ExecuteBotOrders(responseJson);
+            received = true;
         };
 
-        geminiNetwork.OnResponseReceived += tempHandler;
+        geminiNetwork.OnResponseReceived += botHandler;
         geminiNetwork.SendRequest(prompt);
-        
-        yield return null;
+
+        // Czekamy na odpowiedź max 10 sekund (żeby nie zwiesić bota na zawsze)
+        float timeout = 10f;
+        while (!received && timeout > 0)
+        {
+            timeout -= Time.deltaTime;
+            yield return null;
+        }
+
+        geminiNetwork.OnResponseReceived -= botHandler; // Odpinamy się
+        isWaitingForResponse = false;
     }
+
+    // --- 3. WYKONANIE (ACTION) ---
 
     void ExecuteBotOrders(string jsonResponse)
     {
-        // To samo co w LLMCommander, ale dla bota
         try
         {
             AICommandResponse response = JsonUtility.FromJson<AICommandResponse>(jsonResponse);
-            
-            if(!string.IsNullOrEmpty(response.ai_thought)) 
-                Debug.Log($"<color=red>Myśl Wroga: {response.ai_thought}</color>");
+
+            if (!string.IsNullOrEmpty(response.ai_thought))
+                Debug.Log($"<color=orange>[AI Generał]: {response.ai_thought}</color>");
 
             foreach (var cmd in response.commands)
             {
@@ -101,97 +235,99 @@ public class EnemyGeneral : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogError("Błąd Generała AI: " + e.Message);
+            Debug.LogError("Błąd Bota: " + e.Message);
+            isWaitingForResponse = false;
         }
     }
 
     void ProcessBotCommand(AICommand cmd)
     {
-        // Pobieramy jednostki TEJ frakcji (Bota)
-        List<TacticalGroup> myUnits = (myFaction == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
-        List<TacticalGroup> selectedUnits = new List<TacticalGroup>();
-
-        // Filtrowanie jednostek (Infantry, Cavalry itp.)
+        // 1. Wybierz jednostki
+        List<TacticalGroup> selectedGroups = new List<TacticalGroup>();
         foreach (string tag in cmd.unit_tags)
         {
             string lowerTag = tag.ToLower();
-            if (lowerTag == "all") { selectedUnits.AddRange(myUnits); break; }
+            if (lowerTag == "all") { selectedGroups.AddRange(myUnits); break; }
+            
             foreach (var group in myUnits)
             {
                 if (group.groupName.ToLower().Contains(lowerTag))
                 {
-                    if (!selectedUnits.Contains(group)) selectedUnits.Add(group);
+                    if (!selectedGroups.Contains(group)) selectedGroups.Add(group);
                 }
             }
         }
 
-        if (selectedUnits.Count == 0) return;
+        if (selectedGroups.Count == 0) return;
 
-        // Interpretacja celu (Gdzie mają iść?)
-        Vector3 targetPos = CalculateBotTarget(cmd.target_location);
-
-        // Wykonanie ruchu
-        foreach (var group in selectedUnits)
+        // 2. Oblicz cel (Gdzie to jest na mapie?)
+        Vector3 targetPos = CalculateTargetPosition(cmd.target_location);
+        
+        // 3. Wykonaj rozkaz używając ArmyHierarchyManager (żeby fizyka i unikanie działały!)
+        foreach (var group in selectedGroups)
         {
-            float clampedX = Mathf.Clamp(targetPos.x, armyManager.minX, armyManager.maxX);
-            float clampedZ = Mathf.Clamp(targetPos.z, armyManager.minZ, armyManager.maxZ);
-            group.currentDestination = new Vector3(clampedX, targetPos.y, clampedZ);
-            group.isMoving = true;
+            if (cmd.action == "STOP" || cmd.target_location == "Hold_Position")
+            {
+                group.isMoving = false;
+                group.chaseTarget = null;
+                continue;
+            }
+
+            // Używamy ApplyFormation, bo ona obsługuje logikę ruchu, formacji i PendingOrder
+            // Dzięki temu bot "myśli" tak samo jak gracz
+            Vector3 direction = (targetPos - group.groupCenter).normalized;
+            
+            // Logika ataku: jeśli bot atakuje "Enemy_Center", to każemy mu szukać celów (tak jak u gracza)
+            if (cmd.action == "ATTACK")
+            {
+                // Znajdź najbliższego wroga dla tej grupy (żeby nie zbiegali się w jeden punkt)
+                TacticalGroup closestEnemy = armyManager.FindClosestEnemy(group.groupCenter, enemyUnits);
+                
+                if (closestEnemy != null)
+                {
+                    group.chaseTarget = closestEnemy;
+                    targetPos = closestEnemy.groupCenter;
+                    direction = (targetPos - group.groupCenter).normalized;
+                }
+            }
+
+            armyManager.ApplyFormation(group, "Line", targetPos, direction);
         }
     }
 
-    Vector3 CalculateBotTarget(string locationName)
+    Vector3 CalculateTargetPosition(string locKey)
     {
-        string loc = locationName.ToLower();
-        float centerX = (armyManager.minX + armyManager.maxX) / 2;
-        float centerZ = (armyManager.minZ + armyManager.maxZ) / 2;
-        
-        // Dla bota "Enemy" to Gracz (SideA)
-        List<TacticalGroup> playerUnits = (myFaction == "SideA") ? armyManager.factionBGroups : armyManager.factionAGroups;
-        Vector3 playerArmyPos = Vector3.zero;
-        if (playerUnits.Count > 0) playerArmyPos = playerUnits[0].groupCenter; // Uproszczenie: pierwszy oddział
-
-        if (loc.Contains("center")) return new Vector3(centerX, 0, centerZ);
-        if (loc.Contains("enemy") || loc.Contains("attack")) return playerArmyPos;
-        if (loc.Contains("base")) return new Vector3(centerX, 0, (myFaction == "SideB" ? armyManager.maxZ : armyManager.minZ)); // Baza B jest na górze (MaxZ)
-        
-        // Logika flankowania
-        if (loc.Contains("left")) return new Vector3(armyManager.minX + 150, 0, centerZ);
-        if (loc.Contains("right")) return new Vector3(armyManager.maxX - 150, 0, centerZ);
-
-        return new Vector3(centerX, 0, centerZ); // Domyślnie środek
-    }
-
-    string GenerateBattleReport()
-    {
-        // Tutaj tworzymy tekstowy opis dla AI
-        int myInf = 0, myCav = 0, myArc = 0;
-        List<TacticalGroup> myUnits = (myFaction == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
-        
-        foreach(var g in myUnits)
+        Vector3 enemyCenter = Vector3.zero;
+        if (enemyUnits.Count > 0)
         {
-            if (g.groupName.Contains("Infantry")) myInf += g.unitMatrices.Count;
-            if (g.groupName.Contains("Cavalry")) myCav += g.unitMatrices.Count;
-            if (g.groupName.Contains("Archer")) myArc += g.unitMatrices.Count;
+            foreach (var u in enemyUnits) enemyCenter += u.groupCenter;
+            enemyCenter /= enemyUnits.Count;
+        }
+        else
+        {
+            // Domyślna pozycja wroga (Baza A)
+            enemyCenter = new Vector3((armyManager.minX + armyManager.maxX) / 2, 0, armyManager.minZ + 100);
         }
 
-        // Pobieramy pozycję wroga (uśrednioną)
-        List<TacticalGroup> enemyUnits = (myFaction == "SideA") ? armyManager.factionBGroups : armyManager.factionAGroups;
-        Vector3 enemyPos = Vector3.zero;
-        if (enemyUnits.Count > 0 && enemyUnits[0].unitMatrices.Count > 0) enemyPos = enemyUnits[0].groupCenter;
+        Vector3 myBase = new Vector3((armyManager.minX + armyManager.maxX) / 2, 0, armyManager.maxZ - 100);
 
-        return $"My Army: Infantry: {myInf}, Cavalry: {myCav}, Archers: {myArc}. Enemy is roughly at position X:{enemyPos.x:F0}, Z:{enemyPos.z:F0}. Map Size: {armyManager.maxX}x{armyManager.maxZ}.";
-    }
+        switch (locKey)
+        {
+            case "Enemy_Center":
+                return enemyCenter;
+            
+            case "Flank_Left":
+                // Lewa strona WROGA (czyli nasze prawo, jeśli patrzymy z góry, ale prościej: X+)
+                return enemyCenter + new Vector3(300, 0, 0); 
+            
+            case "Flank_Right":
+                return enemyCenter + new Vector3(-300, 0, 0);
+            
+            case "My_Base":
+                return myBase;
 
-    string ConstructEnemySystemPrompt()
-    {
-        return $@"Jesteś Generałem Frakcji {myFaction} w bitwie Total War. 
-Twój cel: Pokonać wroga.
-Twoja baza jest na {(myFaction == "SideB" ? "Górze (Max Z)" : "Dole (Min Z)")} mapy.
-Otrzymasz raport o siłach. Zdecyduj o strategii.
-ODPOWIADAMY TYLKO JSON (format AICommandResponse).
-Dostępne akcje: MOVE, ATTACK.
-Dostępne cele: Center, Enemy_Army, Left_Flank, Right_Flank, My_Base.
-Myśl strategicznie (np. flankuj kawalerią).";
+            default:
+                return enemyCenter; // Domyślnie atak
+        }
     }
 }
