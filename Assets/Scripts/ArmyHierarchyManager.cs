@@ -495,6 +495,18 @@ public class ArmyHierarchyManager : MonoBehaviour
         // WAŻNE: Nie ustawiamy hasCursorPosition = false tutaj.
         // AI potrzebuje jeszcze chwili (sekunda/dwie), żeby odebrać dane.
     }
+
+    public TacticalGroup GetGroupByName(string name)
+    {
+        // Szukamy w obu frakcjach
+        foreach (var g in factionAGroups)
+            if (g.groupName == name || g.customName == name) return g;
+
+        foreach (var g in factionBGroups)
+            if (g.groupName == name || g.customName == name) return g;
+
+        return null;
+    }
     void OpenNamingPanel()
     {
         if (namingPanel != null)

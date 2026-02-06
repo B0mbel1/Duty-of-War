@@ -243,7 +243,39 @@ public class LLMCommander : MonoBehaviour
         }
 
         if (selectedUnits.Count == 0) return;
+        if (cmd.action == "ATTACK")
+        {
+            TacticalGroup targetEnemy = null;
 
+            // 1. Sprawdzamy czy AI podało nazwę konkretnej grupy w target_location
+            targetEnemy = armyManager.GetGroupByName(cmd.target_location);
+
+            // 2. Jeśli nie, sprawdzamy czy gracz ma kogoś zaznaczonego myszką
+            if (targetEnemy == null)
+                targetEnemy = armyManager.selectedEnemyGroup;
+
+            if (targetEnemy != null && targetEnemy.unitMatrices.Count > 0)
+            {
+                foreach (var group in selectedUnits)
+                {
+                    group.assignedFeature = null;
+
+                    // Obliczamy kierunek do wroga
+                    Vector3 directionToEnemy = (targetEnemy.groupCenter - group.groupCenter).normalized;
+
+                    // Celujemy nieco przed środek wroga, by formacja uderzyła w pierwszą linię
+                    Vector3 attackPos = targetEnemy.groupCenter - (directionToEnemy * 2.0f);
+
+                    // Używamy ApplyFormation, by jednostki szły w szyku bojowym
+                    armyManager.ApplyFormation(group, "Line", attackPos, directionToEnemy);
+
+                    // Wymuszamy, by celem był konkretny punkt wroga
+                    group.currentDestination = attackPos;
+                    Debug.Log($"[BATTLE] {group.groupName} atakuje cel: {targetEnemy.groupName}");
+                }
+                return;
+            }
+        }
         // --- OBSŁUGA ROZKAZU STOP ---
         if (cmd.action == "STOP")
         {
@@ -614,7 +646,8 @@ ZASADY:
    - SPECJALNE: 'Cursor' - UŻYJ TEGO, gdy gracz mówi 'tam', 'tutaj', 'w miejscu kliknięcia', 'do znacznika' LUB wydaje rozkaz formacji bez podania miejsca (np. 'Uformuj linię').
    - FLANKOWANIE (Absolutne): 'Flank_North' (Podejdź od strony Z+), 'Flank_South' (Od Z-), 'Flank_East' (Od X+), 'Flank_West' (Od X-).
    - 'Cursor' - gdy gracz wskazuje 'tam', 'tutaj'.
-4. action: 'MOVE', 'ATTACK', 'STOP', 'FORM'.
+   - KONKRETNY CEL: Jeśli w CONTEXT jest 'TARGETED ENEMY TAG' (np. 'B_Infantry_1'), użyj tego TAGU jako target_location przy rozkazie ataku na 'tego wroga'.
+4. action: 'MOVE', 'ATTACK' - użyj, gdy gracz mówi 'bij', 'atakuj', 'szarżuj'., 'STOP', 'FORM'.
 
 PRZYKŁADY (Zawsze używaj tablicy 'commands'!):
 User: Atakujcie od wschodu!
@@ -622,7 +655,11 @@ AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", "
 
 User: Idźcie do przodu!
 AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Relative_Forward_50"" }} ] }}
+User: Jazda, szarżować na tych łuczników! (W kontekście jest TARGETED ENEMY TAG: 'B_Archers_2')
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Cavalry""], ""action"": ""ATTACK"", ""target_location"": ""B_Archers_2"" }} ], ""ai_thought"": ""Szarża jazdy na wskazanych łuczników."" }}
 
+User: Zniszczyć ten oddział! (W kontekście jest TARGETED ENEMY TAG: 'A_Infantry_5')
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""ATTACK"", ""target_location"": ""A_Infantry_5"" }} ], ""ai_thought"": ""Rozkaz ataku na konkretny, zaznaczony oddział."" }}
 User: Piechota do lasu na północy!
 AI:
 {{
@@ -631,6 +668,9 @@ AI:
   ],
   ""ai_thought"": ""Wysyłam piechotę na północny skraj lasu.""
 }}
+User: Bijcie ich! (Context: TARGETED ENEMY TAG: 'B_Infantry_3')
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""ATTACK"", ""target_location"": ""B_Infantry_3"" }} ] }}
+
 User: Zajdźcie ich od wschodu!
 AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Flank_East"" }} ], ""ai_thought"": ""Wysyłam oddział na wschodnią flankę wroga."" }}
 
@@ -688,7 +728,7 @@ User: Zaznaczone jednostki do lasu!
         var selectedEnemy = armyManager.selectedEnemyGroup;
         if (selectedEnemy != null && selectedEnemy.unitMatrices.Count > 0)
         {
-            enemyInfo = $"TARGETED ENEMY: '{selectedEnemy.groupName}' (or '{selectedEnemy.customName}') at position {selectedEnemy.groupCenter}.";
+            enemyInfo = $"TARGETED ENEMY TAG: '{selectedEnemy.groupName}'. Enemy Name: '{selectedEnemy.customName}'. Position: {selectedEnemy.groupCenter}.";
         }
 
         return $"My Units Count: {myCount}. Map Size: {armyManager.maxX}x{armyManager.maxZ}. {enemyInfo}";
