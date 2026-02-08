@@ -650,7 +650,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         bool isChasing = (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count > 0);
         float distToTargetSq = Vector3.SqrMagnitude(flatTarget - flatCenter);
 
-        // Jeśli NIE gonimy (zwykły ruch) i dotarliśmy -> stop
         if (!isChasing && !group.isReforming && distToTargetSq < 0.5f)
         {
             group.isMoving = false;
@@ -677,6 +676,11 @@ public class ArmyHierarchyManager : MonoBehaviour
         int alphaWidth = 0, alphaHeight = 0;
         if (terrainData != null) { alphaWidth = terrainData.alphamapWidth; alphaHeight = terrainData.alphamapHeight; }
 
+        // --- SEPARACJA (Zmniejszamy, gdy walczą, żeby mogli podejść) ---
+        float separationRadius = 1.1f;
+        float separationStrength = isChasing ? 1.5f : 2.5f; // Mniej odpychania w ataku
+        float maxSeparationForce = 0.5f;
+
         for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             Matrix4x4 mat = group.unitMatrices[i];
@@ -684,15 +688,17 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 scaleVec = mat.lossyScale;
             UnitArchetype arch = group.GetUnitArchetype(i);
 
-            // --- 3. Logika Walki (Płynna) ---
+            // Zwiększamy promień separacji dla koni
+            float myRadius = separationRadius;
+            if (arch != null && arch.type == UnitType.Cavalry) myRadius *= 1.8f;
+
+            // --- 3. Logika Walki ---
+            // Sprawdzamy czy walczył w ostatnim ułamku sekundy
             bool isFighting = (Time.time - group.lastCombatTimes[i] < 0.5f);
 
-            // Domyślna prędkość
             float currentMoveSpeed = globalBaseSpeed;
             if (arch != null) currentMoveSpeed *= arch.speedMultiplier;
 
-            // ZMIANA: Jeśli walczysz, prędkość = 0, ALE nie przerywamy pętli (nie ma continue).
-            // Pozwalamy kodowi niżej obliczyć rotację.
             if (isFighting && arch.type != UnitType.Cavalry)
             {
                 currentMoveSpeed = 0f;
@@ -715,17 +721,53 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
             else
             {
-                // Idziemy ławą
                 moveDirection = groupDirection;
             }
 
-            // --- 5. Aplikowanie RUCHU (Pozycja) ---
+            // --- SEPARACJA ---
+            // Nie stosujemy separacji, jeśli jednostka walczy (żeby nie odsuwała się od wroga)
+            if (moveDirection != Vector3.zero && !group.isReforming && !isFighting)
+            {
+                Vector3 separationForce = Vector3.zero;
+                int neighborsCount = 0;
+                int checkRange = 6;
+                int startCheck = Mathf.Max(0, i - checkRange);
+                int endCheck = Mathf.Min(group.unitMatrices.Count, i + checkRange + 1);
+
+                for (int n = startCheck; n < endCheck; n++)
+                {
+                    if (n == i) continue;
+                    Vector3 neighborPos = (Vector3)group.unitMatrices[n].GetColumn(3);
+                    Vector3 toNeighbor = currentPos - neighborPos;
+                    toNeighbor.y = 0;
+
+                    float distSq = toNeighbor.sqrMagnitude;
+                    float safeDistSq = myRadius * myRadius;
+
+                    if (distSq < safeDistSq && distSq > 0.001f)
+                    {
+                        float pushStrength = (safeDistSq - distSq) / safeDistSq;
+                        separationForce += toNeighbor.normalized * pushStrength;
+                        neighborsCount++;
+                    }
+                }
+
+                if (neighborsCount > 0)
+                {
+                    separationForce /= neighborsCount;
+                    separationForce *= separationStrength;
+                    separationForce = Vector3.ClampMagnitude(separationForce, maxSeparationForce);
+                    moveDirection += separationForce;
+                    moveDirection.Normalize();
+                }
+            }
+
+            // --- 5. Aplikowanie RUCHU ---
             Vector3 newPos = currentPos;
 
-            // Ruszamy się tylko jeśli mamy prędkość (czyli nie walczymy) i mamy gdzie iść
             if (moveDirection != Vector3.zero && currentMoveSpeed > 0.001f)
             {
-                // -- Fizyka Terenu (Skrócona) --
+                // -- Fizyka Terenu --
                 float terrainY = currentPos.y;
                 if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
                 bool inWater = false;
@@ -773,32 +815,30 @@ public class ArmyHierarchyManager : MonoBehaviour
                 else newPos.y = terrainY;
             }
 
-            // --- 6. Aplikowanie ROTACJI (Wygładzona) ---
+            // --- 6. Aplikowanie ROTACJI (FIX DRŻENIA) ---
             Quaternion targetUnitRot;
 
             if (isFighting)
             {
-                // Jeśli walczymy, patrzymy na WROGA (kierunek grupy).
-                // Ale robimy to PŁYNNIE (Slerp), a nie skokowo.
-                targetUnitRot = Quaternion.LookRotation(groupDirection);
+                // ZMIANA KLUCZOWA:
+                // Jeśli walczysz, NIE OBRACAJ SIĘ w stronę grupy.
+                // Zachowaj obecną rotację (tę, przy której uderzyłeś wroga).
+                // To eliminuje konflikt: "Uderzam w lewo" vs "Grupa idzie w prawo".
+                targetUnitRot = mat.rotation;
             }
             else if (isChasing)
             {
-                // W biegu też patrzymy na cel
                 targetUnitRot = Quaternion.LookRotation(groupDirection);
             }
             else if (group.isReforming && moveDirection.sqrMagnitude > 0.1f)
             {
-                // W formowaniu patrzymy tam gdzie idziemy
                 targetUnitRot = Quaternion.LookRotation(moveDirection);
             }
             else
             {
-                // W spoczynku patrzymy tam gdzie cała grupa
                 targetUnitRot = nextRot;
             }
 
-            // Klucz do płynności: Zawsze używamy Slerp
             Quaternion finalRot = Quaternion.Slerp(mat.rotation, targetUnitRot, 10f * Time.deltaTime);
 
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, finalRot, scaleVec);
@@ -1003,16 +1043,8 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void ProcessSingleAttacker(TacticalGroup attackerGroup, List<TacticalGroup> enemyFaction, int idx)
     {
-        // Zabezpieczenia indeksów
+        // 1. Walidacja indeksów
         if (idx >= attackerGroup.attackCooldowns.Count || idx >= attackerGroup.unitMatrices.Count) return;
-
-        // Obsługa Cooldownu (przeładowania ataku)
-        float dt = Time.deltaTime;
-        if (attackerGroup.attackCooldowns[idx] > 0)
-        {
-            attackerGroup.attackCooldowns[idx] -= dt;
-            return;
-        }
 
         // Pobranie danych atakującego
         Matrix4x4 myMat = attackerGroup.unitMatrices[idx];
@@ -1027,12 +1059,40 @@ public class ArmyHierarchyManager : MonoBehaviour
         float rangeSq = range * range;
         float cooldownTime = isArcher ? archerAttackCooldown : attackCooldown;
 
-        // Szukanie celu (Łucznicy globalnie, Melee w siatce przestrzennej)
+        // --- SZUKANIE CELU (PRIORYTETYZACJA) ---
         UnitRef target = new UnitRef { group = null };
-        if (isArcher) target = FindTargetGlobal(myPos, range, rangeSq, enemyFaction);
-        else target = FindTargetInGrid(myPos, rangeSq);
 
-        // Jeśli znaleziono cel
+        // KROK A: Czy mam rozkaz ataku na konkretny oddział?
+        bool hasSpecificOrder = (attackerGroup.chaseTarget != null && attackerGroup.chaseTarget.unitMatrices.Count > 0);
+
+        if (hasSpecificOrder)
+        {
+            // Sprawdzamy, czy ktoś z CELU GŁÓWNEGO jest w zasięgu
+            target = FindClosestUnitInGroup(myPos, rangeSq, attackerGroup.chaseTarget);
+
+            // Jeśli cel główny jest daleko (target.group == null), to:
+            // Opcja 1 (Lojalność): Nie atakujemy nikogo innego, biegniemy dalej (return).
+            // Opcja 2 (Samoobrona): Jeśli cel główny daleko, ale ktoś inny mnie bije, to go biję.
+
+            // Wybieramy Opcję 1 dla "Poczucia kontroli" - jak klikasz atak na łuczników, 
+            // to Twoi ludzie mają olać piechotę i biec do łuczników, nawet jak obrywają.
+            if (target.group == null)
+            {
+                // Redukcja cooldownu w biegu i wyjście (jednostka będzie się ruszać w ProcessMovement)
+                if (attackerGroup.attackCooldowns[idx] > 0) attackerGroup.attackCooldowns[idx] -= Time.deltaTime;
+                return;
+            }
+        }
+        else
+        {
+            // KROK B: Nie mam konkretnego celu (Attack Move / Idle) -> Biję najbliższego
+            if (isArcher) target = FindTargetGlobal(myPos, range, rangeSq, enemyFaction);
+            else target = FindTargetInGrid(myPos, rangeSq);
+        }
+
+        // --- KONIEC ZMIAN W SZUKANIU ---
+
+        // Dalsza część funkcji (Zadawanie obrażeń) - bez zmian, wklejam dla kontekstu
         if (target.group != null)
         {
             if (target.index >= target.group.unitMatrices.Count) return;
@@ -1040,57 +1100,43 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 dirToTarget = (target.position - myPos).normalized;
             float angleDot = Vector3.Dot(myForward, dirToTarget);
 
-            // --- POPRAWKA: KĄT WIDZENIA ---
-            // Wcześniej było sztywne 0.2f (ok. 80 stopni), co blokowało ataki w tłumie.
-            // Teraz: Melee bije szeroko (nawet wrogów z boku), Łucznik musi celować prosto.
+            float requiredAngle = isArcher ? 0.5f : -0.5f;
+            if (angleDot < requiredAngle) return;
 
-            float requiredAngle = 0.5f; // Domyślnie dla łucznika (wąski kąt ok. 60 stopni)
-
-            if (!isArcher)
-            {
-                // Dla zwarcia (Piechota/Konie) pozwalamy bić prawie wszystko przed sobą i z boku.
-                // -0.2f oznacza ok. 100 stopni w lewo/prawo (prawie wszystko poza plecami).
-                requiredAngle = -0.2f;
-            }
-
-            if (angleDot < requiredAngle) return; // Jeśli wróg jest poza kątem ataku, nic nie rób
             attackerGroup.lastCombatTimes[idx] = Time.time;
 
-            // Aktualizujemy czas walki dla OFIARY (ofiara też powinna się zatrzymać, żeby się bronić!)
-            if (target.index < target.group.lastCombatTimes.Count)
+            if (attackerGroup.attackCooldowns[idx] > 0)
             {
-                target.group.lastCombatTimes[target.index] = Time.time;
+                attackerGroup.attackCooldowns[idx] -= Time.deltaTime;
+                return;
             }
-            // Obliczanie obrażeń
+
+            if (target.index < target.group.lastCombatTimes.Count)
+                target.group.lastCombatTimes[target.index] = Time.time;
+
+            // (Reszta logiki DMG, Backstab, KillUnit - taka sama jak w poprzednim pliku)
             Matrix4x4 targetMat = target.group.unitMatrices[target.index];
             Vector3 targetForward = (Vector3)targetMat.GetColumn(2);
-
-            // Czy atakujemy w plecy?
             float orientationDot = Vector3.Dot(myForward, targetForward);
-            bool isBackstab = (orientationDot > 0.5f); // Jeśli obaj patrzą w tę samą stronę -> cios w plecy
+            bool isBackstab = (orientationDot > 0.5f);
 
             float dmg = 0f;
-            if (isBackstab) dmg = 10000f; // Instant kill w plecy
+            if (isBackstab) dmg = 10000f;
             else dmg = CalculateDamage(attackerGroup, target.group, idx, target.index, myPos, target.position);
 
-            // Zadawanie obrażeń
             target.group.unitHealth[target.index] -= dmg;
-
-            // Ustawienie losowego cooldownu (żeby nie atakowali wszyscy co do milisekundy równo)
             attackerGroup.attackCooldowns[idx] = cooldownTime * Random.Range(0.8f, 1.2f);
 
-            // Śmierć celu
             if (target.group.unitHealth[target.index] <= 0)
             {
                 KillUnit(target.group, target.index);
-
-                // --- NOWOŚĆ: ODBLOKOWANIE RUCHU ---
-                // Resetujemy czas walki atakującego na "bardzo dawno temu".
-                // Dzięki temu w funkcji ProcessMovement warunek (Time.time - lastCombat < 0.5f) będzie fałszywy
-                // i żołnierz natychmiast zacznie biec dalej w tej samej klatce.
                 attackerGroup.lastCombatTimes[idx] = -100f;
-                // ----------------------------------
             }
+        }
+        else
+        {
+            if (attackerGroup.attackCooldowns[idx] > 0)
+                attackerGroup.attackCooldowns[idx] -= Time.deltaTime;
         }
     }
 
@@ -1111,6 +1157,32 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
         return best;
+    }
+    // Nowa funkcja do szukania celu TYLKO w konkretnym oddziale (dla Focus Fire)
+    UnitRef FindClosestUnitInGroup(Vector3 myPos, float rangeSq, TacticalGroup targetGroup)
+    {
+        int bestIdx = -1;
+        float bestDistSq = rangeSq; // Musi być w zasięgu
+
+        for (int i = 0; i < targetGroup.unitMatrices.Count; i++)
+        {
+            Vector3 enemyPos = (Vector3)targetGroup.unitMatrices[i].GetColumn(3);
+            float dSq = (enemyPos - myPos).sqrMagnitude;
+
+            if (dSq < bestDistSq)
+            {
+                bestDistSq = dSq;
+                bestIdx = i;
+            }
+        }
+
+        if (bestIdx != -1)
+        {
+            Vector3 foundPos = (Vector3)targetGroup.unitMatrices[bestIdx].GetColumn(3);
+            return new UnitRef { group = targetGroup, index = bestIdx, position = foundPos };
+        }
+
+        return new UnitRef { group = null };
     }
 
     // 2. Dodaj metodę aktualizującą pościg:
