@@ -1572,11 +1572,9 @@ public class ArmyHierarchyManager : MonoBehaviour
     // --- NOWOŚĆ: SYSTEM FORMACJI ---
     public void ApplyFormation(TacticalGroup group, string formationType, Vector3? centerOverride = null, Vector3? lookDirectionOverride = null)
     {
-
-        // Ustalmy cel i kierunek (tak jak było wcześniej)
+        // 1. Ustalanie celu i rotacji (Standard, bez zmian)
         Vector3 center = centerOverride.HasValue ? centerOverride.Value : group.groupCenter;
 
-        // Logika kierunku (skopiowana z oryginału dla spójności)
         Quaternion rotation = (group.unitMatrices.Count > 0) ? group.unitMatrices[0].rotation : Quaternion.identity;
         if (lookDirectionOverride.HasValue && lookDirectionOverride.Value != Vector3.zero)
             rotation = Quaternion.LookRotation(lookDirectionOverride.Value);
@@ -1587,8 +1585,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
         Vector3 finalLookDir = rotation * Vector3.forward;
 
-
-        // --- NOWOŚĆ: JEŚLI FAZA PLANOWANIA -> ZAPISZ I WYJDŹ ---
+        // --- OBSŁUGA DEPLOYMENT PHASE (Twój kod) ---
         if (isDeploymentPhase)
         {
             group.pendingOrder = new PendingOrderData
@@ -1597,77 +1594,175 @@ public class ArmyHierarchyManager : MonoBehaviour
                 formationName = formationType,
                 destination = center,
                 lookDirection = finalLookDir,
-                // Zapamiętujemy cel ataku, jeśli został ustawiony w LLMCommander przed wywołaniem tej funkcji
                 chaseTarget = group.chaseTarget
             };
-
-            // WAŻNE: Anulujemy natychmiastowy pościg, żeby jednostka nie ruszyła w Update()
             group.chaseTarget = null;
             group.isMoving = false;
             group.isReforming = false;
-
-            Debug.Log($"[PLANOWANIE] Rozkaz dla {group.groupName} zapamiętany: {formationType}");
             return;
         }
-        if (group.unitMatrices.Count == 0) return;
 
-        // Resetujemy przypisanie do terenu
+        if (group.unitMatrices.Count == 0) return;
         group.assignedFeature = null;
 
-        // Ustalmy środek formacji
-
         int count = group.unitMatrices.Count;
-        int cols = 10;
-        float spacing = 2.0f;
-
-        // Definicje formacji (bez zmian)
-        if (formationType.ToLower().Contains("line") || formationType.ToLower().Contains("linia")) { cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 2); spacing = 1.5f; }
-        else if (formationType.ToLower().Contains("turtle") || formationType.ToLower().Contains("żółw")) { cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 1.2f; }
-        else if (formationType.ToLower().Contains("double") || formationType.ToLower().Contains("dwuszereg")) { cols = count / 2; spacing = 1.8f; }
-
-        // --- LOGIKA ROTACJI (ZMODYFIKOWANA) ---
-
-        // PRIORYTET 1: Wymuszony kierunek (np. flankowanie - patrzenie na wroga)
-        if (lookDirectionOverride.HasValue && lookDirectionOverride.Value != Vector3.zero)
-        {
-            rotation = Quaternion.LookRotation(lookDirectionOverride.Value);
-        }
-        // PRIORYTET 2: Jeśli wskazano cel ruchu, ale nie kierunek -> patrz tam gdzie idziesz
-        else if (centerOverride.HasValue)
-        {
-            Vector3 directionToTarget = (center - group.groupCenter).normalized;
-            if (directionToTarget != Vector3.zero)
-                rotation = Quaternion.LookRotation(directionToTarget);
-        }
-
-        Vector3 right = rotation * Vector3.right;
-        Vector3 back = rotation * Vector3.back;
-
-        float totalWidth = (cols - 1) * spacing;
-        Vector3 startPos = center - (right * totalWidth * 0.5f);
-
+        group.formationTargets.Clear(); // Czyścimy stare cele
         while (group.formationTargets.Count < count) group.formationTargets.Add(Vector3.zero);
 
-        for (int i = 0; i < count; i++)
+        Vector3 right = rotation * Vector3.right;
+        Vector3 back = rotation * Vector3.back; // Pamiętaj: Unity Forward to Z+, więc Back to Z- (dla nas "w głąb formacji")
+        string typeLower = formationType.ToLower();
+
+        // --- MATEMATYKA FORMACJI ---
+
+        // 1. KLIN (WEDGE) - Trójkąt
+        if (typeLower.Contains("wedge") || typeLower.Contains("klin"))
         {
-            int col = i % cols;
-            int row = i / cols;
-            Vector3 offset = (right * col * spacing) + (back * row * spacing);
-            Vector3 finalPos = startPos + offset;
+            // Algorytm trójkąta: Rząd 1 ma 1 jednostkę, Rząd 2 ma 3, Rząd 3 ma 5 itd. (lub 1, 2, 3...)
+            // Użyjmy prostego klina kawaleryjskiego: 1, 2, 3, 4...
 
-            if (terrain != null) finalPos.y = terrain.SampleHeight(finalPos) + terrain.transform.position.y;
-            else finalPos.y = center.y;
+            int currentRow = 0;
+            int unitsInCurrentRow = 0;
+            int maxUnitsInRow = 1;
+            float spacing = 2.0f; // Luźniej dla koni
 
-            group.formationTargets[i] = finalPos;
+            // Przesuwamy czubek klina do przodu, żeby 'center' był w środku masy
+            Vector3 startTip = center - (back * (Mathf.Sqrt(count) * spacing * 0.5f));
+
+            for (int i = 0; i < count; i++)
+            {
+                // Obliczamy szerokość tego konkretnego rzędu
+                float rowWidth = (maxUnitsInRow - 1) * spacing;
+                // Pozycja startowa rzędu (najbardziej na lewo)
+                Vector3 rowStart = startTip + (back * currentRow * spacing) - (right * rowWidth * 0.5f);
+
+                // Pozycja jednostki
+                Vector3 pos = rowStart + (right * unitsInCurrentRow * spacing);
+
+                SetFormationPoint(group, i, pos);
+
+                unitsInCurrentRow++;
+                if (unitsInCurrentRow >= maxUnitsInRow)
+                {
+                    currentRow++;
+                    unitsInCurrentRow = 0;
+                    maxUnitsInRow++; // Kolejny rząd jest szerszy
+                }
+            }
+        }
+        // 2. CZWOROBOK (SQUARE/BOX) - Pusty w środku
+        else if (typeLower.Contains("square") || typeLower.Contains("czworobok"))
+        {
+            float spacing = 1.5f;
+            // Obliczamy bok kwadratu (ile jednostek na bok)
+            int sideCount = Mathf.CeilToInt(count / 4.0f);
+            float sideLength = sideCount * spacing;
+
+            // Lewy Górny Róg (względem rotacji)
+            Vector3 topLeft = center - (right * sideLength * 0.5f) - (back * sideLength * 0.5f);
+
+            for (int i = 0; i < count; i++)
+            {
+                // Dzielimy jednostki na 4 ściany
+                int sideIndex = (i / sideCount) % 4; // 0=Góra, 1=Prawo, 2=Dół, 3=Lewo
+                int unitInSide = i % sideCount;
+
+                Vector3 pos = Vector3.zero;
+
+                switch (sideIndex)
+                {
+                    case 0: // Góra (Front) - idziemy w prawo
+                        pos = topLeft + (right * unitInSide * spacing);
+                        break;
+                    case 1: // Prawa ściana - idziemy w tył (back)
+                        pos = topLeft + (right * sideLength) + (back * unitInSide * spacing);
+                        break;
+                    case 2: // Dół (Tył) - idziemy w lewo (odejmujemy right)
+                        pos = topLeft + (right * sideLength) + (back * sideLength) - (right * unitInSide * spacing);
+                        break;
+                    case 3: // Lewa ściana - idziemy do przodu (odejmujemy back)
+                        pos = topLeft + (back * sideLength) - (back * unitInSide * spacing);
+                        break;
+                }
+                SetFormationPoint(group, i, pos);
+            }
+        }
+        // 3. KOLUMNA (COLUMN) - Wąska i długa
+        else if (typeLower.Contains("column") || typeLower.Contains("kolumna"))
+        {
+            int cols = 4; // Stała szerokość (np. 4 żołnierzy)
+            float spacing = 1.5f;
+
+            float totalWidth = (cols - 1) * spacing;
+            Vector3 startPos = center - (right * totalWidth * 0.5f) - (back * (count / cols) * spacing * 0.5f); // Centrujemy
+
+            for (int i = 0; i < count; i++)
+            {
+                int col = i % cols;
+                int row = i / cols;
+                Vector3 pos = startPos + (right * col * spacing) + (back * row * spacing);
+                SetFormationPoint(group, i, pos);
+            }
+        }
+        // 4. LUŹNA (LOOSE) - Rozproszona linia
+        else if (typeLower.Contains("loose") || typeLower.Contains("luźna"))
+        {
+            int cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 2);
+            float spacing = 3.5f; // BARDZO DUŻY ODSTĘP
+
+            // Dodajemy losowość (Jitter)
+            float totalWidth = (cols - 1) * spacing;
+            Vector3 startPos = center - (right * totalWidth * 0.5f);
+
+            for (int i = 0; i < count; i++)
+            {
+                int col = i % cols;
+                int row = i / cols;
+
+                // Losowe przesunięcie dla każdej jednostki, żeby wyglądało naturalnie
+                float jitterX = Random.Range(-0.5f, 0.5f);
+                float jitterZ = Random.Range(-0.5f, 0.5f);
+
+                Vector3 pos = startPos + (right * (col + jitterX) * spacing) + (back * (row + jitterZ) * spacing);
+                SetFormationPoint(group, i, pos);
+            }
+        }
+        // 5. STANDARD (LINIA / DWUSZEREG / ŻÓŁW) - Twoja stara logika
+        else
+        {
+            int cols = 10;
+            float spacing = 2.0f;
+
+            if (typeLower.Contains("turtle") || typeLower.Contains("żółw")) { cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 1.1f; } // Bardzo ciasno
+            else if (typeLower.Contains("double") || typeLower.Contains("dwuszereg")) { cols = Mathf.CeilToInt(count / 2.0f); spacing = 1.8f; }
+            else { cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 3); spacing = 1.5f; } // Zwykła linia
+
+            float totalWidth = (cols - 1) * spacing;
+            Vector3 startPos = center - (right * totalWidth * 0.5f);
+
+            for (int i = 0; i < count; i++)
+            {
+                int col = i % cols;
+                int row = i / cols;
+                Vector3 pos = startPos + (right * col * spacing) + (back * row * spacing);
+                SetFormationPoint(group, i, pos);
+            }
         }
 
-        group.targetFacingDirection = finalLookDir; // Używamy obliczonego wcześniej
-        group.isReforming = true; // To włącza precyzyjny ruch do formationTargets
+        group.targetFacingDirection = finalLookDir;
+        group.isReforming = true;
         group.isMoving = true;
         group.currentDestination = center;
+    }
 
-        // Debug info
-        // Debug.Log($"Grupa {group.groupName} formuje {formationType} w punkcie {center}");
+    void SetFormationPoint(TacticalGroup group, int index, Vector3 flatPos)
+    {
+        if (terrain != null)
+            flatPos.y = terrain.SampleHeight(flatPos) + terrain.transform.position.y;
+        else
+            flatPos.y = 0;
+            
+        group.formationTargets[index] = flatPos;
     }
 
     public List<TacticalGroup> GetSelectedGroups()

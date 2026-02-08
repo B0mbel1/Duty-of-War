@@ -775,7 +775,7 @@ ZASADY:
    - TERENOWE: {mapLocations}.
    - DLA KOMENDY STOP: 'None'.
    - DLA PRZESUNIĘĆ (np. 100m w lewo): 'Relative_{{Kierunek}}_{{Metry}}'. Kierunki: Forward, Backward, Left, Right.
-   - DLA 'FORM' (Formacje): 'Line' (Szereg), 'Double_Line' (Dwuszereg), 'Box' (Kwadrat), 'Turtle' (Żółw), 'Loose' (Luźna).
+   - DLA 'FORM' (Formacje): 'Line', 'Double_Line', 'Box', 'Turtle', 'Loose' (Luźna), 'Wedge' (Klin), 'Square' (Czworobok), 'Column' (Kolumna).
    - SPECJALNE: 'Cursor' - UŻYJ TEGO, gdy gracz mówi 'tam', 'tutaj', 'w miejscu kliknięcia', 'do znacznika' LUB wydaje rozkaz formacji bez podania miejsca (np. 'Uformuj linię').
    - FLANKOWANIE (Absolutne): 'Flank_North' (Podejdź od strony Z+), 'Flank_South' (Od Z-), 'Flank_East' (Od X+), 'Flank_West' (Od X-).
    - 'Cursor' - gdy gracz wskazuje 'tam', 'tutaj'.
