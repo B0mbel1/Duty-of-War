@@ -855,7 +855,31 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.RecalculateCenter();
     }
 
+    Vector3 GetSmartLookTarget(TacticalGroup group)
+    {
+        // 1. Jeśli mamy zaznaczonego wroga czerwonym kółkiem -> patrzymy na niego
+        if (selectedEnemyGroup != null && selectedEnemyGroup.unitMatrices.Count > 0)
+        {
+            return selectedEnemyGroup.groupCenter;
+        }
 
+        // 2. Jeśli grupa ma swój cel pościgu -> patrzymy na niego
+        if (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count > 0)
+        {
+            return group.chaseTarget.groupCenter;
+        }
+
+        // 3. Domyślnie: Patrzymy na środek armii przeciwnej (Globalna świadomość)
+        List<TacticalGroup> enemies = (factionAGroups.Contains(group)) ? factionBGroups : factionAGroups;
+
+        // Znajdź najbliższego wroga, żeby nie patrzeć na drugi koniec mapy
+        TacticalGroup closest = FindClosestEnemy(group.groupCenter, enemies);
+        if (closest != null) return closest.groupCenter;
+
+        // Fallback: Środek mapy po stronie wroga
+        float enemyZ = (factionAGroups.Contains(group)) ? maxZ : minZ;
+        return new Vector3((minX + maxX) / 2, 0, enemyZ);
+    }
     void ApplyFinalFormationRotation(TacticalGroup group)
     {
         if (group.unitMatrices.Count == 0) return;
@@ -1572,20 +1596,29 @@ public class ArmyHierarchyManager : MonoBehaviour
     // --- NOWOŚĆ: SYSTEM FORMACJI ---
     public void ApplyFormation(TacticalGroup group, string formationType, Vector3? centerOverride = null, Vector3? lookDirectionOverride = null)
     {
-        // 1. Ustalanie celu i rotacji (Standard, bez zmian)
+        // 1. Ustalmy cel (Gdzie ma stać środek formacji)
         Vector3 center = centerOverride.HasValue ? centerOverride.Value : group.groupCenter;
 
-        Quaternion rotation = (group.unitMatrices.Count > 0) ? group.unitMatrices[0].rotation : Quaternion.identity;
-        if (lookDirectionOverride.HasValue && lookDirectionOverride.Value != Vector3.zero)
-            rotation = Quaternion.LookRotation(lookDirectionOverride.Value);
-        else if (centerOverride.HasValue)
-        {
-            Vector3 directionToTarget = (center - group.groupCenter).normalized;
-            if (directionToTarget != Vector3.zero) rotation = Quaternion.LookRotation(directionToTarget);
-        }
-        Vector3 finalLookDir = rotation * Vector3.forward;
+        // 2. --- NOWA LOGIKA ROTACJI (Zawsze frontem do wroga) ---
+        Quaternion rotation;
 
-        // --- OBSŁUGA DEPLOYMENT PHASE (Twój kod) ---
+        // A. Jeśli komenda wymusza kierunek (np. Flank Attack), użyj go
+        if (lookDirectionOverride.HasValue && lookDirectionOverride.Value != Vector3.zero)
+        {
+            rotation = Quaternion.LookRotation(lookDirectionOverride.Value);
+        }
+        // B. W przeciwnym razie: Oblicz, gdzie jest wróg i patrz na niego!
+        else
+        {
+            Vector3 enemyPos = GetSmartLookTarget(group);
+            Vector3 dirToEnemy = (enemyPos - center).normalized;
+            if (dirToEnemy == Vector3.zero) dirToEnemy = Vector3.forward;
+            rotation = Quaternion.LookRotation(dirToEnemy);
+        }
+
+        Vector3 finalLookDir = rotation * Vector3.forward; // To jest wektor "Do Wroga"
+
+        // --- OBSŁUGA DEPLOYMENT PHASE ---
         if (isDeploymentPhase)
         {
             group.pendingOrder = new PendingOrderData
@@ -1599,6 +1632,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             group.chaseTarget = null;
             group.isMoving = false;
             group.isReforming = false;
+            Debug.Log($"[PLANOWANIE] Formacja {formationType} ustawiona frontem do wroga.");
             return;
         }
 
@@ -1606,111 +1640,118 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.assignedFeature = null;
 
         int count = group.unitMatrices.Count;
-        group.formationTargets.Clear(); // Czyścimy stare cele
+        group.formationTargets.Clear();
         while (group.formationTargets.Count < count) group.formationTargets.Add(Vector3.zero);
 
-        Vector3 right = rotation * Vector3.right;
-        Vector3 back = rotation * Vector3.back; // Pamiętaj: Unity Forward to Z+, więc Back to Z- (dla nas "w głąb formacji")
+        // Wektory pomocnicze (względem wroga)
+        Vector3 forward = finalLookDir; // W stronę wroga
+        Vector3 right = rotation * Vector3.right; // W prawo od patrzenia
+        Vector3 back = -forward; // W tył od patrzenia
+
         string typeLower = formationType.ToLower();
 
         // --- MATEMATYKA FORMACJI ---
 
-        // 1. KLIN (WEDGE) - Trójkąt
+        // 1. KLIN (WEDGE) - Ostry koniec do przeciwnika
         if (typeLower.Contains("wedge") || typeLower.Contains("klin"))
         {
-            // Algorytm trójkąta: Rząd 1 ma 1 jednostkę, Rząd 2 ma 3, Rząd 3 ma 5 itd. (lub 1, 2, 3...)
-            // Użyjmy prostego klina kawaleryjskiego: 1, 2, 3, 4...
+            float spacing = 2.0f; // Luźniej dla koni
+
+            // Obliczamy ile jest rzędów, żeby wiedzieć, jak daleko cofnąć "dupę" klina, 
+            // a czubek wystawić do przodu.
+            // Wzór na sumę ciągu arytmetycznego (1+2+3...) przybliża liczbę rzędów: rows ≈ Sqrt(2*count)
+            int estimatedRows = Mathf.CeilToInt(Mathf.Sqrt(2 * count));
+            float formationDepth = estimatedRows * spacing;
+
+            // Czubek (Tip) ustawiamy "do przodu" względem środka (center)
+            // Dzięki temu 'center' wypada w środku masy oddziału, a czubek jest najbliżej wroga.
+            Vector3 tipPosition = center + (forward * (formationDepth * 0.33f));
 
             int currentRow = 0;
             int unitsInCurrentRow = 0;
-            int maxUnitsInRow = 1;
-            float spacing = 2.0f; // Luźniej dla koni
-
-            // Przesuwamy czubek klina do przodu, żeby 'center' był w środku masy
-            Vector3 startTip = center - (back * (Mathf.Sqrt(count) * spacing * 0.5f));
+            int unitsAllowedInRow = 1; // 1, 2, 3, 4...
 
             for (int i = 0; i < count; i++)
             {
-                // Obliczamy szerokość tego konkretnego rzędu
-                float rowWidth = (maxUnitsInRow - 1) * spacing;
-                // Pozycja startowa rzędu (najbardziej na lewo)
-                Vector3 rowStart = startTip + (back * currentRow * spacing) - (right * rowWidth * 0.5f);
+                // Szerokość aktualnego rzędu
+                float rowWidth = (unitsAllowedInRow - 1) * spacing;
 
-                // Pozycja jednostki
+                // Pozycja startowa rzędu (lewa strona)
+                // "Cofamy się" (back) o numer rzędu
+                Vector3 rowStart = tipPosition + (back * currentRow * spacing) - (right * rowWidth * 0.5f);
+
                 Vector3 pos = rowStart + (right * unitsInCurrentRow * spacing);
-
                 SetFormationPoint(group, i, pos);
 
                 unitsInCurrentRow++;
-                if (unitsInCurrentRow >= maxUnitsInRow)
+                if (unitsInCurrentRow >= unitsAllowedInRow)
                 {
                     currentRow++;
                     unitsInCurrentRow = 0;
-                    maxUnitsInRow++; // Kolejny rząd jest szerszy
+                    unitsAllowedInRow++; // Kolejny rząd szerszy
                 }
             }
         }
-        // 2. CZWOROBOK (SQUARE/BOX) - Pusty w środku
+        // 2. CZWOROBOK (SQUARE)
         else if (typeLower.Contains("square") || typeLower.Contains("czworobok"))
         {
             float spacing = 1.5f;
-            // Obliczamy bok kwadratu (ile jednostek na bok)
             int sideCount = Mathf.CeilToInt(count / 4.0f);
             float sideLength = sideCount * spacing;
 
-            // Lewy Górny Róg (względem rotacji)
-            Vector3 topLeft = center - (right * sideLength * 0.5f) - (back * sideLength * 0.5f);
+            // Róg lewy-przód (względem wroga)
+            Vector3 frontLeftCorner = center + (forward * sideLength * 0.5f) - (right * sideLength * 0.5f);
 
             for (int i = 0; i < count; i++)
             {
-                // Dzielimy jednostki na 4 ściany
-                int sideIndex = (i / sideCount) % 4; // 0=Góra, 1=Prawo, 2=Dół, 3=Lewo
+                int sideIndex = (i / sideCount) % 4;
                 int unitInSide = i % sideCount;
-
                 Vector3 pos = Vector3.zero;
 
                 switch (sideIndex)
                 {
-                    case 0: // Góra (Front) - idziemy w prawo
-                        pos = topLeft + (right * unitInSide * spacing);
+                    case 0: // Front (Frontem do wroga) - wypełniamy w prawo
+                        pos = frontLeftCorner + (right * unitInSide * spacing);
                         break;
-                    case 1: // Prawa ściana - idziemy w tył (back)
-                        pos = topLeft + (right * sideLength) + (back * unitInSide * spacing);
+                    case 1: // Prawy bok - wypełniamy w tył
+                        pos = frontLeftCorner + (right * sideLength) + (back * unitInSide * spacing);
                         break;
-                    case 2: // Dół (Tył) - idziemy w lewo (odejmujemy right)
-                        pos = topLeft + (right * sideLength) + (back * sideLength) - (right * unitInSide * spacing);
+                    case 2: // Tył - wypełniamy w lewo
+                        pos = frontLeftCorner + (right * sideLength) + (back * sideLength) - (right * unitInSide * spacing);
                         break;
-                    case 3: // Lewa ściana - idziemy do przodu (odejmujemy back)
-                        pos = topLeft + (back * sideLength) - (back * unitInSide * spacing);
+                    case 3: // Lewy bok - wypełniamy w przód
+                        pos = frontLeftCorner + (back * sideLength) - (back * unitInSide * spacing);
                         break;
                 }
                 SetFormationPoint(group, i, pos);
             }
         }
-        // 3. KOLUMNA (COLUMN) - Wąska i długa
+        // 3. KOLUMNA
         else if (typeLower.Contains("column") || typeLower.Contains("kolumna"))
         {
-            int cols = 4; // Stała szerokość (np. 4 żołnierzy)
+            int cols = 5;
             float spacing = 1.5f;
-
             float totalWidth = (cols - 1) * spacing;
-            Vector3 startPos = center - (right * totalWidth * 0.5f) - (back * (count / cols) * spacing * 0.5f); // Centrujemy
+
+            // Startujemy z przodu, żeby czoło kolumny było bliżej wroga
+            int rows = Mathf.CeilToInt((float)count / cols);
+            Vector3 frontLineCenter = center + (forward * (rows * spacing * 0.5f));
+            Vector3 startPos = frontLineCenter - (right * totalWidth * 0.5f);
 
             for (int i = 0; i < count; i++)
             {
                 int col = i % cols;
                 int row = i / cols;
+                // Budujemy w tył (back)
                 Vector3 pos = startPos + (right * col * spacing) + (back * row * spacing);
                 SetFormationPoint(group, i, pos);
             }
         }
-        // 4. LUŹNA (LOOSE) - Rozproszona linia
+        // 4. LUŹNA
         else if (typeLower.Contains("loose") || typeLower.Contains("luźna"))
         {
             int cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 2);
-            float spacing = 3.5f; // BARDZO DUŻY ODSTĘP
-
-            // Dodajemy losowość (Jitter)
+            float spacing = 3.5f;
             float totalWidth = (cols - 1) * spacing;
             Vector3 startPos = center - (right * totalWidth * 0.5f);
 
@@ -1718,38 +1759,37 @@ public class ArmyHierarchyManager : MonoBehaviour
             {
                 int col = i % cols;
                 int row = i / cols;
-
-                // Losowe przesunięcie dla każdej jednostki, żeby wyglądało naturalnie
                 float jitterX = Random.Range(-0.5f, 0.5f);
                 float jitterZ = Random.Range(-0.5f, 0.5f);
-
                 Vector3 pos = startPos + (right * (col + jitterX) * spacing) + (back * (row + jitterZ) * spacing);
                 SetFormationPoint(group, i, pos);
             }
         }
-        // 5. STANDARD (LINIA / DWUSZEREG / ŻÓŁW) - Twoja stara logika
+        // 5. STANDARD (LINIA)
         else
         {
-            int cols = 10;
-            float spacing = 2.0f;
-
-            if (typeLower.Contains("turtle") || typeLower.Contains("żółw")) { cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 1.1f; } // Bardzo ciasno
-            else if (typeLower.Contains("double") || typeLower.Contains("dwuszereg")) { cols = Mathf.CeilToInt(count / 2.0f); spacing = 1.8f; }
-            else { cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 3); spacing = 1.5f; } // Zwykła linia
+            int cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 3);
+            float spacing = 1.5f;
+            if (typeLower.Contains("turtle")) { cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 1.1f; }
+            else if (typeLower.Contains("double")) { cols = Mathf.CeilToInt(count / 2.0f); spacing = 1.8f; }
 
             float totalWidth = (cols - 1) * spacing;
+
+            // Startujemy po lewej stronie (patrząc na wroga)
             Vector3 startPos = center - (right * totalWidth * 0.5f);
 
             for (int i = 0; i < count; i++)
             {
                 int col = i % cols;
                 int row = i / cols;
+                // Budujemy w prawo i w tył
                 Vector3 pos = startPos + (right * col * spacing) + (back * row * spacing);
                 SetFormationPoint(group, i, pos);
             }
         }
 
-        group.targetFacingDirection = finalLookDir;
+        // Finalizacja
+        group.targetFacingDirection = finalLookDir; // To sprawia, że po dojściu na miejsce obrócą się do wroga
         group.isReforming = true;
         group.isMoving = true;
         group.currentDestination = center;
@@ -1761,7 +1801,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             flatPos.y = terrain.SampleHeight(flatPos) + terrain.transform.position.y;
         else
             flatPos.y = 0;
-            
+
         group.formationTargets[index] = flatPos;
     }
 
