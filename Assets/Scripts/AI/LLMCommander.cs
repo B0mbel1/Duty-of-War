@@ -247,79 +247,74 @@ public class LLMCommander : MonoBehaviour
         {
             TacticalGroup targetEnemy = null;
 
-            // 1. Sprawdzamy, czy to ogólny rozkaz ataku na całą armię
-            // Jeśli AI zwróciło "Enemy_Army" LUB jeśli gracz nie wskazał konkretu
-            bool isGeneralAttack = (cmd.target_location == "Enemy_Army");
+            // --- KROK 1: SPRAWDZAMY PRIORYTETY CELU ---
 
-            if (!isGeneralAttack)
+            // PRIORYTET A: Czy gracz ma ręcznie zaznaczonego wroga (Czerwony Marker)?
+            // Jeśli tak, to "Do ataku" ZAWSZE oznacza "Atakuj tego zaznaczonego".
+            if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
             {
-                // Próba znalezienia konkretnego celu po nazwie
+                targetEnemy = armyManager.selectedEnemyGroup;
+            }
+            // PRIORYTET B: Jeśli nie ma zaznaczenia, sprawdzamy czy AI wykryło nazwę w komendzie (np. "Atakuj Łuczników")
+            else if (cmd.target_location != "Enemy_Army" && cmd.target_location != "None" && !string.IsNullOrEmpty(cmd.target_location))
+            {
                 targetEnemy = armyManager.GetGroupByName(cmd.target_location);
-
-                // Próba znalezienia celu zaznaczonego myszką (jeśli AI nie podało nazwy, ale gracz coś kliknął)
-                if (targetEnemy == null)
-                    targetEnemy = armyManager.selectedEnemyGroup;
             }
 
-            // --- SCENARIUSZ 1: OGÓLNY ATAK (Attack Move na środek wroga) ---
-            if (isGeneralAttack || targetEnemy == null)
-            {
-                // 1. Pobieramy listę wszystkich wrogów, żeby nie szukać jej dla każdego oddziału osobno
-                List<TacticalGroup> allEnemies = (playerSide == "SideA") ? armyManager.factionBGroups : armyManager.factionAGroups;
+            // --- KROK 2: WYKONANIE ROZKAZU ---
 
-                Debug.Log($"[AI] Rozkaz ogólnego ataku! Każdy oddział szuka najbliższego celu.");
-
-                foreach (var group in selectedUnits)
-                {
-                    group.assignedFeature = null;
-                    group.chaseTarget = null;
-
-                    // 2. Znajdź najbliższego wroga DLA TEGO KONKRETNEGO ODDZIAŁU
-                    TacticalGroup myPersonalTarget = armyManager.FindClosestEnemy(group.groupCenter, allEnemies);
-
-                    if (myPersonalTarget != null)
-                    {
-                        // Mamy cel! Ustawiamy go jako cel pościgu.
-                        // Dzięki temu oddział nie pójdzie w centrum mapy, tylko do tego konkretnego wroga.
-                        group.chaseTarget = myPersonalTarget;
-
-                        Vector3 directionToTarget = (myPersonalTarget.groupCenter - group.groupCenter).normalized;
-
-                        // Wydajemy rozkaz ruchu na pozycję tego wroga.
-                        // Ponieważ ustawiliśmy chaseTarget, jednostka będzie korygować kurs, jeśli wróg ucieknie.
-                        armyManager.ApplyFormation(group, "Line", myPersonalTarget.groupCenter, directionToTarget);
-                    }
-                    else
-                    {
-                        // FALLBACK: Jeśli nie ma żadnych żywych wrogów (np. koniec bitwy), 
-                        // idź po prostu przed siebie (w stronę środka mapy wroga/bazy wroga).
-                        Vector3 fallbackPos = GetEnemyArmyCenter();
-                        Vector3 dir = (fallbackPos - group.groupCenter).normalized;
-                        armyManager.ApplyFormation(group, "Line", fallbackPos, dir);
-                    }
-                }
-                return;
-            }
-
-            // --- SCENARIUSZ 2: ATAK NA KONKRETNY CEL (Targeted Charge) ---
-            if (targetEnemy != null && targetEnemy.unitMatrices.Count > 0)
+            // SCENARIUSZ 1: MAMY KONKRETNY CEL (Zaznaczony myszką lub wymieniony z nazwy)
+            if (targetEnemy != null)
             {
                 foreach (var group in selectedUnits)
                 {
                     group.assignedFeature = null;
 
-                    // Ustawiamy cel POŚCIGU - jednostki będą gonić TEN KONKRETNY oddział
+                    // Ustawiamy cel pościgu - jednostki będą gonić TEN KONKRETNY oddział
+                    // Dzięki temu działa priorytetyzacja ataku z poprzedniego kroku
                     group.chaseTarget = targetEnemy;
 
                     Vector3 directionToEnemy = (targetEnemy.groupCenter - group.groupCenter).normalized;
 
-                    // ApplyFormation zaktualizuje pozycje, a chaseTarget sprawi, że w Update() będą korygować kurs
+                    // ApplyFormation obliczy pozycje, a chaseTarget sprawi, że będą korygować kurs w biegu
                     armyManager.ApplyFormation(group, "Line", targetEnemy.groupCenter, directionToEnemy);
 
-                    Debug.Log($"[BATTLE] {group.groupName} szarżuje na: {targetEnemy.groupName}");
+                    Debug.Log($"[ATAK CELOWANY] {group.groupName} atakuje: {targetEnemy.groupName}");
                 }
                 return;
             }
+
+            // SCENARIUSZ 2: OGÓLNY ATAK (Brak celu -> Każdy szuka najbliższego wroga)
+            // To się wykona, gdy powiesz "Do ataku", a nikogo nie zaznaczyłeś.
+
+            List<TacticalGroup> allEnemies = (playerSide == "SideA") ? armyManager.factionBGroups : armyManager.factionAGroups;
+            Debug.Log($"[ATAK OGÓLNY] Rozkaz 'Attack Move'. Każdy oddział szuka wroga na własną rękę.");
+
+            foreach (var group in selectedUnits)
+            {
+                group.assignedFeature = null;
+                group.chaseTarget = null; // Resetujemy stary cel (żeby nie biegli na drugi koniec mapy do starego wroga)
+
+                // 1. Znajdź najbliższego wroga DLA TEGO KONKRETNEGO ODDZIAŁU
+                TacticalGroup myPersonalTarget = armyManager.FindClosestEnemy(group.groupCenter, allEnemies);
+
+                if (myPersonalTarget != null)
+                {
+                    // Przypisujemy najbliższego wroga jako cel pościgu
+                    group.chaseTarget = myPersonalTarget;
+
+                    Vector3 directionToTarget = (myPersonalTarget.groupCenter - group.groupCenter).normalized;
+                    armyManager.ApplyFormation(group, "Line", myPersonalTarget.groupCenter, directionToTarget);
+                }
+                else
+                {
+                    // Fallback: Jeśli nie ma wrogów w pobliżu, idź na środek armii wroga (szukaj guza)
+                    Vector3 fallbackPos = GetEnemyArmyCenter();
+                    Vector3 dir = (fallbackPos - group.groupCenter).normalized;
+                    armyManager.ApplyFormation(group, "Line", fallbackPos, dir);
+                }
+            }
+            return;
         }
         // --- OBSŁUGA ROZKAZU STOP ---
         if (cmd.action == "STOP")
