@@ -1768,10 +1768,32 @@ public class ArmyHierarchyManager : MonoBehaviour
         // 5. STANDARD (LINIA)
         else
         {
-            int cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 3);
+            // Domyślna "Bezkształtna masa" to 3 szeregi, żeby nie zajmowali całego ekranu
+            int targetRows = 3;
+
+            // --- ZMIANA: DEFINICJE SZEREGÓW ---
+
+            if (typeLower.Contains("turtle") || typeLower.Contains("żółw"))
+            {
+                targetRows = Mathf.CeilToInt(Mathf.Sqrt(count)); // Kwadrat
+            }
+            else if (typeLower.Contains("double") || typeLower.Contains("dwuszereg"))
+            {
+                targetRows = 2; // SZTYWNY DWUSZEREG
+            }
+            // Jeśli nazwa to "Line", "Linia", "Single" lub "Szereg" -> ROBIMY DŁUGI WĄŻ (1 rząd)
+            else if (typeLower.Contains("single") || typeLower.Contains("szereg") || typeLower.Contains("line") || typeLower.Contains("linia"))
+            {
+                targetRows = 1; // SZTYWNY JEDEN SZEREG
+            }
+
+            // Obliczamy szerokość (cols) na podstawie sztywnej liczby rzędów
+            int cols = Mathf.CeilToInt((float)count / targetRows);
+
             float spacing = 1.5f;
-            if (typeLower.Contains("turtle")) { cols = Mathf.CeilToInt(Mathf.Sqrt(count)); spacing = 1.1f; }
-            else if (typeLower.Contains("double")) { cols = Mathf.CeilToInt(count / 2.0f); spacing = 1.8f; }
+            if (typeLower.Contains("turtle")) spacing = 1.1f;
+            // Dla 1 i 2 szeregów dajemy ciut więcej luzu (1.6f), żeby ładnie wyglądali
+            else if (targetRows <= 2) spacing = 1.6f;
 
             float totalWidth = (cols - 1) * spacing;
 
@@ -1782,6 +1804,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             {
                 int col = i % cols;
                 int row = i / cols;
+
                 // Budujemy w prawo i w tył
                 Vector3 pos = startPos + (right * col * spacing) + (back * row * spacing);
                 SetFormationPoint(group, i, pos);
