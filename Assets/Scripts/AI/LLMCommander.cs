@@ -246,69 +246,108 @@ public class LLMCommander : MonoBehaviour
         if (cmd.action == "ATTACK")
         {
             TacticalGroup targetEnemy = null;
+            Vector3? flankPosition = null;
 
-            // --- KROK 1: SPRAWDZAMY PRIORYTETY CELU ---
+            // A. Czy to atak kierunkowy (Flank)?
+            if (cmd.target_location.StartsWith("Flank"))
+            {
+                // Ustalamy punkt odniesienia (Wybrany wróg lub środek armii wroga)
+                Vector3 centerPoint = GetEnemyArmyCenter();
 
-            // PRIORYTET A: Czy gracz ma ręcznie zaznaczonego wroga (Czerwony Marker)?
-            // Jeśli tak, to "Do ataku" ZAWSZE oznacza "Atakuj tego zaznaczonego".
-            if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
+                // --- LOGIKA ZAZNACZANIA ---
+                // Jeśli masz zaznaczonego wroga (podświetlonego), to flankujemy TEGO konkretnego wroga
+                if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
+                {
+                    centerPoint = armyManager.selectedEnemyGroup.groupCenter;
+                    targetEnemy = armyManager.selectedEnemyGroup;
+                }
+
+                // Obliczamy pozycję flanki (np. 30m od wroga)
+                float offset = 70.0f;
+                string dir = cmd.target_location.ToLower();
+
+                if (dir.Contains("north")) flankPosition = centerPoint + new Vector3(0, 0, offset); // Z+
+                else if (dir.Contains("south")) flankPosition = centerPoint + new Vector3(0, 0, -offset); // Z-
+                else if (dir.Contains("east")) flankPosition = centerPoint + new Vector3(offset, 0, 0); // X+
+                else if (dir.Contains("west")) flankPosition = centerPoint + new Vector3(-offset, 0, 0); // X-
+
+                // SCENARIUSZ 1: SEKWENCJA FLANKOWANIA (Idź -> Ustaw się -> Atakuj)
+                foreach (var group in selectedUnits)
+                {
+                    // Obliczamy wektor patrzenia: Z pozycji flanki W STRONĘ WROGA.
+                    // Dzięki temu ApplyFormation ustawi ich w linię PROSTOPADŁĄ do tego wektora.
+                    Vector3 lookDir = (centerPoint - flankPosition.Value).normalized;
+
+                    // Uruchamiamy korutynę (działa w tle)
+                    StartCoroutine(FlankAndStrikeSequence(group, flankPosition.Value, lookDir, targetEnemy));
+                }
+                return; // Wychodzimy, bo korutyna przejęła kontrolę
+            }
+            // B. Priorytet Ręczny (Marker)
+            else if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
             {
                 targetEnemy = armyManager.selectedEnemyGroup;
             }
-            // PRIORYTET B: Jeśli nie ma zaznaczenia, sprawdzamy czy AI wykryło nazwę w komendzie (np. "Atakuj Łuczników")
-            else if (cmd.target_location != "Enemy_Army" && cmd.target_location != "None" && !string.IsNullOrEmpty(cmd.target_location))
+            // C. Priorytet Nazwy (Prompt)
+            else if (cmd.target_location != "Enemy_Army" && !string.IsNullOrEmpty(cmd.target_location))
             {
                 targetEnemy = armyManager.GetGroupByName(cmd.target_location);
             }
 
-            // --- KROK 2: WYKONANIE ROZKAZU ---
+            // --- WYKONANIE ATAKU ---
 
-            // SCENARIUSZ 1: MAMY KONKRETNY CEL (Zaznaczony myszką lub wymieniony z nazwy)
-            if (targetEnemy != null)
+            // SCENARIUSZ 1: ATAK Z FLANKI (Kierunkowy)
+            if (flankPosition.HasValue)
             {
                 foreach (var group in selectedUnits)
                 {
                     group.assignedFeature = null;
 
-                    // Ustawiamy cel pościgu - jednostki będą gonić TEN KONKRETNY oddział
-                    // Dzięki temu działa priorytetyzacja ataku z poprzedniego kroku
+                    // Jeśli mamy konkretny cel (targetEnemy), przypisujemy go, 
+                    // żeby jednostki wiedziały kogo bić jak dobiegną na flankę.
+                    // Jeśli nie (atak na armię), chaseTarget = null (biją najbliższego po dobiegnięciu).
                     group.chaseTarget = targetEnemy;
 
-                    Vector3 directionToEnemy = (targetEnemy.groupCenter - group.groupCenter).normalized;
+                    // Obliczamy wektor patrzenia: Z pozycji flanki W STRONĘ WROGA (czyli w stronę środka)
+                    // Muszą patrzeć tam, gdzie atakują
+                    Vector3 lookDir = (GetEnemyArmyCenter() - flankPosition.Value).normalized;
+                    if (targetEnemy != null) lookDir = (targetEnemy.groupCenter - flankPosition.Value).normalized;
 
-                    // ApplyFormation obliczy pozycje, a chaseTarget sprawi, że będą korygować kurs w biegu
-                    armyManager.ApplyFormation(group, "Line", targetEnemy.groupCenter, directionToEnemy);
-
-                    Debug.Log($"[ATAK CELOWANY] {group.groupName} atakuje: {targetEnemy.groupName}");
+                    // Wydajemy rozkaz ruchu bojowego na pozycję flanki
+                    armyManager.ApplyFormation(group, "Line", flankPosition.Value, lookDir);
                 }
                 return;
             }
 
-            // SCENARIUSZ 2: OGÓLNY ATAK (Brak celu -> Każdy szuka najbliższego wroga)
-            // To się wykona, gdy powiesz "Do ataku", a nikogo nie zaznaczyłeś.
+            // SCENARIUSZ 2: ATAK NA KONKRETNY CEL (Bez flankowania, najkrótsza droga)
+            if (targetEnemy != null)
+            {
+                foreach (var group in selectedUnits)
+                {
+                    group.assignedFeature = null;
+                    group.chaseTarget = targetEnemy;
+                    Vector3 directionToEnemy = (targetEnemy.groupCenter - group.groupCenter).normalized;
+                    armyManager.ApplyFormation(group, "Line", targetEnemy.groupCenter, directionToEnemy);
+                }
+                return;
+            }
 
+            // SCENARIUSZ 3: OGÓLNY ATAK (Attack Move)
             List<TacticalGroup> allEnemies = (playerSide == "SideA") ? armyManager.factionBGroups : armyManager.factionAGroups;
-            Debug.Log($"[ATAK OGÓLNY] Rozkaz 'Attack Move'. Każdy oddział szuka wroga na własną rękę.");
-
             foreach (var group in selectedUnits)
             {
                 group.assignedFeature = null;
-                group.chaseTarget = null; // Resetujemy stary cel (żeby nie biegli na drugi koniec mapy do starego wroga)
-
-                // 1. Znajdź najbliższego wroga DLA TEGO KONKRETNEGO ODDZIAŁU
+                group.chaseTarget = null;
                 TacticalGroup myPersonalTarget = armyManager.FindClosestEnemy(group.groupCenter, allEnemies);
 
                 if (myPersonalTarget != null)
                 {
-                    // Przypisujemy najbliższego wroga jako cel pościgu
                     group.chaseTarget = myPersonalTarget;
-
                     Vector3 directionToTarget = (myPersonalTarget.groupCenter - group.groupCenter).normalized;
                     armyManager.ApplyFormation(group, "Line", myPersonalTarget.groupCenter, directionToTarget);
                 }
                 else
                 {
-                    // Fallback: Jeśli nie ma wrogów w pobliżu, idź na środek armii wroga (szukaj guza)
                     Vector3 fallbackPos = GetEnemyArmyCenter();
                     Vector3 dir = (fallbackPos - group.groupCenter).normalized;
                     armyManager.ApplyFormation(group, "Line", fallbackPos, dir);
@@ -630,7 +669,62 @@ public class LLMCommander : MonoBehaviour
 
         return false;
     }
+    System.Collections.IEnumerator FlankAndStrikeSequence(TacticalGroup group, Vector3 flankPos, Vector3 lookDir, TacticalGroup targetEnemy)
+    {
+        // KROK 1: Rozkaz ruchu na pozycję flankującą
+        // Ważne: chaseTarget = null, żeby nie biegli na wroga, tylko na pozycję
+        group.chaseTarget = null;
+        group.assignedFeature = null;
 
+        // ApplyFormation z lookDir ustawi ich frontem do wroga (tworząc linię prostopadłą do niego)
+        armyManager.ApplyFormation(group, "Line", flankPos, lookDir);
+
+        Debug.Log($"[FLANK] {group.groupName} rozpoczyna manewr na pozycję...");
+
+        // KROK 2: Czekanie na dotarcie do celu
+        // Sprawdzamy co 0.5s czy grupa jest blisko celu (< 10m)
+        while (group != null && group.unitMatrices.Count > 0)
+        {
+            float dist = Vector3.Distance(group.groupCenter, flankPos);
+
+            // Jeśli dotarliśmy
+            if (dist < 12.0f && !group.isMoving) break;
+
+            // ZABEZPIECZENIE: Jeśli gracz w międzyczasie wydał inny rozkaz (zmienił cel), przerywamy korutynę!
+            if (Vector3.Distance(group.currentDestination, flankPos) > 1.0f)
+            {
+                Debug.Log($"[FLANK] Manewr przerwany przez gracza dla {group.groupName}");
+                yield break;
+            }
+
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        if (group == null || group.unitMatrices.Count == 0) yield break;
+
+        // KROK 3: "Po chwili" - pauza na wyrównanie oddechu i szyku
+        Debug.Log($"[FLANK] {group.groupName} na pozycji. Wyrównanie szyku...");
+        yield return new WaitForSeconds(1.5f); // 1.5 sekundy pauzy
+
+        // KROK 4: Ruszają na nią (Atak właściwy)
+        if (targetEnemy != null && targetEnemy.unitMatrices.Count > 0)
+        {
+            Debug.Log($"[FLANK] {group.groupName} SZARŻUJE na {targetEnemy.groupName}!");
+
+            // Teraz ustawiamy cel pościgu
+            group.chaseTarget = targetEnemy;
+
+            // I wydajemy rozkaz ataku
+            Vector3 attackDir = (targetEnemy.groupCenter - group.groupCenter).normalized;
+            armyManager.ApplyFormation(group, "Line", targetEnemy.groupCenter, attackDir);
+        }
+        else
+        {
+            // Jeśli wróg uciekł/zginął w międzyczasie -> Attack Move na środek
+            Vector3 fallback = GetEnemyArmyCenter();
+            armyManager.ApplyFormation(group, "Line", fallback, (fallback - group.groupCenter).normalized);
+        }
+    }
     string GetMapFeaturesInfo()
     {
         TerrainFeature[] features = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
@@ -687,7 +781,7 @@ ZASADY:
    - 'Cursor' - gdy gracz wskazuje 'tam', 'tutaj'.
    - KONKRETNY CEL: Jeśli w CONTEXT jest 'TARGETED ENEMY TAG' (np. 'B_Infantry_1'), użyj tego TAGU jako target_location przy rozkazie ataku na 'tego wroga'.
    - 'Enemy_Army' - UŻYJ TEGO, gdy gracz mówi 'Do ataku', 'Atakować', 'Zniszczyć wroga', a nie wskazał konkretnego oddziału ani nie kliknął na nikogo.
-4. action: 'MOVE', 'ATTACK' - użyj, gdy gracz mówi 'bij', 'atakuj', 'szarżuj'., 'STOP', 'FORM'.
+4. action: 'MOVE', 'ATTACK' - użyj, gdy gracz mówi 'bij', 'atakuj', 'szarżuj','oflankuj'., 'STOP', 'FORM'.
 
 PRZYKŁADY (Zawsze używaj tablicy 'commands'!):
 User: Atakujcie od wschodu!
@@ -713,7 +807,17 @@ AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""ATTACK"",
 
 User: Zajdźcie ich od wschodu!
 AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Flank_East"" }} ], ""ai_thought"": ""Wysyłam oddział na wschodnią flankę wroga."" }}
+User: Atakujcie od wschodu!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""ATTACK"", ""target_location"": ""Flank_East"" }} ] }}
 
+User: Jazda, oflankować ich od zachodu!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Cavalry""], ""action"": ""ATTACK"", ""target_location"": ""Flank_West"" }} ] }}
+
+User: Zaznaczeni atak od południa!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""ATTACK"", ""target_location"": ""Flank_South"" }} ] }}
+
+User: Do ataku! (Bez kierunku)
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""ATTACK"", ""target_location"": ""Enemy_Army"" }} ] }}
 
 User: Wszyscy do ataku!
 AI: {{ ""commands"": [ {{ ""unit_tags"": [""All""], ""action"": ""ATTACK"", ""target_location"": ""Enemy_Army"" }} ] }}
