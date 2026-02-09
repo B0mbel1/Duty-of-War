@@ -900,7 +900,10 @@ public class ArmyHierarchyManager : MonoBehaviour
     // Znajdź tę funkcję i podmień jej zawartość (sekcję isHill)
     public void MoveGroupToLineFeature(TacticalGroup group, TerrainFeature feature, string mode = "Top")
     {
-        if (isDeploymentPhase)
+        string pSide = PlayerPrefs.GetString("PlayerSide", "SideA");
+        bool isPlayerGroup = (pSide == "SideA" && factionAGroups.Contains(group)) ||
+                             (pSide == "SideB" && factionBGroups.Contains(group));
+        if (isDeploymentPhase && !isPlayerGroup)
         {
             group.pendingOrder = new PendingOrderData
             {
@@ -1606,6 +1609,9 @@ public class ArmyHierarchyManager : MonoBehaviour
     // --- NOWOŚĆ: SYSTEM FORMACJI ---
     public void ApplyFormation(TacticalGroup group, string formationType, Vector3? centerOverride = null, Vector3? lookDirectionOverride = null)
     {
+        string pSide = PlayerPrefs.GetString("PlayerSide", "SideA");
+        bool isPlayerGroup = (pSide == "SideA" && factionAGroups.Contains(group)) ||
+                             (pSide == "SideB" && factionBGroups.Contains(group));
         // 1. Ustalmy cel (Gdzie ma stać środek formacji)
         Vector3 center = centerOverride.HasValue ? centerOverride.Value : group.groupCenter;
 
@@ -1629,7 +1635,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         Vector3 finalLookDir = rotation * Vector3.forward; // To jest wektor "Do Wroga"
 
         // --- OBSŁUGA DEPLOYMENT PHASE ---
-        if (isDeploymentPhase)
+        if (isDeploymentPhase && !isPlayerGroup)
         {
             group.pendingOrder = new PendingOrderData
             {
@@ -1642,7 +1648,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             group.chaseTarget = null;
             group.isMoving = false;
             group.isReforming = false;
-            Debug.Log($"[PLANOWANIE] Formacja {formationType} ustawiona frontem do wroga.");
+            // Debug.Log($"[PLANOWANIE AI] Formacja {formationType} zakolejkowana.");
             return;
         }
 

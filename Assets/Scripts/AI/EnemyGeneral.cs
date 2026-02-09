@@ -15,10 +15,10 @@ public class EnemyGeneral : MonoBehaviour
 {
     [Header("Konfiguracja AI")]
     // Jak często AI podejmuje decyzje (w sekundach).
-    public float decisionInterval = 5.0f; 
-    
+    public float decisionInterval = 5.0f;
+
     // To zostanie nadpisane automatycznie w Start(), ale widoczne w inspektorze
-    public string side = "SideB"; 
+    public string side = "SideB";
 
     [Header("Referencje")]
     public ArmyHierarchyManager armyManager;
@@ -64,24 +64,23 @@ public class EnemyGeneral : MonoBehaviour
         deploymentTimer = Time.time + 5.0f; // 5 sekund na start
     }
 
+    // Podmień całą metodę Update:
+
     void Update()
     {
-        // --- FAZA 1: DEPLOYMENT ---
-        if (currentState == GeneralState.Deployment)
+        // --- FAZA 1: DEPLOYMENT (OCZEKIWANIE) ---
+        // ZMIANA: AI nie decyduje o końcu fazy. Czeka na sygnał od ArmyManagera (przycisku gracza).
+        if (armyManager.isDeploymentPhase)
         {
-            if (Time.time > deploymentTimer)
-            {
-                currentState = GeneralState.InitialAdvance;
-                
-                // Odblokowanie ruchu jednostek w Managerze
-                if (armyManager != null)
-                {
-                    armyManager.isDeploymentPhase = false;
-                }
-                
-                Debug.Log($"EnemyGeneral ({side}): Koniec rozstawiania. Atakuję!");
-            }
-            return;
+            currentState = GeneralState.Deployment;
+            return; // AI nic nie robi, póki trwa faza rozstawiania
+        }
+
+        // Jeśli faza rozstawiania się skończyła (gracz kliknął Start), a my wciąż jesteśmy w stanie Deployment:
+        if (currentState == GeneralState.Deployment && !armyManager.isDeploymentPhase)
+        {
+            currentState = GeneralState.InitialAdvance;
+            Debug.Log($"EnemyGeneral ({side}): Gracz rozpoczął bitwę. Przechodzę do ataku!");
         }
 
         // --- FAZA 2: TIMER DECYZYJNY ---
@@ -193,10 +192,10 @@ public class EnemyGeneral : MonoBehaviour
     {
         if (groups == null || groups.Count == 0) return Vector3.zero;
         Vector3 sum = Vector3.zero;
-        foreach (var g in groups) 
+        foreach (var g in groups)
         {
             // POPRAWKA: Używamy groupCenter zamiast transform.position
-            if(g != null) sum += g.groupCenter;
+            if (g != null) sum += g.groupCenter;
         }
         return sum / groups.Count;
     }
