@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
-using System.Linq; // Potrzebne do debugowania
 
 public class ArmyHierarchyManager : MonoBehaviour
 {
@@ -898,18 +897,16 @@ public class ArmyHierarchyManager : MonoBehaviour
     }
 
     // --- NOWA FUNKCJA: Ustawianie na linii terenu ---
+    // Znajdź tę funkcję i podmień jej zawartość (sekcję isHill)
     public void MoveGroupToLineFeature(TacticalGroup group, TerrainFeature feature, string mode = "Top")
     {
         if (isDeploymentPhase)
         {
-            // (Logika deploymentu - uproszczona, po prostu zapisujemy cel)
             group.pendingOrder = new PendingOrderData
             {
                 type = PendingOrderType.FeatureMove,
                 feature = feature,
                 chaseTarget = null
-                // Note: W idealnym świecie PendingOrderData też powinno przechowywać 'mode', 
-                // ale dla uproszczenia Deploymentu załóżmy, że zawsze idą na Top lub zapiszesz to w nazwie.
             };
             group.isMoving = false;
             return;
@@ -920,56 +917,71 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.assignedFeature = feature;
 
         Vector3 center = feature.transform.position;
+        // Uwzględniamy rotację obiektu
         Vector3 lineDir = feature.transform.TransformDirection(feature.lineOrientation).normalized;
-
-        // Normalna (prostopadła) liczona względem obróconej linii
         Vector3 featureNormal = Vector3.Cross(Vector3.up, lineDir).normalized;
 
-        // --- DALEJ LOGIKA BEZ ZMIAN ---
         Vector3 faceDir = featureNormal;
 
+        // --- ZMODYFIKOWANA LOGIKA RELATYWNA (PERSPEKTYWA GRACZA) ---
         if (feature.isHill)
         {
-            // 1. Ustal, po której stronie wzgórza jest teraz oddział (Side check)
-            Vector3 toGroup = group.groupCenter - center;
-            float dot = Vector3.Dot(toGroup, featureNormal);
+            // 1. Sprawdzamy, kim gra gracz (pobieramy to z ustawień zapisanych w LLMCommander/MainMenu)
+            string playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
+            bool amIRomans = (playerSide == "SideA"); // Zakładamy: SideA (Rzym) startuje na dole (MinZ), SideB (Goci) na górze (MaxZ)
 
-            // 'mySideNormal' to wektor wskazujący "w moją stronę" od środka wzgórza
-            Vector3 mySideNormal = (dot > 0) ? featureNormal : -featureNormal;
-            Vector3 otherSideNormal = -mySideNormal;
+            // 2. Definiujemy wektor "w stronę mojej bazy"
+            // Jeśli jestem Rzymianinem (dół mapy), moja baza jest w kierunku -Z (Back).
+            // Jeśli jestem Gotem (góra mapy), moja baza jest w kierunku +Z (Forward).
+            Vector3 directionToMyBase = amIRomans ? Vector3.back : Vector3.forward;
+
+            // 3. Sprawdzamy, która strona wzgórza jest bliżej mojej bazy
+            // Iloczyn skalarny powie nam, czy featureNormal celuje w stronę bazy, czy przeciwną
+            float dot = Vector3.Dot(directionToMyBase, featureNormal);
+
+            // 'frontNormal' to wektor prostopadły do wzgórza, celujący w stronę GRACZA (bezpieczną)
+            Vector3 frontNormal = (dot > 0) ? featureNormal : -featureNormal;
+
+            // 'backNormal' to wektor celujący w stronę WROGA (za wzgórzem)
+            Vector3 backNormal = -frontNormal;
 
             switch (mode)
             {
-                case "Front": // "Przed wzgórzem" (Zostań po swojej stronie, u podnóża)
-                    // Przesuwamy centrum do podnóża po NASZEJ stronie
-                    center += mySideNormal * feature.widthOffset;
-                    faceDir = otherSideNormal; // Patrzymy NA wzgórze (do góry)
+                case "Front": // "Przed wzgórzem" (Moja strona)
+                    // Ustawiamy się po naszej stronie
+                    center += frontNormal * feature.widthOffset;
+
+                    // Patrzymy w stronę wzgórza/wroga (czyli w kierunku backNormal)
+                    faceDir = backNormal;
                     break;
 
-                case "Back": // "Za wzgórzem" (Przejdź na drugą stronę)
-                    // Przesuwamy centrum do podnóża po DRUGIEJ stronie
-                    center += otherSideNormal * feature.widthOffset;
-                    faceDir = otherSideNormal; // Patrzymy OD wzgórza (plecami do niego)
+                case "Back": // "Za wzgórzem" (Strona wroga)
+                    // Przechodzimy na drugą stronę
+                    center += backNormal * feature.widthOffset;
+
+                    // Patrzymy dalej w głąb terytorium wroga (lub asekurujemy tyły)
+                    faceDir = backNormal;
                     break;
 
-                case "Top": // "Na szczycie" (Domyślnie)
+                case "Top": // "Na szczycie"
                 default:
-                    // Zostajemy na środku (center bez zmian)
-                    // Patrzymy w dół zbocza, z którego nadchodzi wróg (lub domyślnie "przed siebie")
-                    faceDir = mySideNormal;
+                    // Stoimy na środku, ale patrzymy w stronę nadchodzącego wroga
+                    faceDir = frontNormal;
                     break;
             }
         }
         else if (feature.isRiver)
         {
-            // (Stara logika rzeki - bez zmian)
+            // Dla rzeki logika pozostaje bez zmian (brzeg bliższy jednostce)
             Vector3 toWater = (feature.transform.position - center).normalized;
             if (Vector3.Dot(toWater, featureNormal) > 0) faceDir = featureNormal;
             else faceDir = -featureNormal;
             center = feature.transform.position + (-faceDir * feature.widthOffset);
         }
 
-        // --- GŁĘBOKOŚĆ SZEREGÓW (bez zmian) ---
+        // --- RESZTA FUNKCJI BEZ ZMIAN ---
+        // (Obliczanie szeregów, spacingu i pozycji jednostek)
+
         int myRankIndex = 0;
         List<TacticalGroup> myFaction = (factionAGroups.Contains(group)) ? factionAGroups : factionBGroups;
         foreach (var other in myFaction)
@@ -979,16 +991,12 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         // Cofamy kolejne oddziały, żeby nie właziły na siebie
-        // Dla Top: cofamy w stronę przeciwną do patrzenia. 
-        // Dla Front/Back: też cofamy "od linii".
         center -= faceDir * (myRankIndex * 12.0f);
 
-        // Zapisujemy i wykonujemy
         group.targetFacingDirection = faceDir;
 
         int unitCount = group.unitMatrices.Count;
         float spacing = 1.5f;
-        // Obliczamy max jednostek w rzędzie bazując na długości linii
         int maxUnitsPerRow = Mathf.FloorToInt(feature.lineLength / spacing);
         if (maxUnitsPerRow < 1) maxUnitsPerRow = 1;
 
@@ -1004,7 +1012,7 @@ public class ArmyHierarchyManager : MonoBehaviour
 
             Vector3 pos = lineStart
                         + (lineDir * col * spacing)
-                        - (faceDir * row * spacing); // Kolejne rzędy za plecami
+                        - (faceDir * row * spacing);
 
             if (terrain != null)
                 pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
