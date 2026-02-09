@@ -316,10 +316,10 @@ MonoBehaviour:
   indicatorMeshArcher: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   indicatorMeshCavalry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   groupSize: 150
-  moveSpeed: 10
-  rotationSpeed: 8
+  moveSpeed: 5
+  rotationSpeed: 1.2
   stopDistance: 2
-  cavalrySpeedMultiplier: 1.5
+  cavalrySpeedMultiplier: 2
   waterLayerMask:
     serializedVersion: 2
     m_Bits: 16
