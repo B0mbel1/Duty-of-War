@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
+using System.Linq; // Potrzebne do debugowania
 
 public class ArmyHierarchyManager : MonoBehaviour
 {
@@ -897,101 +898,103 @@ public class ArmyHierarchyManager : MonoBehaviour
     }
 
     // --- NOWA FUNKCJA: Ustawianie na linii terenu ---
-    public void MoveGroupToLineFeature(TacticalGroup group, TerrainFeature feature)
+    public void MoveGroupToLineFeature(TacticalGroup group, TerrainFeature feature, string mode = "Top")
     {
         if (isDeploymentPhase)
         {
+            // (Logika deploymentu - uproszczona, po prostu zapisujemy cel)
             group.pendingOrder = new PendingOrderData
             {
                 type = PendingOrderType.FeatureMove,
                 feature = feature,
                 chaseTarget = null
+                // Note: W idealnym świecie PendingOrderData też powinno przechowywać 'mode', 
+                // ale dla uproszczenia Deploymentu załóżmy, że zawsze idą na Top lub zapiszesz to w nazwie.
             };
-
             group.isMoving = false;
-            group.isReforming = false;
-            Debug.Log($"[PLANOWANIE] Rozkaz terenowy dla {group.groupName} zapamiętany: {feature.featureName}");
             return;
         }
 
         if (group.unitMatrices.Count == 0) return;
 
-        // 1. Przypisujemy grupę do terenu (ważne dla kolejkowania!)
         group.assignedFeature = feature;
 
         Vector3 center = feature.transform.position;
-        Vector3 lineDir = feature.lineOrientation.normalized;
-        float lineLen = feature.lineLength;
+        Vector3 lineDir = feature.transform.TransformDirection(feature.lineOrientation).normalized;
 
-        // Obliczamy normalną (prostopadłą) do linii
-        Vector3 riverNormal = Vector3.Cross(Vector3.up, lineDir).normalized;
+        // Normalna (prostopadła) liczona względem obróconej linii
+        Vector3 featureNormal = Vector3.Cross(Vector3.up, lineDir).normalized;
 
-        // --- KIERUNEK PATRZENIA (FaceDir) ---
-        // Domyślnie prostopadle do linii
-        Vector3 faceDir = riverNormal;
+        // --- DALEJ LOGIKA BEZ ZMIAN ---
+        Vector3 faceDir = featureNormal;
 
-        // Jeśli to rzeka, patrzymy W STRONĘ WODY
-        if (feature.isRiver)
+        if (feature.isHill)
         {
-            // Sprawdzamy po której stronie rzeki jesteśmy
+            // 1. Ustal, po której stronie wzgórza jest teraz oddział (Side check)
             Vector3 toGroup = group.groupCenter - center;
-            float side = Vector3.Dot(toGroup, riverNormal);
+            float dot = Vector3.Dot(toGroup, featureNormal);
 
-            // Jeśli side > 0, woda jest "za nami" względem normalnej, więc odwracamy normalną żeby patrzeć na wodę
-            // Albo prościej: Patrzymy od naszej pozycji w stronę środka rzeki
-            Vector3 toWater = (feature.transform.position - center).normalized; // Wektor na rzekę
+            // 'mySideNormal' to wektor wskazujący "w moją stronę" od środka wzgórza
+            Vector3 mySideNormal = (dot > 0) ? featureNormal : -featureNormal;
+            Vector3 otherSideNormal = -mySideNormal;
 
-            // Poprawka: Czasami środek grupy jest daleko, więc używamy wektora prostopadłego
-            // Ustalmy faceDir tak, by celował w rzekę, ale był idealnie prostopadły do linii
-            if (Vector3.Dot(toWater, riverNormal) > 0) faceDir = riverNormal;
-            else faceDir = -riverNormal;
-
-            // Ustawiamy "bazę" na brzegu (z uwzględnieniem offsetu)
-            Vector3 offsetVector = -faceDir; // Cofamy się od wody w głąb lądu
-            center = feature.transform.position + (offsetVector * feature.riverBankOffset);
-        }
-
-        // --- NOWOŚĆ: OBLICZANIE "GŁĘBOKOŚCI" (Rank Depth) ---
-        // Sprawdzamy, który to jest szereg oddziałów
-        int myRankIndex = 0;
-        List<TacticalGroup> myFaction = (factionAGroups.Contains(group)) ? factionAGroups : factionBGroups;
-
-        foreach (var other in myFaction)
-        {
-            if (other == group) break; // Liczymy tylko tych PRZED nami na liście (żeby uniknąć sytuacji, że oba oddziały ustępują sobie nawzajem)
-
-            // Jeśli inny oddział też jest przypisany do tej samej rzeki/lasu
-            if (other.assignedFeature == feature)
+            switch (mode)
             {
-                myRankIndex++;
+                case "Front": // "Przed wzgórzem" (Zostań po swojej stronie, u podnóża)
+                    // Przesuwamy centrum do podnóża po NASZEJ stronie
+                    center += mySideNormal * feature.widthOffset;
+                    faceDir = otherSideNormal; // Patrzymy NA wzgórze (do góry)
+                    break;
+
+                case "Back": // "Za wzgórzem" (Przejdź na drugą stronę)
+                    // Przesuwamy centrum do podnóża po DRUGIEJ stronie
+                    center += otherSideNormal * feature.widthOffset;
+                    faceDir = otherSideNormal; // Patrzymy OD wzgórza (plecami do niego)
+                    break;
+
+                case "Top": // "Na szczycie" (Domyślnie)
+                default:
+                    // Zostajemy na środku (center bez zmian)
+                    // Patrzymy w dół zbocza, z którego nadchodzi wróg (lub domyślnie "przed siebie")
+                    faceDir = mySideNormal;
+                    break;
             }
         }
+        else if (feature.isRiver)
+        {
+            // (Stara logika rzeki - bez zmian)
+            Vector3 toWater = (feature.transform.position - center).normalized;
+            if (Vector3.Dot(toWater, featureNormal) > 0) faceDir = featureNormal;
+            else faceDir = -featureNormal;
+            center = feature.transform.position + (-faceDir * feature.widthOffset);
+        }
 
-        // Obliczamy ile miejsca zajmuje jeden oddział (głębokość)
-        // Zakładamy średnio 10-15 metrów na oddział + odstęp
-        float groupDepthSpacing = 12.0f; // Możesz zwiększyć, jeśli oddziały są duże
+        // --- GŁĘBOKOŚĆ SZEREGÓW (bez zmian) ---
+        int myRankIndex = 0;
+        List<TacticalGroup> myFaction = (factionAGroups.Contains(group)) ? factionAGroups : factionBGroups;
+        foreach (var other in myFaction)
+        {
+            if (other == group) break;
+            if (other.assignedFeature == feature) myRankIndex++;
+        }
 
-        // Cofamy centrum o (index * głębokość) w stronę PRZECIWNĄ do patrzenia
-        // Czyli stajemy "za plecami" pierwszego oddziału
-        center -= faceDir * (myRankIndex * groupDepthSpacing);
+        // Cofamy kolejne oddziały, żeby nie właziły na siebie
+        // Dla Top: cofamy w stronę przeciwną do patrzenia. 
+        // Dla Front/Back: też cofamy "od linii".
+        center -= faceDir * (myRankIndex * 12.0f);
 
-        // Debug info
-        if (myRankIndex > 0) Debug.Log($"Grupa {group.groupName} staje w {myRankIndex}. linii obrony (za innymi).");
-
-        // ----------------------------------------------------
-
-        // Zapisujemy kierunek patrzenia
+        // Zapisujemy i wykonujemy
         group.targetFacingDirection = faceDir;
 
-        // Reszta logiki rozstawiania (Szeregi wewnątrz oddziału)
         int unitCount = group.unitMatrices.Count;
         float spacing = 1.5f;
-        int maxUnitsPerRow = Mathf.FloorToInt(lineLen / spacing);
+        // Obliczamy max jednostek w rzędzie bazując na długości linii
+        int maxUnitsPerRow = Mathf.FloorToInt(feature.lineLength / spacing);
         if (maxUnitsPerRow < 1) maxUnitsPerRow = 1;
+
         float currentLineWidth = Mathf.Min(unitCount, maxUnitsPerRow) * spacing;
         Vector3 lineStart = center - (lineDir * currentLineWidth * 0.5f);
 
-        // Rozszerzamy listę celów jeśli trzeba
         while (group.formationTargets.Count < unitCount) group.formationTargets.Add(Vector3.zero);
 
         for (int i = 0; i < unitCount; i++)
@@ -999,10 +1002,9 @@ public class ArmyHierarchyManager : MonoBehaviour
             int row = i / maxUnitsPerRow;
             int col = i % maxUnitsPerRow;
 
-            // faceDir * row * spacing * -1 -> kolejne rzędy żołnierzy stają za plecami pierwszego
             Vector3 pos = lineStart
                         + (lineDir * col * spacing)
-                        - (faceDir * row * spacing);
+                        - (faceDir * row * spacing); // Kolejne rzędy za plecami
 
             if (terrain != null)
                 pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;

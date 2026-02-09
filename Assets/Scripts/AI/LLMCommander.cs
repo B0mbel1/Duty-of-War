@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using System.Linq; // Potrzebne do debugowania
+
 
 public class LLMCommander : MonoBehaviour
 {
@@ -469,24 +471,37 @@ public class LLMCommander : MonoBehaviour
 
         // --- OBSŁUGA RUCHU DO KONKRETNEGO OBIEKTU (Lasy, Rzeki) ---
         TerrainFeature targetFeature = null;
-        TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
+        string targetSuffix = ""; // "Top", "Front", "Back"
 
+        // Parsowanie sufiksów (Hill_North_Back -> feature: Hill_North, suffix: Back)
+        string cleanLocName = cmd.target_location;
+
+        if (cleanLocName.EndsWith("_Front")) { targetSuffix = "Front"; cleanLocName = cleanLocName.Replace("_Front", ""); }
+        else if (cleanLocName.EndsWith("_Back")) { targetSuffix = "Back"; cleanLocName = cleanLocName.Replace("_Back", ""); }
+        else if (cleanLocName.EndsWith("_Top")) { targetSuffix = "Top"; cleanLocName = cleanLocName.Replace("_Top", ""); }
+
+        TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
         foreach (var f in allFeatures)
         {
-            if (f.featureName.ToLower() == cmd.target_location.ToLower())
+            if (f.featureName.Trim().ToLower() == cleanLocName.Trim().ToLower())
             {
                 targetFeature = f;
                 break;
             }
         }
 
-        // JEŚLI TO FEATURE Z LINIĄ (Las, Rzeka) -> Użyj logiki "MoveGroupToLineFeature"
-        if (targetFeature != null && (targetFeature.lineLength > 1.0f || targetFeature.isRiver))
+        // JEŚLI TO FEATURE Z LINIĄ (Las, Rzeka, Wzgórze)
+        if (targetFeature == null && !cleanLocName.Contains("Relative") && !cleanLocName.Contains("Flank") && !useCursor && !cleanLocName.Contains("Enemy"))
+        {
+            // Pokaż graczowi (i programiście), że nazwy się nie zgadzają
+            string available = string.Join(", ", allFeatures.Select(f => f.featureName));
+            Debug.LogWarning($"[LLMCommander] AI zwróciło nazwę: '{cleanLocName}', ale nie znaleziono takiego obiektu!\nDOSTĘPNE: {available}");
+        }
+        if (targetFeature != null && (targetFeature.lineLength > 1.0f || targetFeature.isRiver || targetFeature.isHill))
         {
             foreach (var group in selectedUnits)
             {
-                // Manager obliczy pozycję wzdłuż linii/rzeki i ustawi odpowiedni targetFacingDirection
-                armyManager.MoveGroupToLineFeature(group, targetFeature);
+                armyManager.MoveGroupToLineFeature(group, targetFeature, targetSuffix);
             }
             return;
         }
@@ -773,6 +788,15 @@ ZASADY:
    - RELATYWNE (Z perspektywy oddziału): 'Relative_Forward', 'Relative_Backward', 'Relative_Left', 'Relative_Right'.
      Użyj ich TYLKO, gdy gracz mówi: 'naprzód', 'do tyłu', 'w lewo', 'w prawo'.
    - TERENOWE: {mapLocations}.
+   - TŁUMACZENIE NAZW (Mianownik -> Nazwa Obiektu):
+     * Jeśli gracz mówi 'Północne wzgórze' lub 'Wzgórza na północy' -> szukaj obiektu zawierającego 'Północ' (np. 'Wzgórze Północ').
+     * Jeśli gracz mówi 'Wschodnie wzgórze' -> szukaj 'Wzgórze Wschód'.
+     * Jeśli gracz mówi 'Południowy las' -> szukaj 'Las Południe'.
+     * 'Zachodnie' -> 'Zachód', 'Centralne' -> 'Centrum'.
+   - SUFIKSY (Dla wzgórz):
+     * 'Zajmij', 'Wejdź', 'Na szczyt' -> Dodaj '_Top' (np. 'Wzgórze Północ_Top').
+     * 'Przed', 'U podnóża', 'Pod' -> Dodaj '_Front' (np. 'Wzgórze Północ_Front').
+     * 'Za', 'Schowaj się', 'Druga strona' -> Dodaj '_Back' (np. 'Wzgórze Północ_Back').
    - DLA KOMENDY STOP: 'None'.
    - DLA PRZESUNIĘĆ (np. 100m w lewo): 'Relative_{{Kierunek}}_{{Metry}}'. Kierunki: Forward, Backward, Left, Right.
    - DLA 'FORM' (Formacje): 'Line', 'Double_Line', 'Box', 'Turtle', 'Loose' (Luźna), 'Wedge' (Klin), 'Square' (Czworobok), 'Column' (Kolumna).
@@ -791,7 +815,22 @@ User: Idźcie do przodu!
 AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Relative_Forward_50"" }} ] }}
 User: Jazda, szarżować na tych łuczników! (W kontekście jest TARGETED ENEMY TAG: 'B_Archers_2')
 AI: {{ ""commands"": [ {{ ""unit_tags"": [""Cavalry""], ""action"": ""ATTACK"", ""target_location"": ""B_Archers_2"" }} ], ""ai_thought"": ""Szarża jazdy na wskazanych łuczników."" }}
+User: Łucznicy zająć wzgórze na północy!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Archer""], ""action"": ""MOVE"", ""target_location"": ""Hill_North_Top"" }} ] }}
+User: Zajmijcie północne wzgórze!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Wzgórze Północ_Top"" }} ] }}
 
+User: Jazda, schowajcie się za wschodnim lasem!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Cavalry""], ""action"": ""MOVE"", ""target_location"": ""Las Wschód_Back"" }} ] }}
+
+User: Ustawcie się przed południowym wzgórzem.
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""MOVE"", ""target_location"": ""Wzgórze Południe_Front"" }} ] }}
+User: Piechota ustawić się przed wzgórzem!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Infantry""], ""action"": ""MOVE"", ""target_location"": ""Hill_North_Front"" }} ] }}
+User: Jazda ustawić się przed wzgórzem!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Cavalry""], ""action"": ""MOVE"", ""target_location"": ""Wzgórze Czaszki_Front"" }} ] }}
+User: Jazda, schowajcie się za wzgórzem!
+AI: {{ ""commands"": [ {{ ""unit_tags"": [""Cavalry""], ""action"": ""MOVE"", ""target_location"": ""Hill_North_Back"" }} ] }}
 User: Zniszczyć ten oddział! (W kontekście jest TARGETED ENEMY TAG: 'A_Infantry_5')
 AI: {{ ""commands"": [ {{ ""unit_tags"": [""Selected""], ""action"": ""ATTACK"", ""target_location"": ""A_Infantry_5"" }} ], ""ai_thought"": ""Rozkaz ataku na konkretny, zaznaczony oddział."" }}
 User: Piechota do lasu na północy!

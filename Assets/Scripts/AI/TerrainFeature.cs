@@ -3,13 +3,18 @@ using UnityEngine;
 public class TerrainFeature : MonoBehaviour
 {
     [Header("Dane dla AI")]
-    public string featureName; 
-    [TextArea] public string description; 
+    public string featureName;
+    [TextArea] public string description;
 
     [Header("Ustawienia Linii")]
-    public float lineLength = 20.0f; 
-    public Vector3 lineOrientation = Vector3.right; 
-    
+    public float lineLength = 20.0f;
+    public Vector3 lineOrientation = Vector3.right; // To teraz jest kierunek LOKALNY
+
+    [Header("Typ Terenu")]
+    public bool isHill = false; // NOWOŚĆ: Czy to wzgórze?
+    public float widthOffset = 15.0f;
+
+
     [Header("Ustawienia Rzeczne")]
     public bool isRiver = false; // Czy to jest rzeka?
     public float riverBankOffset = 10.0f; // Jak daleko od środka rzeki jest brzeg (bezpieczna strefa)
@@ -18,32 +23,48 @@ public class TerrainFeature : MonoBehaviour
     public Color debugColor = Color.green;
     public float radius = 2.0f;
 
+    public Vector3 GetWorldDirection()
+    {
+        return transform.TransformDirection(lineOrientation).normalized;
+    }
+
     void OnDrawGizmos()
     {
         Gizmos.color = debugColor;
         Gizmos.DrawWireSphere(transform.position, radius);
-        
-        Vector3 start = transform.position - (lineOrientation * lineLength * 0.5f);
-        Vector3 end = transform.position + (lineOrientation * lineLength * 0.5f);
-        
+        Vector3 worldDir = GetWorldDirection();
+        Vector3 start = transform.position - (worldDir * lineLength * 0.5f);
+        Vector3 end = transform.position + (worldDir * lineLength * 0.5f);
+
         Gizmos.DrawLine(start, end);
         Gizmos.DrawLine(start, start + Vector3.up * 5);
         Gizmos.DrawLine(end, end + Vector3.up * 5);
 
         // Wizualizacja brzegów (tylko dla rzek)
-        if (isRiver)
+        if (isRiver || isHill)
         {
-            Gizmos.color = Color.blue;
-            Vector3 perp = Vector3.Cross(Vector3.up, lineOrientation).normalized * riverBankOffset;
-            Gizmos.DrawLine(start + perp, end + perp); // Brzeg A
-            Gizmos.DrawLine(start - perp, end - perp); // Brzeg B
+            Gizmos.color = isRiver ? Color.blue : Color.yellow;
+            // Obliczamy prostopadłą względem kierunku świata
+            Vector3 perp = Vector3.Cross(Vector3.up, worldDir) * widthOffset;
+
+            // Strefy
+            Gizmos.DrawLine(start + perp, end + perp);
+            Gizmos.DrawLine(start - perp, end - perp);
+
+            if (isHill)
+            {
+                Gizmos.color = new Color(1, 0.92f, 0.016f, 0.3f);
+                Gizmos.DrawLine(transform.position, transform.position + perp);
+                Gizmos.DrawLine(transform.position, transform.position - perp);
+            }
         }
     }
-    
+
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
-        UnityEditor.Handles.Label(transform.position + Vector3.up * 4, featureName + $"\n(Szer: {lineLength:F0}m)");
+        string type = isRiver ? "Rzeka" : (isHill ? "Wzgórze" : "Obszar");
+        UnityEditor.Handles.Label(transform.position + Vector3.up * 5, $"{featureName}\nTyp: {type}\nDł: {lineLength:F0}m");
     }
 #endif
 }

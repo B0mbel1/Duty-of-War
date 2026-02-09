@@ -165,9 +165,10 @@ public class TerrainScanner : MonoBehaviour
         float[,] heights = data.GetHeights(0, 0, res, res);
         Vector3 size = data.size;
 
-        List<Vector3> candidates = new List<Vector3>();
-        int step = 10;
+        List<Vector3> peaks = new List<Vector3>();
+        int step = 20; // Zwiększony krok skanowania (mniej punktów)
 
+        // 1. Znajdź tylko najwyższe punkty (szczyty)
         for (int x = 0; x < res; x += step)
         {
             for (int y = 0; y < res; y += step)
@@ -180,27 +181,56 @@ public class TerrainScanner : MonoBehaviour
                         h + terrain.transform.position.y,
                         (y / (float)res) * size.z + terrain.transform.position.z
                     );
-                    candidates.Add(worldPos);
+                    peaks.Add(worldPos);
                 }
             }
         }
 
-        candidates = candidates.OrderByDescending(v => v.y).ToList();
-        List<Vector3> finalPeaks = new List<Vector3>();
+        // 2. Sortuj od najwyższego i filtruj bliskie
+        peaks = peaks.OrderByDescending(v => v.y).ToList();
+        List<Vector3> finalHills = new List<Vector3>();
+        float minHillDist = 150.0f; // Duży dystans, żeby nie tworzyć klastrów wzgórz
 
-        foreach (var point in candidates)
+        foreach (var p in peaks)
         {
-            if (IsFarEnough(point, finalPeaks, minDistanceBetweenPeaks))
+            if (IsFarEnough(p, finalHills, minHillDist))
             {
-                finalPeaks.Add(point);
-                string dirName = GetLocationName(point);
-                string uniqueName = GetUniqueName("Hill_" + dirName);
-
-                CreateMarker(point, uniqueName, $"Wzgórze ({TranslateDir(dirName)})", Color.yellow);
+                finalHills.Add(p);
             }
         }
-    }
 
+        // 3. Twórz obiekty TerrainFeature (Wzgórza)
+        foreach (var hillCenter in finalHills)
+        {
+            string dirName = GetLocationName(hillCenter); // np. "North"
+
+            // ZMIANA: Tłumaczymy kierunek na polski rzeczownik (North -> Północ)
+            string plDir = TranslateDirNoun(dirName);
+
+            // Tworzymy nazwę: "Wzgórze Północ", "Wzgórze Centrum"
+            string uniqueName = GetUniqueName("Wzgórze " + plDir);
+
+            Vector3 orient = (dirName == "East" || dirName == "West") ? Vector3.forward : Vector3.right;
+
+            CreateHillMarker(hillCenter, uniqueName, "Wzgórze", orient);
+        }
+    }
+    void CreateHillMarker(Vector3 pos, string idName, string desc, Vector3 orient)
+    {
+        GameObject marker = new GameObject($"Auto_{idName}");
+        marker.transform.position = pos;
+
+        TerrainFeature feature = marker.AddComponent<TerrainFeature>();
+        feature.featureName = idName;
+        feature.description = desc;
+        feature.debugColor = Color.yellow;
+
+        // Konfiguracja pod wzgórze
+        feature.isHill = true;
+        feature.lineLength = 60.0f; // Domyślna długość grzbietu
+        feature.lineOrientation = orient;
+        feature.widthOffset = 25.0f; // Dystans od szczytu do podnóża
+    }
     // --- LASY (Zachowana Twoja logika klastrów) ---
     void ScanForForests_Clustered()
     {
@@ -305,11 +335,12 @@ public class TerrainScanner : MonoBehaviour
     void GenerateMarkersForCluster(ForestCluster forest)
     {
         Vector3 center = forest.GetCenter();
-        string dirName = GetLocationName(center); // np. "North", "East"
+        string dirName = GetLocationName(center);
 
-        // Generujemy nazwę
-        string baseID = GetUniqueName("Forest_" + dirName);
-        string plDesc = TranslateDir(dirName) + " las";
+        // ZMIANA: Polska nazwa
+        string plDir = TranslateDirNoun(dirName);
+        string baseID = GetUniqueName("Las " + plDir);
+        string plDesc = "Las (" + plDir + ")";
 
         // Obliczamy wymiary lasu
         float widthX = forest.maxX - forest.minX;
@@ -351,7 +382,18 @@ public class TerrainScanner : MonoBehaviour
         // Tworzymy znacznik z danymi o linii
         CreateMarker(center, baseID, plDesc, Color.green, calculatedLength, calculatedOrientation);
     }
-
+    string TranslateDirNoun(string enDir)
+    {
+        switch (enDir)
+        {
+            case "North": return "Północ";
+            case "South": return "Południe";
+            case "East": return "Wschód";
+            case "West": return "Zachód";
+            case "Center": return "Centrum";
+            default: return enDir;
+        }
+    }
     void CreateMarker(Vector3 pos, string idName, string desc, Color color, float len = 0.0f, Vector3 orient = default(Vector3), bool isRiver = false)
     {
         if (orient == Vector3.zero) orient = Vector3.forward;

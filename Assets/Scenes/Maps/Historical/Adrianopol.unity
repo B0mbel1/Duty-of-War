@@ -708,6 +708,10 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
+    - target: {fileID: 8209082027268439167, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: terrain
+      value: 
+      objectReference: {fileID: 1843948588}
     m_RemovedComponents:
     - {fileID: 3318211242045764330, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
     m_RemovedGameObjects: []
@@ -1307,6 +1311,8 @@ MonoBehaviour:
   description: "Rzeka, przez kt\xF3r\u0105 mo\u017Cna przej\u015B\u0107."
   lineLength: 1000
   lineOrientation: {x: 1, y: 0, z: 0}
+  isHill: 0
+  widthOffset: 55
   isRiver: 1
   riverBankOffset: 50
   debugColor: {r: 0, g: 1, b: 0, a: 1}
@@ -1553,6 +1559,60 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &2030846731
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2030846733}
+  - component: {fileID: 2030846732}
+  m_Layer: 0
+  m_Name: "P\xF3\u0142nocne wzg\xF3rze"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2030846732
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2030846731}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 223aeebcdca464f44b83b04762bb649a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TerrainFeature
+  featureName: "Wzg\xF3rze P\xF3\u0142noc"
+  description: "Wzg\xF3rze"
+  lineLength: 1000
+  lineOrientation: {x: 0, y: 0, z: 1}
+  isHill: 1
+  widthOffset: 60
+  isRiver: 0
+  riverBankOffset: 10
+  debugColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  radius: 2
+--- !u!4 &2030846733
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2030846731}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.6790236, z: -0, w: 0.73411644}
+  m_LocalPosition: {x: 496, y: 11.371544, z: 582}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 85.535, z: 0}
 --- !u!1 &2084568181 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 935478258473247211, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -1585,6 +1645,60 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!1 &2141529657
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2141529659}
+  - component: {fileID: 2141529658}
+  m_Layer: 0
+  m_Name: "Po\u0142udniowe wzg\xF3rze"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2141529658
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141529657}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 223aeebcdca464f44b83b04762bb649a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TerrainFeature
+  featureName: "Wzg\xF3rze Po\u0142udnie"
+  description: "Wzg\xF3rze"
+  lineLength: 1000
+  lineOrientation: {x: 1, y: 0, z: 0}
+  isHill: 1
+  widthOffset: 50
+  isRiver: 0
+  riverBankOffset: 10
+  debugColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  radius: 2
+--- !u!4 &2141529659
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141529657}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.029485723, z: -0, w: 0.99956524}
+  m_LocalPosition: {x: 492, y: 10.492583, z: 396}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -3.379, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1599,3 +1713,5 @@ SceneRoots:
   - {fileID: 1391068152}
   - {fileID: 1114083743}
   - {fileID: 651943832}
+  - {fileID: 2030846733}
+  - {fileID: 2141529659}
