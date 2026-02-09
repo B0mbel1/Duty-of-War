@@ -401,7 +401,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
             if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
             if (Input.GetKeyDown(KeyCode.Space)) ToggleTacticalPause();
-            if (Input.GetKeyDown(KeyCode.M))
+            if (Input.GetKeyDown(KeyCode.LeftControl))
             {
                 if (namingPanel != null && namingPanel.activeSelf) namingPanel.SetActive(false);
                 else if (selectedGroups.Count > 1) OpenNamingPanel();
