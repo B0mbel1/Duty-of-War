@@ -351,6 +351,10 @@ PrefabInstance:
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 8209082027268439167, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+      propertyPath: terrain
+      value: 
+      objectReference: {fileID: 1399228586}
+    - target: {fileID: 8209082027268439167, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
       propertyPath: heightThreshold
       value: 20
       objectReference: {fileID: 0}
