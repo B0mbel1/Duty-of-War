@@ -253,37 +253,38 @@ public class LLMCommander : MonoBehaviour
             // A. Czy to atak kierunkowy (Flank)?
             if (cmd.target_location.StartsWith("Flank"))
             {
-                // Ustalamy punkt odniesienia (Wybrany wróg lub środek armii wroga)
                 Vector3 centerPoint = GetEnemyArmyCenter();
-
-                // --- LOGIKA ZAZNACZANIA ---
-                // Jeśli masz zaznaczonego wroga (podświetlonego), to flankujemy TEGO konkretnego wroga
                 if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
                 {
                     centerPoint = armyManager.selectedEnemyGroup.groupCenter;
                     targetEnemy = armyManager.selectedEnemyGroup;
                 }
 
-                // Obliczamy pozycję flanki (np. 30m od wroga)
+                // Inicjalizujemy flankPosition jako null
                 float offset = 70.0f;
                 string dir = cmd.target_location.ToLower();
 
-                if (dir.Contains("north")) flankPosition = centerPoint + new Vector3(0, 0, offset); // Z+
-                else if (dir.Contains("south")) flankPosition = centerPoint + new Vector3(0, 0, -offset); // Z-
-                else if (dir.Contains("east")) flankPosition = centerPoint + new Vector3(offset, 0, 0); // X+
-                else if (dir.Contains("west")) flankPosition = centerPoint + new Vector3(-offset, 0, 0); // X-
+                // Sprawdzamy kierunki
+                if (dir.Contains("north")) flankPosition = centerPoint + new Vector3(0, 0, offset);
+                else if (dir.Contains("south")) flankPosition = centerPoint + new Vector3(0, 0, -offset);
+                else if (dir.Contains("east")) flankPosition = centerPoint + new Vector3(offset, 0, 0);
+                else if (dir.Contains("west")) flankPosition = centerPoint + new Vector3(-offset, 0, 0);
+                
+                // POPRAWKA: Jeśli AI podało dziwny kierunek (np. Flank_Back), ustawiamy domyślną flankę (np. Wschód)
+                // Dzięki temu flankPosition nigdy nie będzie nullem w pętli poniżej.
+                if (flankPosition == null)
+                {
+                    Debug.LogWarning($"[LLMCommander] AI podało nieznaną flankę: '{cmd.target_location}'. Ustawiam domyślną (East).");
+                    flankPosition = centerPoint + new Vector3(offset, 0, 0);
+                }
 
-                // SCENARIUSZ 1: SEKWENCJA FLANKOWANIA (Idź -> Ustaw się -> Atakuj)
                 foreach (var group in selectedUnits)
                 {
-                    // Obliczamy wektor patrzenia: Z pozycji flanki W STRONĘ WROGA.
-                    // Dzięki temu ApplyFormation ustawi ich w linię PROSTOPADŁĄ do tego wektora.
+                    // Teraz flankPosition.Value jest bezpieczne, bo obsłużyliśmy null powyżej
                     Vector3 lookDir = (centerPoint - flankPosition.Value).normalized;
-
-                    // Uruchamiamy korutynę (działa w tle)
                     StartCoroutine(FlankAndStrikeSequence(group, flankPosition.Value, lookDir, targetEnemy));
                 }
-                return; // Wychodzimy, bo korutyna przejęła kontrolę
+                return;
             }
             // B. Priorytet Ręczny (Marker)
             else if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)

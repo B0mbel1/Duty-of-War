@@ -339,19 +339,19 @@ MonoBehaviour:
   attackRangeArcher: 100
   heightRangeBonus: 0.5
   maxHeightDamageBonus: 1.5
-  attackCooldown: 1.5
-  archerAttackCooldown: 3
+  attackCooldown: 1.2
+  archerAttackCooldown: 2.5
   minX: 0
   maxX: 2000
   minZ: 0
   maxZ: 2000
   maxCombatChecksPerFrame: 2000
-  hpMax: 2
-  dmgInfantry: 1
-  dmgArcherMin: 0.3
-  dmgArcherMax: 0.5
-  dmgCavalryCharge: 2
-  dmgCavalryStatic: 0.8
+  hpMax: 600
+  dmgInfantry: 15
+  dmgArcherMin: 6
+  dmgArcherMax: 8
+  dmgCavalryCharge: 100
+  dmgCavalryStatic: 25
   cursorMarkerPrefab: {fileID: 8569586844813153232, guid: 14bfbc18e4eb9664f9b147248f2bd5b1, type: 3}
   lastCursorPosition: {x: 0, y: 0, z: 0}
   hasCursorPosition: 0
@@ -780,9 +780,25 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: armyManager
+      value: 
+      objectReference: {fileID: 13856382}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: geminiNetwork
+      value: 
+      objectReference: {fileID: 1064055470}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: scenarioInstruction
+      value: "Wykonuj manewry na wz\xF3r dow\xF3dc\xF3w bitwy pod Adrianopolem"
+      objectReference: {fileID: 0}
     - target: {fileID: 2202242556553842332, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: m_Name
       value: EnemyGeneral
+      objectReference: {fileID: 0}
+    - target: {fileID: 2202242556553842332, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: m_LocalPosition.x
@@ -956,6 +972,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+--- !u!114 &1064055470 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8930509726485920553, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
+  m_PrefabInstance: {fileID: 488601541}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54f8896059b12f944943e60473bce6bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GeminiNetwork
 --- !u!1 &1114083741
 GameObject:
   m_ObjectHideFlags: 0

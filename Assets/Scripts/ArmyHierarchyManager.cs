@@ -51,8 +51,8 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     [Header("Hierarchy & Speed")]
     public HierarchyRank groupSize = HierarchyRank.Company;
-    public float moveSpeed = 10f;
-    public float rotationSpeed = 8f;
+    public float moveSpeed = 2.0f;
+    public float rotationSpeed = 1.2f;
     public float stopDistance = 2.0f;
     public float cavalrySpeedMultiplier = 1.5f;
 
