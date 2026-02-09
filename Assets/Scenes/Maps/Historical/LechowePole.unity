@@ -356,6 +356,63 @@ MonoBehaviour:
   riverBankOffset: 50
   debugColor: {r: 0, g: 1, b: 0, a: 1}
   radius: 10
+--- !u!1001 &852065332
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2202242556553842332, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_Name
+      value: EnemyGeneral
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 683.68445
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.00002
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 802.3749
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: b4a9564489828704fa71788cbc124d41, type: 3}
 --- !u!114 &877380238 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8558128190605741031, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -579,6 +636,144 @@ MonoBehaviour:
     m_Bits: 4294967295
   factionAGroups: []
   factionBGroups: []
+  selectedEnemyGroup:
+    groupName: 
+    customName: 
+    isMergedGroup: 0
+    rank: 0
+    archetypes: []
+    unitArchetypeIndices: 
+    unitMatrices: []
+    unitHealth: []
+    attackCooldowns: []
+    lastCombatTimes: []
+    lastPositions: []
+    formationTargets: []
+    isReforming: 0
+    currentDestination: {x: 0, y: 0, z: 0}
+    isMoving: 0
+    pendingOrder:
+      type: 0
+      formationName: 
+      destination: {x: 0, y: 0, z: 0}
+      lookDirection: {x: 0, y: 0, z: 0}
+      chaseTarget:
+        groupName: 
+        customName: 
+        isMergedGroup: 0
+        rank: 0
+        archetypes: []
+        unitArchetypeIndices: 
+        unitMatrices: []
+        unitHealth: []
+        attackCooldowns: []
+        lastCombatTimes: []
+        lastPositions: []
+        formationTargets: []
+        isReforming: 0
+        currentDestination: {x: 0, y: 0, z: 0}
+        isMoving: 0
+        pendingOrder:
+          type: 0
+          formationName: 
+          destination: {x: 0, y: 0, z: 0}
+          lookDirection: {x: 0, y: 0, z: 0}
+          chaseTarget:
+            groupName: 
+            customName: 
+            isMergedGroup: 0
+            rank: 0
+            archetypes: []
+            unitArchetypeIndices: 
+            unitMatrices: []
+            unitHealth: []
+            attackCooldowns: []
+            lastCombatTimes: []
+            lastPositions: []
+            formationTargets: []
+            isReforming: 0
+            currentDestination: {x: 0, y: 0, z: 0}
+            isMoving: 0
+            pendingOrder:
+              type: 0
+              formationName: 
+              destination: {x: 0, y: 0, z: 0}
+              lookDirection: {x: 0, y: 0, z: 0}
+              chaseTarget:
+                groupName: 
+                customName: 
+                isMergedGroup: 0
+                rank: 0
+                archetypes: []
+                unitArchetypeIndices: 
+                unitMatrices: []
+                unitHealth: []
+                attackCooldowns: []
+                lastCombatTimes: []
+                lastPositions: []
+                formationTargets: []
+                isReforming: 0
+                currentDestination: {x: 0, y: 0, z: 0}
+                isMoving: 0
+                pendingOrder:
+                  type: 0
+                  formationName: 
+                  destination: {x: 0, y: 0, z: 0}
+                  lookDirection: {x: 0, y: 0, z: 0}
+                  chaseTarget:
+                    groupName: 
+                    customName: 
+                    isMergedGroup: 0
+                    rank: 0
+                    archetypes: []
+                    unitArchetypeIndices: 
+                    unitMatrices: []
+                    unitHealth: []
+                    attackCooldowns: []
+                    lastCombatTimes: []
+                    lastPositions: []
+                    formationTargets: []
+                    isReforming: 0
+                    currentDestination: {x: 0, y: 0, z: 0}
+                    isMoving: 0
+                    pendingOrder:
+                      type: 0
+                      formationName: 
+                      destination: {x: 0, y: 0, z: 0}
+                      lookDirection: {x: 0, y: 0, z: 0}
+                      chaseTarget:
+                        groupName: 
+                        customName: 
+                        isMergedGroup: 0
+                        isReforming: 0
+                        isMoving: 0
+                        groupRadius: 0
+                        minGroupSpeedMultiplier: 0
+                      feature: {fileID: 0}
+                    groupCenter: {x: 0, y: 0, z: 0}
+                    groupRadius: 0
+                    targetFacingDirection: {x: 0, y: 0, z: 0}
+                    minGroupSpeedMultiplier: 0
+                  feature: {fileID: 0}
+                groupCenter: {x: 0, y: 0, z: 0}
+                groupRadius: 0
+                targetFacingDirection: {x: 0, y: 0, z: 0}
+                minGroupSpeedMultiplier: 0
+              feature: {fileID: 0}
+            groupCenter: {x: 0, y: 0, z: 0}
+            groupRadius: 0
+            targetFacingDirection: {x: 0, y: 0, z: 0}
+            minGroupSpeedMultiplier: 0
+          feature: {fileID: 0}
+        groupCenter: {x: 0, y: 0, z: 0}
+        groupRadius: 0
+        targetFacingDirection: {x: 0, y: 0, z: 0}
+        minGroupSpeedMultiplier: 0
+      feature: {fileID: 0}
+    groupCenter: {x: 0, y: 0, z: 0}
+    groupRadius: 0
+    targetFacingDirection: {x: 0, y: 0, z: 0}
+    minGroupSpeedMultiplier: 0
   terrainLayerMask:
     serializedVersion: 2
     m_Bits: 1
@@ -1259,3 +1454,4 @@ SceneRoots:
   - {fileID: 952466748}
   - {fileID: 1567430208}
   - {fileID: 1820078498}
+  - {fileID: 852065332}

@@ -119,58 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &11440419
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 11440421}
-  - component: {fileID: 11440420}
-  m_Layer: 0
-  m_Name: EnemyGeneral
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &11440420
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 11440419}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b9360a1508ff7724c9d73d512e2a7027, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemyGeneral
-  armyManager: {fileID: 2048193688271181853}
-  geminiNetwork: {fileID: 1900463156}
-  myFaction: SideB
-  decisionInterval: 10
-  personality: 0
-  scenarioInstruction: "B\u0105d\u017A jak mongo\u0142owie, atakuj i wycofuj si\u0119"
-  isAiActive: 1
-  isWaitingForResponse: 0
---- !u!4 &11440421
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 11440419}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 593.58276, y: 2.92029, z: 843.556}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &98583030 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4237397274064910678, guid: 49d326ed6d683cd42b1395750475b645, type: 3}
@@ -970,6 +918,71 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &362677975919394092
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: armyManager
+      value: 
+      objectReference: {fileID: 2048193688271181853}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: geminiNetwork
+      value: 
+      objectReference: {fileID: 1900463156}
+    - target: {fileID: 2202242556553842332, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_Name
+      value: EnemyGeneral
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 593.58276
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.92029
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 843.556
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: b4a9564489828704fa71788cbc124d41, type: 3}
 --- !u!1001 &2048193688271181850
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1331,4 +1344,4 @@ SceneRoots:
   - {fileID: 2048193688271181850}
   - {fileID: 315272898}
   - {fileID: 735734148}
-  - {fileID: 11440421}
+  - {fileID: 362677975919394092}
