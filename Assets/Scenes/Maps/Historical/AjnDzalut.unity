@@ -934,9 +934,17 @@ PrefabInstance:
       propertyPath: geminiNetwork
       value: 
       objectReference: {fileID: 1900463156}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: decisionInterval
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 2202242556553842332, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: m_Name
       value: EnemyGeneral
+      objectReference: {fileID: 0}
+    - target: {fileID: 2202242556553842332, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3062688917534843446, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1147,10 +1155,10 @@ MonoBehaviour:
   indicatorMeshArcher: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   indicatorMeshCavalry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   groupSize: 150
-  moveSpeed: 10
-  rotationSpeed: 8
+  moveSpeed: 5
+  rotationSpeed: 1.2
   stopDistance: 2
-  cavalrySpeedMultiplier: 1.5
+  cavalrySpeedMultiplier: 2
   waterLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -1170,19 +1178,19 @@ MonoBehaviour:
   attackRangeArcher: 100
   heightRangeBonus: 0.5
   maxHeightDamageBonus: 1.5
-  attackCooldown: 1.5
-  archerAttackCooldown: 3
+  attackCooldown: 1.2
+  archerAttackCooldown: 2.5
   minX: 0
   maxX: 2000
   minZ: 0
   maxZ: 2000
   maxCombatChecksPerFrame: 2000
-  hpMax: 2
-  dmgInfantry: 1
-  dmgArcherMin: 0.3
-  dmgArcherMax: 0.5
-  dmgCavalryCharge: 2
-  dmgCavalryStatic: 0.8
+  hpMax: 100
+  dmgInfantry: 25
+  dmgArcherMin: 10
+  dmgArcherMax: 15
+  dmgCavalryCharge: 100
+  dmgCavalryStatic: 20
   cursorMarkerPrefab: {fileID: 8569586844813153232, guid: 14bfbc18e4eb9664f9b147248f2bd5b1, type: 3}
   lastCursorPosition: {x: 0, y: 0, z: 0}
   hasCursorPosition: 0

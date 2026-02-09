@@ -73,6 +73,10 @@ MonoBehaviour:
   swimmingDepth: 0.5
   factionAShape: 0
   factionBShape: 0
+  useSpawnBoxRotation: 1
+  forceEnemyAlignmentToPlayer: 1
+  useSmartWidthProjection: 1
+  manualFormationWidth: 0
   battleCamera: {fileID: 0}
   cameraHeight: 60
   cameraDistanceBack: 40
@@ -118,10 +122,10 @@ MonoBehaviour:
   indicatorMeshArcher: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   indicatorMeshCavalry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   groupSize: 150
-  moveSpeed: 10
-  rotationSpeed: 8
+  moveSpeed: 5
+  rotationSpeed: 1.2
   stopDistance: 2
-  cavalrySpeedMultiplier: 1.5
+  cavalrySpeedMultiplier: 2
   waterLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -137,23 +141,23 @@ MonoBehaviour:
   uphillSteepMult: 0.4
   downhillLightMult: 1.1
   downhillSteepMult: 0.9
-  attackRangeMelee: 3.5
+  attackRangeMelee: 1.5
   attackRangeArcher: 100
   heightRangeBonus: 0.5
   maxHeightDamageBonus: 1.5
-  attackCooldown: 1
-  archerAttackCooldown: 3
+  attackCooldown: 1.2
+  archerAttackCooldown: 2.5
   minX: 0
   maxX: 2000
   minZ: 0
   maxZ: 2000
   maxCombatChecksPerFrame: 2000
-  hpMax: 2
-  dmgInfantry: 1
-  dmgArcherMin: 0.3
-  dmgArcherMax: 0.5
-  dmgCavalryCharge: 2
-  dmgCavalryStatic: 0.8
+  hpMax: 100
+  dmgInfantry: 25
+  dmgArcherMin: 10
+  dmgArcherMax: 15
+  dmgCavalryCharge: 100
+  dmgCavalryStatic: 20
   cursorMarkerPrefab: {fileID: 8569586844813153232, guid: 14bfbc18e4eb9664f9b147248f2bd5b1, type: 3}
   lastCursorPosition: {x: 0, y: 0, z: 0}
   hasCursorPosition: 0
@@ -162,6 +166,144 @@ MonoBehaviour:
     m_Bits: 4294967295
   factionAGroups: []
   factionBGroups: []
+  selectedEnemyGroup:
+    groupName: 
+    customName: 
+    isMergedGroup: 0
+    rank: 0
+    archetypes: []
+    unitArchetypeIndices: 
+    unitMatrices: []
+    unitHealth: []
+    attackCooldowns: []
+    lastCombatTimes: []
+    lastPositions: []
+    formationTargets: []
+    isReforming: 0
+    currentDestination: {x: 0, y: 0, z: 0}
+    isMoving: 0
+    pendingOrder:
+      type: 0
+      formationName: 
+      destination: {x: 0, y: 0, z: 0}
+      lookDirection: {x: 0, y: 0, z: 0}
+      chaseTarget:
+        groupName: 
+        customName: 
+        isMergedGroup: 0
+        rank: 0
+        archetypes: []
+        unitArchetypeIndices: 
+        unitMatrices: []
+        unitHealth: []
+        attackCooldowns: []
+        lastCombatTimes: []
+        lastPositions: []
+        formationTargets: []
+        isReforming: 0
+        currentDestination: {x: 0, y: 0, z: 0}
+        isMoving: 0
+        pendingOrder:
+          type: 0
+          formationName: 
+          destination: {x: 0, y: 0, z: 0}
+          lookDirection: {x: 0, y: 0, z: 0}
+          chaseTarget:
+            groupName: 
+            customName: 
+            isMergedGroup: 0
+            rank: 0
+            archetypes: []
+            unitArchetypeIndices: 
+            unitMatrices: []
+            unitHealth: []
+            attackCooldowns: []
+            lastCombatTimes: []
+            lastPositions: []
+            formationTargets: []
+            isReforming: 0
+            currentDestination: {x: 0, y: 0, z: 0}
+            isMoving: 0
+            pendingOrder:
+              type: 0
+              formationName: 
+              destination: {x: 0, y: 0, z: 0}
+              lookDirection: {x: 0, y: 0, z: 0}
+              chaseTarget:
+                groupName: 
+                customName: 
+                isMergedGroup: 0
+                rank: 0
+                archetypes: []
+                unitArchetypeIndices: 
+                unitMatrices: []
+                unitHealth: []
+                attackCooldowns: []
+                lastCombatTimes: []
+                lastPositions: []
+                formationTargets: []
+                isReforming: 0
+                currentDestination: {x: 0, y: 0, z: 0}
+                isMoving: 0
+                pendingOrder:
+                  type: 0
+                  formationName: 
+                  destination: {x: 0, y: 0, z: 0}
+                  lookDirection: {x: 0, y: 0, z: 0}
+                  chaseTarget:
+                    groupName: 
+                    customName: 
+                    isMergedGroup: 0
+                    rank: 0
+                    archetypes: []
+                    unitArchetypeIndices: 
+                    unitMatrices: []
+                    unitHealth: []
+                    attackCooldowns: []
+                    lastCombatTimes: []
+                    lastPositions: []
+                    formationTargets: []
+                    isReforming: 0
+                    currentDestination: {x: 0, y: 0, z: 0}
+                    isMoving: 0
+                    pendingOrder:
+                      type: 0
+                      formationName: 
+                      destination: {x: 0, y: 0, z: 0}
+                      lookDirection: {x: 0, y: 0, z: 0}
+                      chaseTarget:
+                        groupName: 
+                        customName: 
+                        isMergedGroup: 0
+                        isReforming: 0
+                        isMoving: 0
+                        groupRadius: 0
+                        minGroupSpeedMultiplier: 0
+                      feature: {fileID: 0}
+                    groupCenter: {x: 0, y: 0, z: 0}
+                    groupRadius: 0
+                    targetFacingDirection: {x: 0, y: 0, z: 0}
+                    minGroupSpeedMultiplier: 0
+                  feature: {fileID: 0}
+                groupCenter: {x: 0, y: 0, z: 0}
+                groupRadius: 0
+                targetFacingDirection: {x: 0, y: 0, z: 0}
+                minGroupSpeedMultiplier: 0
+              feature: {fileID: 0}
+            groupCenter: {x: 0, y: 0, z: 0}
+            groupRadius: 0
+            targetFacingDirection: {x: 0, y: 0, z: 0}
+            minGroupSpeedMultiplier: 0
+          feature: {fileID: 0}
+        groupCenter: {x: 0, y: 0, z: 0}
+        groupRadius: 0
+        targetFacingDirection: {x: 0, y: 0, z: 0}
+        minGroupSpeedMultiplier: 0
+      feature: {fileID: 0}
+    groupCenter: {x: 0, y: 0, z: 0}
+    groupRadius: 0
+    targetFacingDirection: {x: 0, y: 0, z: 0}
+    minGroupSpeedMultiplier: 0
   terrainLayerMask:
     serializedVersion: 2
     m_Bits: 1

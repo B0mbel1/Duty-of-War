@@ -346,12 +346,12 @@ MonoBehaviour:
   minZ: 0
   maxZ: 2000
   maxCombatChecksPerFrame: 2000
-  hpMax: 600
-  dmgInfantry: 15
-  dmgArcherMin: 6
-  dmgArcherMax: 8
+  hpMax: 100
+  dmgInfantry: 25
+  dmgArcherMin: 10
+  dmgArcherMax: 15
   dmgCavalryCharge: 100
-  dmgCavalryStatic: 25
+  dmgCavalryStatic: 20
   cursorMarkerPrefab: {fileID: 8569586844813153232, guid: 14bfbc18e4eb9664f9b147248f2bd5b1, type: 3}
   lastCursorPosition: {x: 0, y: 0, z: 0}
   hasCursorPosition: 0
@@ -788,6 +788,10 @@ PrefabInstance:
       propertyPath: geminiNetwork
       value: 
       objectReference: {fileID: 1064055470}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: decisionInterval
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: scenarioInstruction
       value: "Wykonuj manewry na wz\xF3r dow\xF3dc\xF3w bitwy pod Adrianopolem"

@@ -44,11 +44,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b9360a1508ff7724c9d73d512e2a7027, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyGeneral
+  decisionInterval: 6
+  side: SideB
   armyManager: {fileID: 0}
-  geminiNetwork: {fileID: 0}
-  myFaction: SideB
-  decisionInterval: 10
-  personality: 0
-  scenarioInstruction: 
-  isAiActive: 1
-  isWaitingForResponse: 0
