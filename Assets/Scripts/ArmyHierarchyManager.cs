@@ -46,7 +46,6 @@ public class ArmyHierarchyManager : MonoBehaviour
     public Mesh indicatorMeshInfantry;
     public Mesh indicatorMeshArcher;
     public Mesh indicatorMeshCavalry;
-
     private Mesh cachedInfantryMesh;
     private Mesh cachedArcherMesh;
     private Mesh cachedCavalryMesh;
@@ -102,34 +101,26 @@ public class ArmyHierarchyManager : MonoBehaviour
     public float dmgCavalryStatic = 0.8f;
 
     [Header("Cursor Settings")]
-    public GameObject cursorMarkerPrefab; // Przypisz tu prefab (np. cylinder lub flagę)
+    public GameObject cursorMarkerPrefab;
     private GameObject activeCursorMarker;
     [HideInInspector] public Vector3 lastCursorPosition;
     [HideInInspector] public bool hasCursorPosition = false;
     public LayerMask groundLayerMask = ~0;
-    // --- DANE ---
+
     public List<TacticalGroup> factionAGroups = new List<TacticalGroup>();
     public List<TacticalGroup> factionBGroups = new List<TacticalGroup>();
-
     private List<ArmyGroupUI> uiElements = new List<ArmyGroupUI>();
     private List<TacticalGroup> selectedGroups = new List<TacticalGroup>();
     private TacticalGroup lastSelectedGroup = null;
-
     public bool groupsInitialized = false;
     private Terrain terrain;
     private TerrainData terrainData;
-
-    // --- SPATIAL GRID ---
     private Dictionary<int, List<UnitRef>> spatialGrid = new Dictionary<int, List<UnitRef>>();
     private float cellSize = 10.0f;
-
-    // --- FAIR SCHEDULER ---
     private int nextGroupIdxA = 0;
     private int nextUnitIdxA = 0;
     private int nextGroupIdxB = 0;
     private int nextUnitIdxB = 0;
-
-
     public TacticalGroup selectedEnemyGroup = null;
 
     struct UnitRef
@@ -170,54 +161,35 @@ public class ArmyHierarchyManager : MonoBehaviour
         foreach (var group in potentialGroups)
         {
             if (group.unitMatrices.Count == 0) continue;
-
-            // --- FAZA 1: SZYBKI TEST (BROAD PHASE) ---
-            // Najpierw sprawdzamy, czy w ogóle celujemy w okolice grupy.
-            // Jeśli promień mija całą grupę o 5 metrów, nie ma sensu sprawdzać każdego żołnierza.
-
             Vector3 toCenter = group.groupCenter - ray.origin;
             float projection = Vector3.Dot(toCenter, ray.direction);
-            if (projection < 0) continue; // Grupa za kamerą
 
+            if (projection < 0) continue;
             Vector3 pointOnRay = ray.origin + (ray.direction * projection);
             float distFromRayToCenter = Vector3.Distance(pointOnRay, group.groupCenter);
 
-            // Jeśli kursor jest bardzo daleko od środka grupy -> pomiń
             if (distFromRayToCenter > group.groupRadius + 5.0f) continue;
-
-
-            // --- FAZA 2: PRECYZYJNY TEST (NARROW PHASE) ---
-            // Sprawdzamy kolizję z każdym pojedynczym żołnierzem w tej grupie.
-
-            // Ustalamy wielkość hitboxa zależnie od typu jednostki
-            float unitHitRadius = 1.2f; // Domyślnie (piechota)
+            float unitHitRadius = 1.2f;
             if (group.archetypes.Count > 0)
             {
                 UnitType type = group.archetypes[0].type;
-                if (type == UnitType.Cavalry) unitHitRadius = 2.5f; // Konie są większe i łatwiej w nie trafić
+                if (type == UnitType.Cavalry) unitHitRadius = 2.5f;
                 else if (type == UnitType.Archer) unitHitRadius = 1.2f;
             }
 
             for (int i = 0; i < group.unitMatrices.Count; i++)
             {
-                // Pobieramy pozycję konkretnego żołnierza
                 Vector3 unitPos = (Vector3)group.unitMatrices[i].GetColumn(3);
-
-                // Matematyka: Dystans punktu (żołnierza) od prostej (promienia myszki)
                 Vector3 toUnit = unitPos - ray.origin;
                 float t = Vector3.Dot(toUnit, ray.direction);
 
-                // Jeśli żołnierz jest za kamerą, pomiń
                 if (t < 0) continue;
 
                 Vector3 closestPointOnRay = ray.origin + (ray.direction * t);
                 float distToRay = Vector3.Distance(closestPointOnRay, unitPos);
 
-                // CZY TRAFILIŚMY W TEGO ŻOŁNIERZA?
                 if (distToRay <= unitHitRadius)
                 {
-                    // Tak! Teraz sprawdzamy, czy ten żołnierz jest bliżej kamery niż poprzedni kandydaci.
-                    // 't' to odległość od kamery wzdłuż promienia.
                     if (t < closestDistanceToCamera)
                     {
                         closestDistanceToCamera = t;
@@ -388,7 +360,6 @@ public class ArmyHierarchyManager : MonoBehaviour
     {
         if (!groupsInitialized) return;
 
-        // --- ZABEZPIECZENIE PRZED PISANIEM ---
         bool isTyping = false;
         if (EventSystem.current != null)
         {
@@ -397,7 +368,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                 isTyping = true;
         }
 
-        // --- SKRÓTY KLAWISZOWE ---
         if (!isTyping)
         {
             if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
@@ -408,34 +378,20 @@ public class ArmyHierarchyManager : MonoBehaviour
                 if (namingPanel != null && namingPanel.activeSelf) namingPanel.SetActive(false);
                 else if (selectedGroups.Count > 1) OpenNamingPanel();
             }
-            // SKRÓT ENTER DO ROZPOCZĘCIA BITWY (Opcjonalnie)
             if (Input.GetKeyDown(KeyCode.Return) && isDeploymentPhase) StartBattle();
         }
 
         foreach (var g in factionAGroups) UpdateChaseLogic(g);
         foreach (var g in factionBGroups) UpdateChaseLogic(g);
 
-        // --- LOGIKA FAZ GRY (TOTAL WAR STYLE) ---
-
-        // 1. Czy Gracz może ruszać jednostki? 
-        // TAK, jeśli nie ma PAUZY TAKTYCZNEJ (w Deployment Phase też może!)
         bool canMovePlayer = !isTacticalPause;
-
-        // 2. Czy Wróg może ruszać jednostki?
-        // TYLKO jeśli bitwa się zaczęła i nie ma pauzy
         bool canMoveEnemy = !isTacticalPause;
-        // 3. Czy walka jest aktywna?
-        // TYLKO jeśli bitwa się zaczęła i nie ma pauzy
         bool isCombatActive = !isDeploymentPhase && !isTacticalPause;
 
-
-        // --- AKTUALIZACJA JEDNOSTEK GRACZA (Faction A) ---
         foreach (var group in factionAGroups)
         {
             if (group.unitMatrices.Count > 0)
             {
-                // Jeśli nie ma pauzy (isTacticalPause), przetwarzamy ruch.
-                // (W deployment phase wejdzie do ProcessMovement i od razu zrobi teleport).
                 if (!isTacticalPause && group.isMoving)
                 {
                     ProcessMovement(group);
@@ -446,7 +402,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
 
-        // --- AKTUALIZACJA JEDNOSTEK WROGA (Faction B) ---
         foreach (var group in factionBGroups)
         {
             if (group.unitMatrices.Count > 0)
@@ -457,7 +412,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
 
-        // --- OBSŁUGA KLIKNIĘCIA MYSZKĄ (Bez zmian) ---
         if (Input.GetMouseButtonDown(0))
         {
             if (EventSystem.current.IsPointerOverGameObject()) return;
@@ -487,7 +441,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
 
-        // --- WALKA (Tylko gdy bitwa trwa) ---
         if (isCombatActive) ResolveCombatRoundRobin();
     }
     public void HideCursorMarker()
@@ -496,13 +449,10 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             activeCursorMarker.SetActive(false);
         }
-        // WAŻNE: Nie ustawiamy hasCursorPosition = false tutaj.
-        // AI potrzebuje jeszcze chwili (sekunda/dwie), żeby odebrać dane.
     }
 
     public TacticalGroup GetGroupByName(string name)
     {
-        // Szukamy w obu frakcjach
         foreach (var g in factionAGroups)
             if (g.groupName == name || g.customName == name) return g;
 
@@ -647,23 +597,19 @@ public class ArmyHierarchyManager : MonoBehaviour
         Vector3 flatCenter = new Vector3(group.groupCenter.x, 0, group.groupCenter.z);
         Vector3 flatTarget = new Vector3(group.currentDestination.x, 0, group.currentDestination.z);
 
-        // --- 1. Czy gonimy wroga? ---
         bool isChasing = (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count > 0);
         float distToTargetSq = Vector3.SqrMagnitude(flatTarget - flatCenter);
 
-        // Warunek zatrzymania: jeśli nie gonimy, nie formujemy się i jesteśmy u celu
         if (!isChasing && !group.isReforming && distToTargetSq < 0.5f)
         {
             group.isMoving = false;
             return;
         }
 
-        // --- 2. Kierunek grupy ---
         Vector3 groupDirection = (flatTarget - flatCenter).normalized;
         if (groupDirection == Vector3.zero) groupDirection = group.targetFacingDirection;
         if (groupDirection == Vector3.zero) groupDirection = Vector3.forward;
 
-        // Obliczanie rotacji dla całej grupy (bazowe)
         Quaternion targetRot = Quaternion.LookRotation(groupDirection);
         if (group.isReforming && group.unitMatrices.Count > 0)
             targetRot = group.unitMatrices[0].rotation;
@@ -674,7 +620,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         float globalBaseSpeed = moveSpeed * Time.deltaTime;
         int unitsReachedTarget = 0;
 
-        // Cache danych terenu dla lasu
         int alphaWidth = 0, alphaHeight = 0;
         if (terrainData != null)
         {
@@ -682,12 +627,10 @@ public class ArmyHierarchyManager : MonoBehaviour
             alphaHeight = terrainData.alphamapHeight;
         }
 
-        // --- Parametry SEPARACJI ---
         float separationRadius = 1.1f;
         float separationStrength = isChasing ? 0.8f : 2.0f; // Słabsza separacja w ataku
         float maxSeparationForce = 0.5f;
 
-        // --- PĘTLA PO JEDNOSTKACH ---
         for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             Matrix4x4 mat = group.unitMatrices[i];
@@ -695,37 +638,31 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 scaleVec = mat.lossyScale;
             UnitArchetype arch = group.GetUnitArchetype(i);
 
-            // Promień kolizji (dla kawalerii większy)
             float myRadius = separationRadius;
             if (arch != null && arch.type == UnitType.Cavalry) myRadius *= 1.8f;
 
-            // Bazowa prędkość jednostki
             float currentMoveSpeed = globalBaseSpeed;
             if (arch != null) currentMoveSpeed *= arch.speedMultiplier;
 
             Vector3 moveDirection = Vector3.zero;
 
-            // Zmienne dla systemu indywidualnej walki
             Vector3 individualTargetPos = Vector3.zero;
             bool hasIndividualTarget = false;
-            bool isInAttackRange = false; // Czy stoję i walczę?
+            bool isInAttackRange = false;
 
-            // --- A. NOWA LOGIKA: MAGNETYZM WALKI (Melee Magnetism) ---
-            float engagementRange = 20.0f; // Zasięg "zrywania się" do wroga
+            float engagementRange = 20.0f;
             float stopAtEnemyDist = (arch.type == UnitType.Archer) ? attackRangeArcher * 0.9f : attackRangeMelee * 0.85f;
 
             if (isChasing && group.chaseTarget != null)
             {
                 float distToEnemyGroup = Vector3.Distance(currentPos, group.chaseTarget.groupCenter);
 
-                // Jeśli jesteśmy blisko wrogiej grupy, szukamy konkretnego celu
                 if (distToEnemyGroup < engagementRange + group.chaseTarget.groupRadius)
                 {
                     Vector3 closestEnemyPos = Vector3.zero;
                     float closestDistSq = float.MaxValue;
                     bool foundEnemy = false;
 
-                    // Szukanie najbliższego wroga
                     foreach (var enemyMat in group.chaseTarget.unitMatrices)
                     {
                         Vector3 ePos = (Vector3)enemyMat.GetColumn(3);
@@ -747,22 +684,17 @@ public class ArmyHierarchyManager : MonoBehaviour
 
                         if (distToEnemy <= stopAtEnemyDist)
                         {
-                            // JESTEM W ZASIĘGU ATAKU -> STOP
                             isInAttackRange = true;
                             moveDirection = Vector3.zero;
                             currentMoveSpeed = 0f;
                         }
                         else
                         {
-                            // POZA ZASIĘGIEM -> IDŹ DO KONKRETNEGO WROGA
                             moveDirection = (closestEnemyPos - currentPos).normalized;
                         }
                     }
                 }
             }
-
-            // --- B. STARA LOGIKA: RUCH FORMACJI ---
-            // Wykonujemy tylko, jeśli NIE mamy indywidualnego celu
             if (!hasIndividualTarget)
             {
                 if (group.isReforming)
@@ -782,9 +714,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                     moveDirection = groupDirection;
                 }
             }
-
-            // --- C. SEPARACJA (Unikanie tłoku) ---
-            // Wyłączamy separację TYLKO gdy stoimy i walczymy (isInAttackRange), żeby nie drgać
             if (!isInAttackRange && moveDirection != Vector3.zero)
             {
                 Vector3 separationForce = Vector3.zero;
@@ -817,18 +746,14 @@ public class ArmyHierarchyManager : MonoBehaviour
                     separationForce *= separationStrength;
                     separationForce = Vector3.ClampMagnitude(separationForce, maxSeparationForce);
 
-                    // Jeśli atakujemy, separacja jest słabsza (pozwala na ścisk)
                     if (hasIndividualTarget) separationForce *= 0.4f;
-
                     moveDirection += separationForce;
                     moveDirection.Normalize();
                 }
             }
 
-            // --- D. APLIKOWANIE RUCHU Z FIZYKĄ TERENU I LASU ---
             Vector3 newPos = currentPos;
 
-            // Ruszamy się tylko, jeśli nie walczymy w miejscu (isInAttackRange == false)
             if (!isInAttackRange && moveDirection != Vector3.zero && currentMoveSpeed > 0.001f)
             {
                 // 1. Woda
@@ -866,7 +791,6 @@ public class ArmyHierarchyManager : MonoBehaviour
 
                     if (mapX >= 0 && mapX < alphaWidth && mapZ >= 0 && mapZ < alphaHeight)
                     {
-                        // Sprawdzamy, czy w tym punkcie jest tekstura lasu
                         if (terrainData.GetAlphamaps(mapX, mapZ, 1, 1)[0, 0, forestLayerIndex] > 0.5f)
                         {
                             if (arch != null)
@@ -880,23 +804,19 @@ public class ArmyHierarchyManager : MonoBehaviour
                 if (inWater) finalMod *= waterSpeedPenalty;
 
                 newPos = currentPos + (moveDirection * currentMoveSpeed * finalMod);
-
-                // Clamp mapy
                 newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
                 newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
-                // Ustalenie wysokości Y
                 if (inWater) newPos.y = waterHeight - swimmingDepth;
                 else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y + 0.5f;
                 else newPos.y = terrainY;
             }
 
-            // --- E. ROTACJA (Najważniejsze dla anty-jitter) ---
+            // --- E. ROTACJA  ---
             Quaternion targetUnitRot;
 
             if (isInAttackRange)
             {
-                // Jeśli walczę, patrzę SZTYWNO na wroga
                 Vector3 dirToTarget = (individualTargetPos - currentPos).normalized;
                 if (dirToTarget != Vector3.zero)
                     targetUnitRot = Quaternion.LookRotation(dirToTarget);
@@ -905,25 +825,19 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
             else if (hasIndividualTarget)
             {
-                // Jeśli biegnę na wroga, patrzę w kierunku biegu
                 targetUnitRot = Quaternion.LookRotation(moveDirection);
             }
             else if (group.isReforming && moveDirection.sqrMagnitude > 0.1f)
             {
-                // Jeśli formuję szyk
                 targetUnitRot = Quaternion.LookRotation(moveDirection);
             }
             else
             {
-                // Zwykły marsz / stanie
                 targetUnitRot = nextRot;
             }
 
-            // Jeśli walczymy (isInAttackRange), obrót jest szybszy (20f), żeby nie było opóźnienia
             float rotSpeed = isInAttackRange ? 20f : 10f;
             Quaternion finalRot = Quaternion.Slerp(mat.rotation, targetUnitRot, rotSpeed * Time.deltaTime);
-
-            // Zapis macierzy
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, finalRot, scaleVec);
         }
 
@@ -941,26 +855,19 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     Vector3 GetSmartLookTarget(TacticalGroup group)
     {
-        // 1. Jeśli mamy zaznaczonego wroga czerwonym kółkiem -> patrzymy na niego
         if (selectedEnemyGroup != null && selectedEnemyGroup.unitMatrices.Count > 0)
         {
             return selectedEnemyGroup.groupCenter;
         }
 
-        // 2. Jeśli grupa ma swój cel pościgu -> patrzymy na niego
         if (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count > 0)
         {
             return group.chaseTarget.groupCenter;
         }
 
-        // 3. Domyślnie: Patrzymy na środek armii przeciwnej (Globalna świadomość)
         List<TacticalGroup> enemies = (factionAGroups.Contains(group)) ? factionBGroups : factionAGroups;
-
-        // Znajdź najbliższego wroga, żeby nie patrzeć na drugi koniec mapy
         TacticalGroup closest = FindClosestEnemy(group.groupCenter, enemies);
         if (closest != null) return closest.groupCenter;
-
-        // Fallback: Środek mapy po stronie wroga
         float enemyZ = (factionAGroups.Contains(group)) ? maxZ : minZ;
         return new Vector3((minX + maxX) / 2, 0, enemyZ);
     }
@@ -980,21 +887,17 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.UpdateBatchData();
     }
 
-    // --- NOWA FUNKCJA: Ustawianie na linii terenu ---
-    // Znajdź tę funkcję i podmień jej zawartość (sekcję isHill)
     public void MoveGroupToLineFeature(TacticalGroup group, TerrainFeature feature, string mode = "Top")
     {
         if (group.unitMatrices.Count == 0) return;
 
         group.assignedFeature = feature;
 
-        // 1. Ustalanie bazowej pozycji i rotacji terenu
         Vector3 center = feature.transform.position;
         Vector3 lineDir = feature.transform.TransformDirection(feature.lineOrientation).normalized;
         Vector3 featureNormal = Vector3.Cross(Vector3.up, lineDir).normalized;
         Vector3 faceDir = featureNormal;
 
-        // --- Logika orientacji (Bez zmian) ---
         if (feature.isHill)
         {
             string playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
@@ -1019,12 +922,9 @@ public class ArmyHierarchyManager : MonoBehaviour
             center = feature.transform.position + (-faceDir * feature.widthOffset);
         }
 
-        // --- B. LOGIKA ROZSTAWIANIA (FIX NAKŁADANIA SIĘ) ---
-
         List<TacticalGroup> myFaction = (factionAGroups.Contains(group)) ? factionAGroups : factionBGroups;
         var allOnFeature = myFaction.Where(g => g.assignedFeature == feature).ToList();
 
-        // 1. Podział na WARSTWY (Głębokość)
         int myLayerIndex = 0;
         UnitType myType = group.archetypes[0].type;
         if (myType == UnitType.Archer) myLayerIndex = 1;
@@ -1039,71 +939,39 @@ public class ArmyHierarchyManager : MonoBehaviour
             return layer == myLayerIndex;
         }).ToList();
 
-        // Sortowanie (żeby nie skakali przy dodawaniu nowych)
         groupsInMyLayer.Sort((a, b) => a.groupName.CompareTo(b.groupName));
-
         int countInMyLayer = groupsInMyLayer.Count;
         int myIndexInLayer = groupsInMyLayer.IndexOf(group);
-
-        // --- TU JEST KLUCZOWA ZMIANA ---
-
-        // 2. Obliczamy FIZYCZNĄ szerokość pojedynczego oddziału
-        // Zakładamy, że na długiej linii oddział się spłaszcza do 2 rzędów (desiredRowsInsideGroup = 2)
         int desiredRows = (feature.lineLength > 50f) ? 2 : 3;
         float unitSpacing = 1.5f;
-        // Średnia liczba kolumn w oddziale = Liczba jednostek / rzędy
-        float avgUnitsPerGroup = 150f; // Zakładamy średnią wielkość, lub bierzemy z group.unitMatrices.Count
+        float avgUnitsPerGroup = 150f;
+
         if (group.unitMatrices.Count > 0) avgUnitsPerGroup = group.unitMatrices.Count;
 
         float singleGroupWidth = (avgUnitsPerGroup / desiredRows) * unitSpacing;
-
-        // 3. Obliczamy dostępny LUŹNY obszar (Gap)
-        float usableLineLength = feature.lineLength * 0.95f; // Margines bezpieczeństwa
-        float totalWidthOfUnits = countInMyLayer * singleGroupWidth; // Ile zajmują same ciała żołnierzy
+        float usableLineLength = feature.lineLength * 0.95f;
+        float totalWidthOfUnits = countInMyLayer * singleGroupWidth;
         float availableSpaceForGaps = usableLineLength - totalWidthOfUnits;
+        float gapSize = 10.0f;
 
-        // 4. Obliczamy wielkość odstępu (Gap)
-        float gapSize = 10.0f; // Domyślny minimalny odstęp
         if (countInMyLayer > 1)
         {
             gapSize = availableSpaceForGaps / (countInMyLayer - 1);
         }
 
-        // Clampowanie odstępów (żeby nie wchodzili w siebie przy braku miejsca, ani nie stali za daleko)
         gapSize = Mathf.Clamp(gapSize, 5.0f, 200.0f); // Min 5m odstępu, Max 200m
-
-        // 5. Obliczamy całkowitą szerokość formacji (Jednostki + Odstępy)
-        // Jeśli jest za ciasno (gap=5m), to formacja może być szersza niż linia rzeki (trudno, lepiej wystawać niż się przenikać)
         float totalFormationWidth = totalWidthOfUnits + ((countInMyLayer - 1) * gapSize);
-
-        // 6. Pozycja startowa (Najbardziej na lewo)
-        // Zaczynamy od środka rzeki (center) i cofamy się o połowę całej formacji w lewo.
-        // Dodajemy połowę szerokości pierwszego oddziału, bo pivot oddziału jest w jego środku.
         float startX = -(totalFormationWidth * 0.5f) + (singleGroupWidth * 0.5f);
-
-        // 7. Finalny Offset dla TEGO konkretnego oddziału
         float xOffset = startX + (myIndexInLayer * (singleGroupWidth + gapSize));
-
-        // 8. Offset Głębokości (Warstwy)
         float zOffset = myLayerIndex * 35.0f;
 
-        // Aplikacja pozycji
         center += lineDir * xOffset;
         center -= faceDir * zOffset;
-
-        // --- KONIEC POPRAWKI ---
-
         Vector3 lookTarget = GetSmartLookTarget(group);
         Vector3 directionToEnemy = (lookTarget - center).normalized;
-
-        // Zabezpieczenie: jeśli wektor jest zerowy, użyj faceDir
         if (directionToEnemy == Vector3.zero) directionToEnemy = faceDir;
-
         group.targetFacingDirection = directionToEnemy;
-
-        // Ustawianie pojedynczych żołnierzy wewnątrz grupy
         int unitCount = group.unitMatrices.Count;
-
         int unitsPerGroupRow = Mathf.CeilToInt((float)unitCount / desiredRows);
         float currentLineWidth = unitsPerGroupRow * unitSpacing;
         Vector3 lineStart = center - (lineDir * currentLineWidth * 0.5f);
@@ -1182,15 +1050,13 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void ProcessSingleAttacker(TacticalGroup attackerGroup, List<TacticalGroup> enemyFaction, int idx)
     {
-        // 1. Walidacja indeksów
         if (idx >= attackerGroup.attackCooldowns.Count || idx >= attackerGroup.unitMatrices.Count) return;
 
-        // Pobranie danych atakującego
         Matrix4x4 myMat = attackerGroup.unitMatrices[idx];
         Vector3 myPos = (Vector3)myMat.GetColumn(3);
         Vector3 myForward = (Vector3)myMat.GetColumn(2);
-
         UnitArchetype attackerStats = attackerGroup.GetUnitArchetype(idx);
+
         if (attackerStats == null) return;
 
         bool isArcher = attackerStats.type == UnitType.Archer;
@@ -1198,40 +1064,24 @@ public class ArmyHierarchyManager : MonoBehaviour
         float rangeSq = range * range;
         float cooldownTime = isArcher ? archerAttackCooldown : attackCooldown;
 
-        // --- SZUKANIE CELU (PRIORYTETYZACJA) ---
         UnitRef target = new UnitRef { group = null };
-
-        // KROK A: Czy mam rozkaz ataku na konkretny oddział?
         bool hasSpecificOrder = (attackerGroup.chaseTarget != null && attackerGroup.chaseTarget.unitMatrices.Count > 0);
 
         if (hasSpecificOrder)
         {
-            // Sprawdzamy, czy ktoś z CELU GŁÓWNEGO jest w zasięgu
             target = FindClosestUnitInGroup(myPos, rangeSq, attackerGroup.chaseTarget);
 
-            // Jeśli cel główny jest daleko (target.group == null), to:
-            // Opcja 1 (Lojalność): Nie atakujemy nikogo innego, biegniemy dalej (return).
-            // Opcja 2 (Samoobrona): Jeśli cel główny daleko, ale ktoś inny mnie bije, to go biję.
-
-            // Wybieramy Opcję 1 dla "Poczucia kontroli" - jak klikasz atak na łuczników, 
-            // to Twoi ludzie mają olać piechotę i biec do łuczników, nawet jak obrywają.
             if (target.group == null)
             {
-                // Redukcja cooldownu w biegu i wyjście (jednostka będzie się ruszać w ProcessMovement)
                 if (attackerGroup.attackCooldowns[idx] > 0) attackerGroup.attackCooldowns[idx] -= Time.deltaTime;
                 return;
             }
         }
         else
         {
-            // KROK B: Nie mam konkretnego celu (Attack Move / Idle) -> Biję najbliższego
             if (isArcher) target = FindTargetGlobal(myPos, range, rangeSq, enemyFaction);
             else target = FindTargetInGrid(myPos, rangeSq);
         }
-
-        // --- KONIEC ZMIAN W SZUKANIU ---
-
-        // Dalsza część funkcji (Zadawanie obrażeń) - bez zmian, wklejam dla kontekstu
         if (target.group != null)
         {
             if (target.index >= target.group.unitMatrices.Count) return;
@@ -1253,7 +1103,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (target.index < target.group.lastCombatTimes.Count)
                 target.group.lastCombatTimes[target.index] = Time.time;
 
-            // (Reszta logiki DMG, Backstab, KillUnit - taka sama jak w poprzednim pliku)
             Matrix4x4 targetMat = target.group.unitMatrices[target.index];
             Vector3 targetForward = (Vector3)targetMat.GetColumn(2);
             float orientationDot = Vector3.Dot(myForward, targetForward);
@@ -1286,7 +1135,7 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         foreach (var enemy in enemyList)
         {
-            if (enemy.unitMatrices.Count == 0) continue; // Martwych pomijamy
+            if (enemy.unitMatrices.Count == 0) continue;
 
             float d = Vector3.Distance(searchPos, enemy.groupCenter);
             if (d < closestDist)
@@ -1297,11 +1146,10 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
         return best;
     }
-    // Nowa funkcja do szukania celu TYLKO w konkretnym oddziale (dla Focus Fire)
     UnitRef FindClosestUnitInGroup(Vector3 myPos, float rangeSq, TacticalGroup targetGroup)
     {
         int bestIdx = -1;
-        float bestDistSq = rangeSq; // Musi być w zasięgu
+        float bestDistSq = rangeSq;
 
         for (int i = 0; i < targetGroup.unitMatrices.Count; i++)
         {
@@ -1324,34 +1172,26 @@ public class ArmyHierarchyManager : MonoBehaviour
         return new UnitRef { group = null };
     }
 
-    // 2. Dodaj metodę aktualizującą pościg:
     void UpdateChaseLogic(TacticalGroup group)
     {
         if (isDeploymentPhase) return;
 
-        // Scenariusz A: Mamy cel, ale on już nie żyje (oddział wybity do nogi)
         if (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count == 0)
         {
-            // Zamiast się zatrzymywać (group.chaseTarget = null), szukamy nowego celu!
             List<TacticalGroup> enemies = (factionAGroups.Contains(group)) ? factionBGroups : factionAGroups;
-
-            // Znajdź najbliższego żywego wroga
             TacticalGroup newTarget = FindClosestEnemy(group.groupCenter, enemies);
 
             if (newTarget != null)
             {
                 group.chaseTarget = newTarget;
-                // Debug.Log($"Grupa {group.groupName} zniszczyła cel i zmienia cel na: {newTarget.groupName}");
             }
             else
             {
-                // Dopiero gdy nie ma już NIKOGO na mapie, zatrzymujemy się
                 group.chaseTarget = null;
                 group.isMoving = false;
             }
         }
 
-        // Scenariusz B: Mamy żywy cel -> gonimy go
         if (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count > 0)
         {
             group.currentDestination = group.chaseTarget.groupCenter;
@@ -1418,8 +1258,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         int cz = Mathf.FloorToInt(pos.z / cellSize);
 
         UnitRef bestTarget = new UnitRef { group = null };
-        float closestDistSq = rangeSq; // Szukamy tylko w zasięgu
-
+        float closestDistSq = rangeSq;
         for (int x = -1; x <= 1; x++)
         {
             for (int z = -1; z <= 1; z++)
@@ -1430,7 +1269,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                     foreach (var u in list)
                     {
                         float dSq = (u.position - pos).sqrMagnitude;
-                        // Jeśli ten wróg jest bliżej niż poprzedni znaleziony ORAZ jest w zasięgu
                         if (dSq < closestDistSq)
                         {
                             closestDistSq = dSq;
@@ -1576,18 +1414,14 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void OnDrawGizmos()
     {
-        // Rysowanie obszarów detekcji wrogów (Czerwone kule)
-        Gizmos.color = new Color(1, 0, 0, 0.3f); // Półprzezroczysty czerwony
+        Gizmos.color = new Color(1, 0, 0, 0.3f);
         if (factionBGroups != null)
         {
             foreach (var group in factionBGroups)
             {
                 if (group.unitMatrices.Count > 0)
                 {
-                    // Rysujemy sferę w miejscu, gdzie kod "myśli", że jest środek grupy
                     Gizmos.DrawSphere(group.groupCenter, group.groupRadius);
-
-                    // Rysujemy drut dla dokładności
                     Gizmos.color = Color.red;
                     Gizmos.DrawWireSphere(group.groupCenter, group.groupRadius);
                     Gizmos.color = new Color(1, 0, 0, 0.3f);
@@ -1595,7 +1429,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
 
-        // Debug Raycasta - zobacz gdzie trafiasz myszką
         if (hasCursorPosition)
         {
             Gizmos.color = Color.blue;
@@ -1652,7 +1485,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (startBattleButton != null) startBattleButton.SetActive(false);
         Debug.Log("Faza rozstawiania zakończona. Wykonywanie zaplanowanych rozkazów...");
 
-        // Wykonaj rozkazy dla obu frakcji
         ExecutePendingOrdersForFaction(factionAGroups);
         ExecutePendingOrdersForFaction(factionBGroups);
     }
@@ -1671,16 +1503,11 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (group.pendingOrder.type == PendingOrderType.None) continue;
 
             var order = group.pendingOrder;
-
-            // Czyścimy pending order przed wykonaniem (żeby nie zapętlić)
             group.pendingOrder.type = PendingOrderType.None;
 
             if (order.type == PendingOrderType.MoveOrForm)
             {
-                // Przywracamy cel ataku (jeśli był)
                 group.chaseTarget = order.chaseTarget;
-
-                // Wywołujemy ApplyFormation (teraz isDeploymentPhase jest false, więc wykona się fizyka)
                 ApplyFormation(group, order.formationName, order.destination, order.lookDirection);
             }
             else if (order.type == PendingOrderType.FeatureMove)
@@ -1708,24 +1535,18 @@ public class ArmyHierarchyManager : MonoBehaviour
         return false;
     }
 
-    // --- NOWOŚĆ: SYSTEM FORMACJI ---
     public void ApplyFormation(TacticalGroup group, string formationType, Vector3? centerOverride = null, Vector3? lookDirectionOverride = null)
     {
         string pSide = PlayerPrefs.GetString("PlayerSide", "SideA");
         bool isPlayerGroup = (pSide == "SideA" && factionAGroups.Contains(group)) ||
                              (pSide == "SideB" && factionBGroups.Contains(group));
-        // 1. Ustalmy cel (Gdzie ma stać środek formacji)
         Vector3 center = centerOverride.HasValue ? centerOverride.Value : group.groupCenter;
-
-        // 2. --- NOWA LOGIKA ROTACJI (Zawsze frontem do wroga) ---
         Quaternion rotation;
 
-        // A. Jeśli komenda wymusza kierunek (np. Flank Attack), użyj go
         if (lookDirectionOverride.HasValue && lookDirectionOverride.Value != Vector3.zero)
         {
             rotation = Quaternion.LookRotation(lookDirectionOverride.Value);
         }
-        // B. W przeciwnym razie: Oblicz, gdzie jest wróg i patrz na niego!
         else
         {
             Vector3 enemyPos = GetSmartLookTarget(group);
@@ -1734,7 +1555,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             rotation = Quaternion.LookRotation(dirToEnemy);
         }
 
-        Vector3 finalLookDir = rotation * Vector3.forward; // To jest wektor "Do Wroga"
+        Vector3 finalLookDir = rotation * Vector3.forward;
 
         // --- OBSŁUGA DEPLOYMENT PHASE ---
         // if (isDeploymentPhase && !isPlayerGroup)
@@ -1761,43 +1582,26 @@ public class ArmyHierarchyManager : MonoBehaviour
         group.formationTargets.Clear();
         while (group.formationTargets.Count < count) group.formationTargets.Add(Vector3.zero);
 
-        // Wektory pomocnicze (względem wroga)
-        Vector3 forward = finalLookDir; // W stronę wroga
-        Vector3 right = rotation * Vector3.right; // W prawo od patrzenia
-        Vector3 back = -forward; // W tył od patrzenia
+        Vector3 forward = finalLookDir;
+        Vector3 right = rotation * Vector3.right;
+        Vector3 back = -forward;
 
         string typeLower = formationType.ToLower();
 
-        // --- MATEMATYKA FORMACJI ---
-
-        // 1. KLIN (WEDGE) - Ostry koniec do przeciwnika
         if (typeLower.Contains("wedge") || typeLower.Contains("klin"))
         {
-            float spacing = 2.0f; // Luźniej dla koni
-
-            // Obliczamy ile jest rzędów, żeby wiedzieć, jak daleko cofnąć "dupę" klina, 
-            // a czubek wystawić do przodu.
-            // Wzór na sumę ciągu arytmetycznego (1+2+3...) przybliża liczbę rzędów: rows ≈ Sqrt(2*count)
+            float spacing = 2.0f;
             int estimatedRows = Mathf.CeilToInt(Mathf.Sqrt(2 * count));
             float formationDepth = estimatedRows * spacing;
-
-            // Czubek (Tip) ustawiamy "do przodu" względem środka (center)
-            // Dzięki temu 'center' wypada w środku masy oddziału, a czubek jest najbliżej wroga.
             Vector3 tipPosition = center + (forward * (formationDepth * 0.33f));
-
             int currentRow = 0;
             int unitsInCurrentRow = 0;
-            int unitsAllowedInRow = 1; // 1, 2, 3, 4...
+            int unitsAllowedInRow = 1;
 
             for (int i = 0; i < count; i++)
             {
-                // Szerokość aktualnego rzędu
                 float rowWidth = (unitsAllowedInRow - 1) * spacing;
-
-                // Pozycja startowa rzędu (lewa strona)
-                // "Cofamy się" (back) o numer rzędu
                 Vector3 rowStart = tipPosition + (back * currentRow * spacing) - (right * rowWidth * 0.5f);
-
                 Vector3 pos = rowStart + (right * unitsInCurrentRow * spacing);
                 SetFormationPoint(group, i, pos);
 
@@ -1806,7 +1610,7 @@ public class ArmyHierarchyManager : MonoBehaviour
                 {
                     currentRow++;
                     unitsInCurrentRow = 0;
-                    unitsAllowedInRow++; // Kolejny rząd szerszy
+                    unitsAllowedInRow++;
                 }
             }
         }
@@ -1816,8 +1620,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             float spacing = 1.5f;
             int sideCount = Mathf.CeilToInt(count / 4.0f);
             float sideLength = sideCount * spacing;
-
-            // Róg lewy-przód (względem wroga)
             Vector3 frontLeftCorner = center + (forward * sideLength * 0.5f) - (right * sideLength * 0.5f);
 
             for (int i = 0; i < count; i++)
@@ -1828,16 +1630,16 @@ public class ArmyHierarchyManager : MonoBehaviour
 
                 switch (sideIndex)
                 {
-                    case 0: // Front (Frontem do wroga) - wypełniamy w prawo
+                    case 0:
                         pos = frontLeftCorner + (right * unitInSide * spacing);
                         break;
-                    case 1: // Prawy bok - wypełniamy w tył
+                    case 1:
                         pos = frontLeftCorner + (right * sideLength) + (back * unitInSide * spacing);
                         break;
-                    case 2: // Tył - wypełniamy w lewo
+                    case 2:
                         pos = frontLeftCorner + (right * sideLength) + (back * sideLength) - (right * unitInSide * spacing);
                         break;
-                    case 3: // Lewy bok - wypełniamy w przód
+                    case 3:
                         pos = frontLeftCorner + (back * sideLength) - (back * unitInSide * spacing);
                         break;
                 }
@@ -1850,8 +1652,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             int cols = 5;
             float spacing = 1.5f;
             float totalWidth = (cols - 1) * spacing;
-
-            // Startujemy z przodu, żeby czoło kolumny było bliżej wroga
             int rows = Mathf.CeilToInt((float)count / cols);
             Vector3 frontLineCenter = center + (forward * (rows * spacing * 0.5f));
             Vector3 startPos = frontLineCenter - (right * totalWidth * 0.5f);
@@ -1860,7 +1660,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             {
                 int col = i % cols;
                 int row = i / cols;
-                // Budujemy w tył (back)
                 Vector3 pos = startPos + (right * col * spacing) + (back * row * spacing);
                 SetFormationPoint(group, i, pos);
             }
@@ -1886,36 +1685,28 @@ public class ArmyHierarchyManager : MonoBehaviour
         // 5. STANDARD (LINIA)
         else
         {
-            // Domyślna "Bezkształtna masa" to 3 szeregi, żeby nie zajmowali całego ekranu
             int targetRows = 3;
-
-            // --- ZMIANA: DEFINICJE SZEREGÓW ---
 
             if (typeLower.Contains("turtle") || typeLower.Contains("żółw"))
             {
-                targetRows = Mathf.CeilToInt(Mathf.Sqrt(count)); // Kwadrat
+                targetRows = Mathf.CeilToInt(Mathf.Sqrt(count));
             }
             else if (typeLower.Contains("double") || typeLower.Contains("dwuszereg"))
             {
-                targetRows = 2; // SZTYWNY DWUSZEREG
+                targetRows = 2;
             }
-            // Jeśli nazwa to "Line", "Linia", "Single" lub "Szereg" -> ROBIMY DŁUGI WĄŻ (1 rząd)
             else if (typeLower.Contains("single") || typeLower.Contains("szereg") || typeLower.Contains("line") || typeLower.Contains("linia"))
             {
-                targetRows = 1; // SZTYWNY JEDEN SZEREG
+                targetRows = 1;
             }
 
-            // Obliczamy szerokość (cols) na podstawie sztywnej liczby rzędów
             int cols = Mathf.CeilToInt((float)count / targetRows);
-
             float spacing = 1.5f;
+
             if (typeLower.Contains("turtle")) spacing = 1.1f;
-            // Dla 1 i 2 szeregów dajemy ciut więcej luzu (1.6f), żeby ładnie wyglądali
             else if (targetRows <= 2) spacing = 1.6f;
 
             float totalWidth = (cols - 1) * spacing;
-
-            // Startujemy po lewej stronie (patrząc na wroga)
             Vector3 startPos = center - (right * totalWidth * 0.5f);
 
             for (int i = 0; i < count; i++)
@@ -1923,14 +1714,12 @@ public class ArmyHierarchyManager : MonoBehaviour
                 int col = i % cols;
                 int row = i / cols;
 
-                // Budujemy w prawo i w tył
                 Vector3 pos = startPos + (right * col * spacing) + (back * row * spacing);
                 SetFormationPoint(group, i, pos);
             }
         }
 
-        // Finalizacja
-        group.targetFacingDirection = finalLookDir; // To sprawia, że po dojściu na miejsce obrócą się do wroga
+        group.targetFacingDirection = finalLookDir;
         group.isReforming = true;
         group.isMoving = true;
         group.currentDestination = center;
@@ -1948,7 +1737,6 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     public List<TacticalGroup> GetSelectedGroups()
     {
-        // Zwracamy kopię listy, żeby nie uszkodzić oryginału
         return new List<TacticalGroup>(selectedGroups);
     }
 }
