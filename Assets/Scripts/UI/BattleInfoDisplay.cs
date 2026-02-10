@@ -20,8 +20,6 @@ public class BattleInfoDisplay : MonoBehaviour
     public GameObject sideABorder;
     public GameObject sideBBorder;
     private GameObject selectedBorder = null;
-
-    // Dodatkowa zmienna do œledzenia, któr¹ stronê wybrano (dla logiki gry)
     private string selectedSideKey = "";
 
     [Header("Przyciski scenariuszy")]
@@ -48,22 +46,18 @@ public class BattleInfoDisplay : MonoBehaviour
     [Header("Przycisk Graj")]
     public Button playButton;
 
-    // -----------------------------
-    // Zaznaczanie strony A
     public void SelectSideA()
     {
         SetBorder(sideABorder);
-        selectedSideKey = "SideA"; // Zapamiêtujemy wybór
+        selectedSideKey = "SideA";
     }
 
-    // Zaznaczanie strony B
     public void SelectSideB()
     {
         SetBorder(sideBBorder);
-        selectedSideKey = "SideB"; // Zapamiêtujemy wybór
+        selectedSideKey = "SideB"; 
     }
 
-    // W³¹cz/wy³¹cz ramkê pod flag¹
     private void SetBorder(GameObject border)
     {
         if (selectedBorder != null)
@@ -72,7 +66,6 @@ public class BattleInfoDisplay : MonoBehaviour
         selectedBorder = border;
         selectedBorder.SetActive(true);
 
-        // ZMIANA: Skoro wybrano ramkê (stronê), odblokuj przycisk Play
         if (playButton != null)
             playButton.interactable = true;
     }
@@ -82,7 +75,6 @@ public class BattleInfoDisplay : MonoBehaviour
         if (playButton != null)
         {
             playButton.onClick.AddListener(PlaySelectedMap);
-            // ZMIANA: Na starcie przycisk jest nieaktywny
             playButton.interactable = false;
         }
     }
@@ -95,15 +87,12 @@ public class BattleInfoDisplay : MonoBehaviour
             return;
         }
 
-        // ZMIANA: Dodatkowe zabezpieczenie, gdyby przycisk jakoœ by³ aktywny
         if (selectedBorder == null || string.IsNullOrEmpty(selectedSideKey))
         {
             Debug.LogWarning("Nie wybrano strony konfliktu!");
             return;
         }
 
-        // Zapisujemy wybór gracza, aby nowa scena wiedzia³a kim gramy
-        // Mo¿esz to odebraæ w nowej scenie przez PlayerPrefs.GetString("PlayerSide");
         PlayerPrefs.SetString("PlayerSide", selectedSideKey);
         PlayerPrefs.Save();
 
@@ -133,11 +122,8 @@ public class BattleInfoDisplay : MonoBehaviour
 
     private void Awake()
     {
-        // Ukryj ramki
         if (sideABorder != null) sideABorder.SetActive(false);
         if (sideBBorder != null) sideBBorder.SetActive(false);
-
-        // Wyczyœæ flagi i ustaw kolor na przezroczysty
         if (sideAImage != null)
         {
             sideAImage.sprite = null;
@@ -149,41 +135,31 @@ public class BattleInfoDisplay : MonoBehaviour
             sideBImage.color = new Color(1f, 1f, 1f, 0f);
         }
 
-        // Wyczyœæ teksty
         if (sideAText != null) sideAText.text = "";
         if (sideBText != null) sideBText.text = "";
         if (battleDescriptionText != null) battleDescriptionText.text = "";
         if (terrainDescription != null) terrainDescription.text = "";
     }
 
-
-    // -----------------------------
-    // Pokazuje info o bitwie
     public void ShowBattleInfo(string sideA, string sideB, Button clickedButton, Sprite spriteA, Sprite spriteB, string description, Sprite image, string descriptionTerrain)
     {
         sideAText.text = sideA;
         sideBText.text = sideB;
         battleDescriptionText.text = description;
         terrainDescription.text = descriptionTerrain;
-
-        // Flagi i pe³na widocznoœæ
         sideAImage.sprite = spriteA;
         sideAImage.color = Color.white;
-
         sideBImage.sprite = spriteB;
         sideBImage.color = Color.white;
 
-        // Czyœæ zaznaczenie frakcji (ramki) i blokuj przycisk
         ClearFactionSelection();
 
-        // Kolor przycisku scenariusza
         if (selectedButton != null)
             SetButtonColor(selectedButton, defaultColor);
 
         selectedButton = clickedButton;
         SetButtonColor(selectedButton, selectedColor);
 
-        // Ustaw mapê do wczytania
         selectedMap = image;
         imageMap.sprite = image;
     }
@@ -205,61 +181,58 @@ public class BattleInfoDisplay : MonoBehaviour
             selectedBorder.SetActive(false);
 
         selectedBorder = null;
-        selectedSideKey = ""; // Resetujemy wybór strony
+        selectedSideKey = "";
 
-        // ZMIANA: Po zmianie mapy/resetowaniu wyboru, blokujemy przycisk Play
         if (playButton != null)
             playButton.interactable = false;
     }
 
-    // -----------------------------
-    // Metody bitew (bez zmian)
     public void Battle_Grunwald(Button btn)
     {
-        string opis = "Bitwa pod Grunwaldem (1410 r.)\n\nWojska polsko-litewskie pod wodz¹ W³adys³awa Jagie³³y rozgromi³y Zakon Krzy¿acki. Jedno z najwiêkszych staræ œredniowiecza, które z³ama³o potêgê Krzy¿aków.";
+        string opis = "Bitwa pod Grunwaldem (1410 r.)\n\nWojska polsko-litewskie pod wodzï¿½ Wï¿½adysï¿½awa Jagieï¿½ï¿½y rozgromiï¿½y Zakon Krzyï¿½acki. Jedno z najwiï¿½kszych starï¿½ ï¿½redniowiecza, ktï¿½re zï¿½amaï¿½o potï¿½gï¿½ Krzyï¿½akï¿½w.";
         string opisterenu = "<color=#663300>Wzniesienia terenu</color>";
-        ShowBattleInfo("Korona Królestwa Polskiego", "Zakon Krzy¿acki", btn, rzeczpol, teutonic, opis, Grunwald, opisterenu);
+        ShowBattleInfo("Korona Krï¿½lestwa Polskiego", "Zakon Krzyï¿½acki", btn, rzeczpol, teutonic, opis, Grunwald, opisterenu);
     }
 
     public void Battle_Hastings(Button btn)
     {
-        string opis = "Bitwa pod Hastings (1066 r.)\n\nNormanowie Wilhelma Zdobywcy pokonali anglosask¹ armiê króla Harolda II. Bitwa zapocz¹tkowa³a normañskie panowanie w Anglii.";
+        string opis = "Bitwa pod Hastings (1066 r.)\n\nNormanowie Wilhelma Zdobywcy pokonali anglosaskï¿½ armiï¿½ krï¿½la Harolda II. Bitwa zapoczï¿½tkowaï¿½a normaï¿½skie panowanie w Anglii.";
         string opisterenu = "<color=#009933>Teren zalesiony</color>";
-        ShowBattleInfo("Ksiêstwo Normandii", "Anglosasi", btn, normandia, anglosas, opis, Hastings, opisterenu);
+        ShowBattleInfo("Ksiï¿½stwo Normandii", "Anglosasi", btn, normandia, anglosas, opis, Hastings, opisterenu);
     }
 
     public void Battle_Jarmuk(Button btn)
     {
-        string opis = "Bitwa pod Jarmukiem (636 r.)\n\nDecyduj¹ce zwyciêstwo Arabów nad Bizancjum. Armia kalifatu Raszidun rozgromi³a wojska cesarza Herakliusza, otwieraj¹c drogê do podboju Syrii i Lewantu.";
-        string opisterenu = "<color=#6d6d6d>Teren górzysty</color> | <color=#3399ff>Przeprawa przez wodê</color>";
+        string opis = "Bitwa pod Jarmukiem (636 r.)\n\nDecydujï¿½ce zwyciï¿½stwo Arabï¿½w nad Bizancjum. Armia kalifatu Raszidun rozgromiï¿½a wojska cesarza Herakliusza, otwierajï¿½c drogï¿½ do podboju Syrii i Lewantu.";
+        string opisterenu = "<color=#6d6d6d>Teren gï¿½rzysty</color> | <color=#3399ff>Przeprawa przez wodï¿½</color>";
         ShowBattleInfo("Bizancjum", "Arabowie", btn, bizantium, arabs, opis, Jarmuk, opisterenu);
     }
 
     public void Battle_AjnDzalat(Button btn)
     {
-        string opis = "Bitwa pod Ajn D¿alat (1260 r.)\n\nMamelucy pod dowództwem Kutuzza i Bajbarsa pokonali armiê mongolsk¹. By³o to pierwsze zdecydowane zwyciêstwo nad Mongo³ami, które zatrzyma³o ich ekspansjê na Bliski Wschód.";
+        string opis = "Bitwa pod Ajn Dï¿½alat (1260 r.)\n\nMamelucy pod dowï¿½dztwem Kutuzza i Bajbarsa pokonali armiï¿½ mongolskï¿½. Byï¿½o to pierwsze zdecydowane zwyciï¿½stwo nad Mongoï¿½ami, ktï¿½re zatrzymaï¿½o ich ekspansjï¿½ na Bliski Wschï¿½d.";
         string opisterenu = "<color=#663300>Wzniesienia terenu</color>";
         ShowBattleInfo("Mamelucy", "Imperium Mongolskie", btn, mamelucy, mongol, opis, AjnDzalut, opisterenu);
     }
 
     public void Battle_TeutoburgForest(Button btn)
     {
-        string opis = "Bitwa w Lesie Teutoburskim (9 r. n.e.)\n\nZasadzka germañskich plemion dowodzonych przez Arminiusza na trzy rzymskie legiony Warusa. Rzymianie ponieœli druzgoc¹c¹ klêskê, trac¹c kontrolê nad Germani¹.";
+        string opis = "Bitwa w Lesie Teutoburskim (9 r. n.e.)\n\nZasadzka germaï¿½skich plemion dowodzonych przez Arminiusza na trzy rzymskie legiony Warusa. Rzymianie ponieï¿½li druzgocï¿½cï¿½ klï¿½skï¿½, tracï¿½c kontrolï¿½ nad Germaniï¿½.";
         string opisterenu = "<color=#009933>Teren zalesiony</color>";
         ShowBattleInfo("Cesarstwo Rzymskie","Germanie", btn, roma, germania, opis, LasTeutoburski, opisterenu);
     }
 
     public void Battle_LechowePole(Button btn)
     {
-        string opis = "Bitwa na Lechowym Polu (955 r.)\n\nKrólestwo Franków pod wodz¹ Ottona I pokona³o najazd Wêgrów. Zwyciêstwo zakoñczy³o wêgierskie najazdy na Europê Zachodni¹ i wzmocni³o w³adzê cesarsk¹.";
-        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodê</color>";
-        ShowBattleInfo("Pañstwo wschodniofrankijskie", "Wêgry", btn, frankowie, wegry, opis, LechowePole, opisterenu);
+        string opis = "Bitwa na Lechowym Polu (955 r.)\n\nKrï¿½lestwo Frankï¿½w pod wodzï¿½ Ottona I pokonaï¿½o najazd Wï¿½grï¿½w. Zwyciï¿½stwo zakoï¿½czyï¿½o wï¿½gierskie najazdy na Europï¿½ Zachodniï¿½ i wzmocniï¿½o wï¿½adzï¿½ cesarskï¿½.";
+        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodï¿½</color>";
+        ShowBattleInfo("Paï¿½stwo wschodniofrankijskie", "Wï¿½gry", btn, frankowie, wegry, opis, LechowePole, opisterenu);
     }
 
     public void Battle_Adrianopol(Button btn)
     {
-        string opis = "Bitwa pod Adrianopolem (378 r.)\n\nStarcie Cesarstwa Rzymskiego z Gotami. Rzym poniós³ wielk¹ pora¿kê, zgin¹³ cesarz Walens, a bitwa zapocz¹tkowa³a upadek zachodniego cesarstwa.";
-        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodê</color>";
+        string opis = "Bitwa pod Adrianopolem (378 r.)\n\nStarcie Cesarstwa Rzymskiego z Gotami. Rzym poniï¿½sï¿½ wielkï¿½ poraï¿½kï¿½, zginï¿½ï¿½ cesarz Walens, a bitwa zapoczï¿½tkowaï¿½a upadek zachodniego cesarstwa.";
+        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodï¿½</color>";
         ShowBattleInfo("Cesarstwo Rzymskie", "Goci", btn, roma, goci, opis, Adrianopol, opisterenu);
     }
 }

@@ -7,12 +7,8 @@ using UnityEngine.Networking;
 public class GeminiNetwork : MonoBehaviour
 {
     [Header("API Settings")]
-    // Pamiętaj, aby wkleić tu swój klucz z Google AI Studio
     [SerializeField] private string apiKey = "WPISZ_SWOJ_KLUCZ_API";
-
-    // Używamy modelu Flash (szybki i tani/darmowy)
     private string apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
-    // Event, który odpali się, gdy przyjdzie odpowiedź
     public event Action<string> OnResponseReceived;
 
     public void SendRequest(string prompt)
@@ -22,8 +18,6 @@ public class GeminiNetwork : MonoBehaviour
 
     IEnumerator PostRequest(string promptText)
     {
-        // 1. Budujemy JSON zapytania ręcznie (najbezpieczniejsza metoda bez zewnętrznych bibliotek)
-        // EscapeJson zabezpiecza przed cudzysłowami w tekście gracza
         string escapedText = EscapeJson(promptText);
 
         string jsonPayload = "{ \"contents\": [{ \"parts\": [{ \"text\": \"" + escapedText + "\" }] }], \"generationConfig\": { \"responseMimeType\": \"application/json\" } }";
@@ -35,7 +29,6 @@ public class GeminiNetwork : MonoBehaviour
             webRequest.downloadHandler = new DownloadHandlerBuffer();
             webRequest.SetRequestHeader("Content-Type", "application/json");
 
-            // Wysyłamy i czekamy
             yield return webRequest.SendWebRequest();
 
             if (webRequest.result != UnityWebRequest.Result.Success)
@@ -44,7 +37,6 @@ public class GeminiNetwork : MonoBehaviour
             }
             else
             {
-                // Sukces! Parsujemy odpowiedź
                 string responseText = ParseGeminiResponse(webRequest.downloadHandler.text);
 
                 if (!string.IsNullOrEmpty(responseText))
@@ -55,7 +47,6 @@ public class GeminiNetwork : MonoBehaviour
         }
     }
 
-    // Funkcja czyszcząca tekst do formatu JSON
     string EscapeJson(string s)
     {
         if (s == null) return "";
@@ -64,7 +55,6 @@ public class GeminiNetwork : MonoBehaviour
 
     string ParseGeminiResponse(string rawJson)
     {
-        // Używamy Unity JsonUtility i naszych wrapperów (zdefiniowanych na dole pliku)
         try
         {
             GeminiResponseWrapper wrapper = JsonUtility.FromJson<GeminiResponseWrapper>(rawJson);
@@ -82,7 +72,6 @@ public class GeminiNetwork : MonoBehaviour
         }
     }
 
-    // --- STRUKTURY DANYCH DO ODBIORU ODPOWIEDZI OD GOOGLE ---
     [Serializable]
     public class GeminiResponseWrapper
     {

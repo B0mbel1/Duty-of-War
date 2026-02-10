@@ -17,31 +17,23 @@ public class ArmyGroupUI : MonoBehaviour
     private TacticalGroup myGroup;
     private ArmyHierarchyManager manager;
 
-    // Funkcja inicjalizuj�ca
     public void Setup(TacticalGroup group, ArmyHierarchyManager mgr)
     {
         myGroup = group;
         manager = mgr;
 
-        // 1. Dodajemy/Pobieramy LayoutElement - to on mówi "Horizontal Layout Group" ile miejsca potrzebujemy
         LayoutElement layout = GetComponent<LayoutElement>();
         if (layout == null) layout = gameObject.AddComponent<LayoutElement>();
-
-        // 2. Logika rozmiaru
         if (group.isMergedGroup)
         {
-            // --- DLA CUSTOMOWYCH (DUŻYCH) ---
-            // Ustawiamy szerszy element (np. 100 pikseli zamiast 50)
             layout.minWidth = 100f;
             layout.preferredWidth = 100f;
 
-            layout.minHeight = 40f;  // Wysokość taka sama jak reszty (żeby pasowało do paska)
+            layout.minHeight = 40f; 
             layout.preferredHeight = 40f;
         }
         else
         {
-            // --- DLA ZWYKŁYCH (STANDARDOWE 50x40) ---
-            // To odpowiada Twojemu staremu Cell Size
             layout.minWidth = 50f;
             layout.preferredWidth = 50f;
 
@@ -49,14 +41,12 @@ public class ArmyGroupUI : MonoBehaviour
             layout.preferredHeight = 40f;
         }
 
-        // 3. Reszta logiki (obrazki i tekst) bez zmian
         if (backgroundImage != null)
         {
             backgroundImage.preserveAspect = false;
 
             if (group.isMergedGroup)
             {
-                // Tutaj np. brak obrazka lub specjalna ramka dla połączonych
                 // backgroundImage.sprite = null; 
             }
             else
@@ -92,12 +82,12 @@ public class ArmyGroupUI : MonoBehaviour
 
     public void SetSelectionState(bool isSelected)
     {
-        if (myGroup.unitMatrices.Count == 0) return; // Je�li martwy, nie zmieniaj kolor�w
+        if (myGroup.unitMatrices.Count == 0) return; 
 
         if (isSelected)
-            backgroundImage.color = Color.green; // Wybrany = Zielony
+            backgroundImage.color = Color.green;
         else
-            backgroundImage.color = Color.white; // Odznaczony = Neutralny (Bia�y)
+            backgroundImage.color = Color.white;
     }
 
     public void UpdateUnitCount()
@@ -109,7 +99,6 @@ public class ArmyGroupUI : MonoBehaviour
             else
                 groupNameText.text = myGroup.unitMatrices.Count.ToString();
 
-            // Je�li oddzia� wybity -> zr�b szary i nieaktywny
             if (myGroup.unitMatrices.Count == 0)
             {
                 myButton.interactable = false;

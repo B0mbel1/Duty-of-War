@@ -4,7 +4,6 @@ using UnityEngine.Networking;
 
 public class ModelChecker : MonoBehaviour
 {
-    // Wstaw tu swój (NOWY) klucz API
     [SerializeField] private string apiKey = "WPISZ_SWOJ_KLUCZ_API"; 
 
     public void CheckModels()

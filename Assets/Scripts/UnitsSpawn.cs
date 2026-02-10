@@ -4,7 +4,6 @@ using TMPro;
 
 public class UnitsSpawn : MonoBehaviour
 {
-    // --- KONFIGURACJA SK�ADU ARMII ---
     [System.Serializable]
     public class ArmyComposition
     {
@@ -45,11 +44,9 @@ public class UnitsSpawn : MonoBehaviour
     [Range(0f, 1f)]
     public float randomness = 0.8f;
 
-    // --- NOWO��: USTAWIENIA WODY DLA SPAWNU ---
     [Header("Water Settings (Spawn Correction)")]
     public string waterTag = "Water";
-    public float swimmingDepth = 0.5f; // Musi by� takie samo jak w Managerze
-    // -------------------------------------------
+    public float swimmingDepth = 0.5f; 
 
     [Header("Camera Start Settings")]
     public Camera battleCamera;
@@ -57,7 +54,6 @@ public class UnitsSpawn : MonoBehaviour
     public float cameraDistanceBack = 40f;
     public float cameraAngle = 55f;
 
-    // --- DANE JEDNOSTEK ---
     public List<Matrix4x4> listA_Inf = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Arc = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Cav = new List<Matrix4x4>();
@@ -78,7 +74,6 @@ public class UnitsSpawn : MonoBehaviour
     private const int batchSize = 1023;
     enum UnitType { Infantry, Archer, Cavalry }
 
-    // Zmienne wody
     private float waterSurfaceY;
     private bool waterFound = false;
 
@@ -90,18 +85,14 @@ public class UnitsSpawn : MonoBehaviour
         terrain = Terrain.activeTerrain;
         if (terrain == null) return;
 
-        // 1. Wykryj wod� PRZED spawnowaniem
         DetectWater();
 
-        // 2. Spawnowanie
         HandleFactionSpawning(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true);
         HandleFactionSpawning(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false);
 
-        // 3. Batche
         RebuildAllBatches();
         UpdateUICounters();
 
-        // 4. Kamera
         SetupCameraPosition();
     }
 
@@ -110,7 +101,6 @@ public class UnitsSpawn : MonoBehaviour
         GameObject waterObj = GameObject.FindGameObjectWithTag(waterTag);
         if (waterObj != null)
         {
-            // Zak�adamy p�ask� tafl� wody (proste rozwi�zanie dla spawnu)
             waterSurfaceY = waterObj.transform.position.y + (waterObj.transform.localScale.y * 0.5f);
             waterFound = true;
         }
@@ -162,41 +152,31 @@ public class UnitsSpawn : MonoBehaviour
     {
         if (mainArea == null) return;
 
-        // Ukryj renderery stref spawnu
         mainArea.GetComponent<Renderer>().enabled = false;
         if (secArea != null) secArea.GetComponent<Renderer>().enabled = false;
 
-        // Cel patrzenia (zawsze główny spawn wroga)
         GameObject enemyMainSpawn = isFactionA ? spawnAreaB : spawnAreaA;
-        // Jeśli nie ma spawnu wroga, patrz w stronę środka mapy (0,0,0) jako fallback
         Vector3 enemyPos = enemyMainSpawn != null ? enemyMainSpawn.transform.position : Vector3.zero;
 
         if (secArea != null)
         {
-            // --- RĘCZNE DZIELENIE ARMII ---
-            // Tworzymy tymczasowe obiekty składu armii dla obu stref
-            
-            // Armia 1 (Połowa sił)
             ArmyComposition army1 = new ArmyComposition();
             army1.name = fullArmy.name + "_Part1";
             army1.infantryCount = fullArmy.infantryCount / 2;
             army1.archerCount = fullArmy.archerCount / 2;
             army1.cavalryCount = fullArmy.cavalryCount / 2;
 
-            // Armia 2 (Reszta sił - odejmujemy, żeby nie zgubić nieparzystych jednostek)
             ArmyComposition army2 = new ArmyComposition();
             army2.name = fullArmy.name + "_Part2";
             army2.infantryCount = fullArmy.infantryCount - army1.infantryCount;
             army2.archerCount = fullArmy.archerCount - army1.archerCount;
             army2.cavalryCount = fullArmy.cavalryCount - army1.cavalryCount;
 
-            // Spawnuj w obu strefach
             ProcessFactionSpawns(army1, mainArea, isFactionA, enemyPos);
             ProcessFactionSpawns(army2, secArea, isFactionA, enemyPos);
         }
         else
         {
-            // Spawnuj całość w głównej strefie
             ProcessFactionSpawns(fullArmy, mainArea, isFactionA, enemyPos);
         }
     }
@@ -206,33 +186,21 @@ public class UnitsSpawn : MonoBehaviour
         Vector3 areaCenter = spawnArea.transform.position;
         Vector3 areaSize = spawnArea.transform.localScale;
 
-        // Obliczamy wektor "DO PRZODU" (w stronę wroga)
         Vector3 forwardDir = (enemyTargetPos - areaCenter).normalized;
         forwardDir.y = 0;
         forwardDir.Normalize();
 
         if (forwardDir == Vector3.zero) forwardDir = Vector3.forward;
 
-        // Obliczamy wektor "W PRAWO" (prostopadły do przodu)
         Vector3 rightDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
 
-        // Ustalamy szerokość dostępną dla formacji (rzutujemy wymiary Area na nasz wektor rightDir)
-        // Dla uproszczenia bierzemy większy wymiar boxa jako szerokość, jeśli box jest "płaski"
-        // Ale bezpieczniej przyjąć "szerokość logiczną"
         float usableWidth = Mathf.Max(areaSize.x, areaSize.z) * 0.9f;
-        if (usableWidth < 100) usableWidth = 500f; // Fallback dla małych markerów
-
-        // Punkt startowy: Front boxa (najbliżej wroga)
-        // Przesuwamy się od środka boxa w stronę wroga o połowę "głębokości" boxa wzdłuż osi Forward
-        // Tutaj prosta aproksymacja: startujemy po prostu od środka obszaru + lekki offset w stronę wroga
-        // Żeby było idealnie na krawędzi, trzeba by rzutować boxa, ale dla uproszczenia:
+        if (usableWidth < 100) usableWidth = 500f;
         Vector3 frontLineCenter = areaCenter + (forwardDir * (Mathf.Min(areaSize.x, areaSize.z) * 0.4f));
-
-        // Zaczynamy układać od lewej strony (patrząc w stronę wroga)
         Vector3 rowStart = frontLineCenter - (rightDir * (usableWidth * 0.5f));
 
         float gapBetweenGroups = 25.0f;
-        float currentXOffset = 0f; // Przesunięcie wzdłuż wektora rightDir
+        float currentXOffset = 0f;
 
         void SpawnTypeSequence(UnitType type, int totalCount)
         {
@@ -261,18 +229,12 @@ public class UnitsSpawn : MonoBehaviour
             {
                 int countInThisGroup = Mathf.Min(groupSize, totalCount - unitsSpawned);
 
-                // Czy mieścimy się w szerokości?
                 if (currentXOffset + groupWidth > usableWidth)
                 {
                     currentXOffset = 0;
-                    // Nowa linia - cofamy się (przeciwnie do forwardDir)
                     rowStart -= forwardDir * (groupDepth + verticalGap);
                 }
-
-                // Środek grupy to: StartRzędu + (W Prawo * offset)
                 Vector3 groupCenter = rowStart + (rightDir * currentXOffset);
-
-                // Ważne: Przekazujemy forwardDir jako kierunek patrzenia grupy
                 SpawnTightGroupRect(type, countInThisGroup, groupCenter, isFactionA, enemyTargetPos, rightDir, forwardDir);
 
                 currentXOffset += (groupWidth + horizontalGap);
@@ -283,7 +245,7 @@ public class UnitsSpawn : MonoBehaviour
         // 1. LINIA: Piechota
         SpawnTypeSequence(UnitType.Infantry, army.infantryCount);
 
-        // Odstęp między liniami (cofamy się)
+        // Odstęp między liniami
         currentXOffset = 0;
         rowStart -= forwardDir * 30.0f;
 
@@ -298,7 +260,6 @@ public class UnitsSpawn : MonoBehaviour
         SpawnTypeSequence(UnitType.Cavalry, army.cavalryCount);
     }
 
-    // --- DODAJ TO DO UnitsSpawn.cs ---
     void SpawnTightGroupRect(UnitType type, int count, Vector3 center, bool isFactionA, Vector3 lookTarget, Vector3 rightDir, Vector3 forwardDir)
     {
         float spacingMultiplier = 1.4f;
@@ -323,8 +284,6 @@ public class UnitsSpawn : MonoBehaviour
 
         int cols = Mathf.CeilToInt(Mathf.Sqrt(count) * widthRatio);
 
-        // Offset startowy wewnątrz grupy (żeby center był na środku)
-        // Przesuwamy w lewo o połowę szerokości
         Vector3 startOffset = -(rightDir * (cols * spacingX) / 2f);
 
         // Granice mapy
@@ -338,11 +297,9 @@ public class UnitsSpawn : MonoBehaviour
             int col = i % cols;
             int row = i / cols;
 
-            // Pozycja jednostki: Start + (Prawo * kolumna) - (Przód * rząd) -> bo rzędy rosną w głąb (do tyłu)
             Vector3 localPos = startOffset + (rightDir * col * spacingX) - (forwardDir * row * spacingZ);
             Vector3 rawPos = center + localPos;
 
-            // Clamp do mapy
             rawPos.x = Mathf.Clamp(rawPos.x, mapMinX, mapMaxX);
             rawPos.z = Mathf.Clamp(rawPos.z, mapMinZ, mapMaxZ);
 
@@ -355,10 +312,7 @@ public class UnitsSpawn : MonoBehaviour
             }
 
             Vector3 finalPos = new Vector3(rawPos.x, finalY, rawPos.z);
-
-            // Obrót w stronę wroga (globalny dla grupy)
             Quaternion finalRotation = Quaternion.LookRotation(forwardDir);
-
             Matrix4x4 matrix = Matrix4x4.TRS(finalPos, finalRotation, Vector3.one * unitDiameter);
 
             if (isFactionA)
@@ -403,19 +357,13 @@ public class UnitsSpawn : MonoBehaviour
             }
 
             Vector3 finalPos = new Vector3(rawPos.x, finalY, rawPos.z);
-
-            // --- NOWOŚĆ: Obliczanie rotacji w stronę wroga ---
             Vector3 directionToEnemy = (lookTarget - finalPos).normalized;
-            directionToEnemy.y = 0; // Ignoruj wysokość, żeby nie pochylali się w dół/górę
+            directionToEnemy.y = 0;
 
             if (directionToEnemy == Vector3.zero) directionToEnemy = Vector3.forward;
 
             Quaternion baseRotation = Quaternion.LookRotation(directionToEnemy);
-
-            // Dodajemy mały losowy odchył (jitter), np. +/- 10 stopni, żeby nie wyglądali jak roboty
-            // float randomJitter = (float)(rand.NextDouble() * 20.0 - 10.0); 
-            Quaternion finalRotation = baseRotation; // CZYSTA ROTACJA            // -----------------------------------------------
-
+            Quaternion finalRotation = baseRotation;
             Matrix4x4 matrix = Matrix4x4.TRS(finalPos, finalRotation, Vector3.one * unitDiameter);
 
             if (isFactionA)

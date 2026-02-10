@@ -5,14 +5,11 @@ public class FlagChange : MonoBehaviour
 {
     public Image panelLewy;
     public Image panelPrawy;
-
     public Sprite Flaga1;
     public Sprite Flaga2;
 
-    // Metoda testowa - uruchomi siê po naciœniêciu Play
     private void Start()
     {
-        // Test: Wstawiamy przypisane grafiki na start
         ZmienObraz(1, Flaga1);
         ZmienObraz(2, Flaga2);
     }

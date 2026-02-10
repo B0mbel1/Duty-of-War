@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using UnityEngine.EventSystems; // <-- potrzebne do sprawdzania UI
+using UnityEngine.EventSystems;
 
 public class RTSCameraController : MonoBehaviour
 {
@@ -42,7 +42,6 @@ public class RTSCameraController : MonoBehaviour
 
     void Update()
     {
-        // ❌ Sprawdzenie, czy UI ma fokus
         if (EventSystem.current.IsPointerOverGameObject())
             return;
 
@@ -61,8 +60,8 @@ public class RTSCameraController : MonoBehaviour
 
     void HandleMovement()
     {
-        float moveX = Input.GetAxis("Horizontal"); // A/D
-        float moveZ = Input.GetAxis("Vertical");   // W/S
+        float moveX = Input.GetAxis("Horizontal");
+        float moveZ = Input.GetAxis("Vertical");
 
         Vector3 forward = new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
         Vector3 right = new Vector3(transform.right.x, 0, transform.right.z).normalized;
@@ -93,23 +92,17 @@ public class RTSCameraController : MonoBehaviour
 
     void HandleRotation()
     {
-        if (Input.GetMouseButton(1)) // PPM
+        if (Input.GetMouseButton(1))
         {
             float yaw = Input.GetAxis("Mouse X") * rotationSpeed * Time.deltaTime;
             float pitchDelta = -Input.GetAxis("Mouse Y") * rotationSpeed * Time.deltaTime;
 
-            // YAW (lewo/prawo) – obrót wokół osi Y (globalnie)
             transform.Rotate(Vector3.up, yaw, Space.World);
-
-            // PITCH (góra/dół)
             Vector3 localEuler = transform.localEulerAngles;
             float pitch = localEuler.x;
-
-            // konwersja z 0–360 na -180–180
             if (pitch > 180f) pitch -= 360f;
 
             pitch = Mathf.Clamp(pitch + pitchDelta, minPitch, maxPitch);
-
             transform.localEulerAngles = new Vector3(pitch, transform.localEulerAngles.y, 0f);
         }
     }

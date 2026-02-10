@@ -3,20 +3,20 @@ using System.Collections.Generic;
 
 public enum AITriggerType
 {
-    TimeElapsed,        // Po X sekundach
-    EnemyDistance,      // Gdy wróg podejdzie na X metrów
-    CasualtiesPercent,  // Gdy stracimy X% wojska
-    Immediate           // Od razu po poprzedniej fazie
+    TimeElapsed,       
+    EnemyDistance,
+    CasualtiesPercent, 
+    Immediate 
 }
 
 public enum AIActionType
 {
-    MoveTo,             // Idź w miejsce
-    AttackMove,         // Atakuj ogólnie
-    DefendFeature,      // Zajmij teren (Wzgórze/Las)
-    Flank,              // Atak z flanki
-    HoldPosition,       // Stój i czekaj
-    ChargeTarget        // Atak na konkretny typ wroga
+    MoveTo,
+    AttackMove,
+    DefendFeature,
+    Flank,
+    HoldPosition,
+    ChargeTarget
 }
 
 [System.Serializable]
@@ -24,9 +24,9 @@ public class AICommandData
 {
     public string note = "Opis rozkazu";
     public AIActionType action;
-    public string unitTag;       // np. "Cavalry", "Infantry", "All", "B_Archers_1"
-    public string targetName;    // np. "Wzgórze Północ", "Flank_West", "Center"
-    public string formation;     // "Line", "Wedge", "Loose"
+    public string unitTag;
+    public string targetName;
+    public string formation;
 }
 
 [System.Serializable]
@@ -34,7 +34,7 @@ public class AIPhase
 {
     public string phaseName;
     public AITriggerType trigger;
-    public float triggerValue; // Czas w sek, Dystans w metrach, lub % strat (0-1)
+    public float triggerValue;
     
     [Space]
     public List<AICommandData> commands = new List<AICommandData>();

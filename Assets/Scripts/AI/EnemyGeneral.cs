@@ -5,11 +5,11 @@ using System.Linq;
 public class EnemyGeneral : MonoBehaviour
 {
     [Header("Strategia Bitwy")]
-    public AIStrategyProfile strategyProfile; // TU WRZUCASZ PLIK SCRITABLE OBJECT
-    public string side = "SideB"; // SideB to zazwyczaj AI (Goci)
+    public AIStrategyProfile strategyProfile;
+    public string side = "SideB";
 
     [Header("Dostępne Profile")]
-    public AIStrategyProfile profileForGoths; // Przeciągnij tu Adrianopol_AI_Goci
+    public AIStrategyProfile profileForGoths;
     public AIStrategyProfile profileForRomans;
 
     [Header("Status")]
@@ -19,21 +19,18 @@ public class EnemyGeneral : MonoBehaviour
     [Header("Referencje")]
     public ArmyHierarchyManager armyManager;
 
-    // Zmienne wewnętrzne
     private float battleStartTime;
     private float phaseStartTime;
     private bool battleStarted = false;
     private List<TacticalGroup> myGroups = new List<TacticalGroup>();
     private List<TacticalGroup> enemyGroups = new List<TacticalGroup>();
 
-    // Cache początkowej liczebności do liczenia strat
     private int startingUnitCount = 0;
 
     void Start()
     {
         if (armyManager == null) armyManager = FindAnyObjectByType<ArmyHierarchyManager>();
 
-        // Auto-wykrywanie strony na podstawie PlayerPrefs (żebyś mógł grać obiema stronami)
         string playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
         if (playerSide == "SideA")
         {
@@ -57,17 +54,12 @@ public class EnemyGeneral : MonoBehaviour
             battleStarted = true;
             battleStartTime = Time.time;
 
-            // Teraz lista jednostek na pewno nie będzie pusta
             RefreshUnitLists();
             startingUnitCount = CountMyUnits();
-
-            // To wyśle Gocjan na wzgórze (Phase 0)
             AdvancePhase();
         }
 
         if (armyManager.isDeploymentPhase) return;
-
-        // 3. Normalna logika bitewna (po wciśnięciu Start)
         if (strategyProfile == null || currentPhaseIndex >= strategyProfile.battlePhases.Count) return;
 
         CheckPhaseTriggers();
@@ -83,7 +75,6 @@ public class EnemyGeneral : MonoBehaviour
         switch (currentPhase.trigger)
         {
             case AITriggerType.TimeElapsed:
-                // Czas liczymy od rozpoczęcia AKTUALNEJ fazy
                 if (Time.time - phaseStartTime >= currentPhase.triggerValue) triggerMet = true;
                 break;
 
@@ -120,8 +111,6 @@ public class EnemyGeneral : MonoBehaviour
 
             Debug.Log($"<color=red>[GENERAL {side}] Rozpoczynam fazę: {nextPhase.phaseName}</color>");
             ExecuteCommands(nextPhase.commands);
-
-            // Jeśli wyzwalacz to Immediate, sprawdzamy go w następnej klatce (lub rekurencyjnie, ale bezpieczniej w Update)
         }
         else
         {
@@ -135,11 +124,9 @@ public class EnemyGeneral : MonoBehaviour
 
         foreach (var cmd in commands)
         {
-            // 1. Wybierz jednostki
             List<TacticalGroup> selectedUnits = FilterUnits(cmd.unitTag);
             if (selectedUnits.Count == 0) continue;
 
-            // 2. Wykonaj akcję
             foreach (var group in selectedUnits)
             {
                 ProcessSingleCommand(group, cmd);
@@ -156,31 +143,26 @@ public class EnemyGeneral : MonoBehaviour
         switch (cmd.action)
         {
             case AIActionType.MoveTo:
-                // Szukanie markera na mapie lub obliczanie pozycji
                 targetPos = CalculatePosition(cmd.targetName);
                 armyManager.ApplyFormation(group, cmd.formation, targetPos);
                 break;
 
             case AIActionType.DefendFeature:
-                // Szukanie terenu (Las, Wzgórze)
                 feature = FindFeature(cmd.targetName);
                 if (feature != null)
                 {
-                    // "Top", "Front", "Back" można dokleić do nazwy w ScriptableObject, tu upraszczamy
                     armyManager.MoveGroupToLineFeature(group, feature, "Top");
                 }
                 break;
 
             case AIActionType.AttackMove:
-                // Atak na ogólną pozycję wroga
                 Vector3 enemyCenter = GetEnemyArmyCenter();
                 lookDir = (enemyCenter - group.groupCenter).normalized;
-                group.chaseTarget = null; // Attack move bez konkretnego celu = bicie najbliższego
+                group.chaseTarget = null;
                 armyManager.ApplyFormation(group, cmd.formation, enemyCenter, lookDir);
                 break;
 
             case AIActionType.ChargeTarget:
-                // Atak na konkretny oddział (jeśli znajdzie po tagu/nazwie)
                 TacticalGroup specificEnemy = FindEnemyByNameOrTag(cmd.targetName);
                 if (specificEnemy != null)
                 {
@@ -189,7 +171,6 @@ public class EnemyGeneral : MonoBehaviour
                 }
                 else
                 {
-                    // Fallback: Atak ogólny
                     Vector3 eCenter = GetEnemyArmyCenter();
                     armyManager.ApplyFormation(group, cmd.formation, eCenter);
                 }
@@ -217,8 +198,6 @@ public class EnemyGeneral : MonoBehaviour
         }
     }
 
-    // --- HELPERY ---
-
     List<TacticalGroup> FilterUnits(string tag)
     {
         if (tag.ToLower() == "all") return new List<TacticalGroup>(myGroups);
@@ -226,8 +205,6 @@ public class EnemyGeneral : MonoBehaviour
         List<TacticalGroup> result = new List<TacticalGroup>();
         foreach (var g in myGroups)
         {
-            // Sprawdzamy czy nazwa grupy zawiera tag (np. "Cavalry" w "B_Cavalry_1")
-            // Lub czy typ jednostki pasuje
             bool nameMatch = g.groupName.ToLower().Contains(tag.ToLower());
             bool typeMatch = g.archetypes.Count > 0 && g.archetypes[0].type.ToString().ToLower() == tag.ToLower();
 
@@ -238,14 +215,12 @@ public class EnemyGeneral : MonoBehaviour
 
     Vector3 CalculatePosition(string name)
     {
-        // 1. Szukamy obiektu w scenie (np. pusty GameObject "Marker_Attack")
         GameObject obj = GameObject.Find(name);
         if (obj != null) return obj.transform.position;
 
-        // 2. Stałe punkty
         if (name == "Center") return new Vector3((armyManager.minX + armyManager.maxX) / 2, 0, (armyManager.minZ + armyManager.maxZ) / 2);
 
-        return GetEnemyArmyCenter(); // Domyślnie na wroga
+        return GetEnemyArmyCenter();
     }
 
     TerrainFeature FindFeature(string name)
@@ -264,7 +239,7 @@ public class EnemyGeneral : MonoBehaviour
         {
             if (e.groupName.ToLower().Contains(name.ToLower())) return e;
         }
-        return null; // Można dodać logikę szukania najbliższego danego typu
+        return null; 
     }
 
     void RefreshUnitLists()
@@ -286,8 +261,6 @@ public class EnemyGeneral : MonoBehaviour
         myGroups.RemoveAll(x => x == null);
         enemyGroups.RemoveAll(x => x == null);
 
-        // --- POPRAWKA: Naprawiamy "Problem Zera" ---
-        // Wymuszamy obliczenie pozycji, żeby AI nie myślało, że wszyscy są w punkcie (0,0,0)
         foreach (var g in myGroups) g.RecalculateCenter();
         foreach (var g in enemyGroups) g.RecalculateCenter();
     }

@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
-using System.Linq; // Potrzebne do debugowania
+using System.Linq;
 
 
 public class LLMCommander : MonoBehaviour
@@ -21,7 +21,6 @@ public class LLMCommander : MonoBehaviour
 
     void Start()
     {
-        // --- Auto-wykrywanie Managera ---
         if (armyManager == null)
         {
             armyManager = FindAnyObjectByType<ArmyHierarchyManager>();
@@ -33,7 +32,6 @@ public class LLMCommander : MonoBehaviour
             }
         }
 
-        // Automatyczne wykrywanie strony (SideA = Rzym/Dół, SideB = Goci/Góra)
         playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
         Debug.Log($"LLMCommander: Dowodzę stroną {playerSide}.");
 
@@ -50,7 +48,6 @@ public class LLMCommander : MonoBehaviour
                  commandInput.DeactivateInputField();
              });
 
-            // Ważne: nasłuchiwanie kliknięcia
             commandInput.onSelect.AddListener(OnInputSelected);
         }
 
@@ -58,28 +55,18 @@ public class LLMCommander : MonoBehaviour
         {
             originalTextColor = commandInput.textComponent.color;
 
-            // --- TUTAJ JEST ZMIANA ---
             commandInput.onSubmit.AddListener(val =>
             {
                 if (!string.IsNullOrWhiteSpace(val))
                 {
-                    // 1. Konstruujemy prompt
                     string systemPrompt = ConstructSystemPrompt();
                     string fullPrompt = systemPrompt + "\nUser: " + val;
 
-                    // 2. Wysyłamy do AI
                     geminiNetwork.SendRequest(fullPrompt);
-
-                    // 3. Czyścimy pole tekstowe i blokujemy je na chwilę
                     commandInput.text = "";
-                    commandInput.ActivateInputField(); // Żeby nie trzeba było klikać znowu
-
-                    // 4. NOWOŚĆ: Ukrywamy znacznik kursora natychmiast po wciśnięciu Enter
+                    commandInput.ActivateInputField();
                     armyManager.HideCursorMarker();
                 }
-
-                // Opcjonalnie: przywracamy focus na grę, żebyś mógł ruszać kamerą
-                // EventSystem.current.SetSelectedGameObject(null); 
             });
         }
     }
@@ -88,7 +75,6 @@ public class LLMCommander : MonoBehaviour
     {
         if (commandInput != null && !string.IsNullOrEmpty(commandInput.text))
         {
-            // --- DODAJ TO SPRAWDZENIE: ---
             if (commandInput.textComponent.color == Color.red) return;
 
             string textToSend = commandInput.text;
@@ -116,37 +102,31 @@ public class LLMCommander : MonoBehaviour
     {
         if (commandInput != null)
         {
-            // Jeśli już leci jakieś odliczanie, zatrzymaj je (żeby nie mrugało)
             StopAllCoroutines();
-
             commandInput.text = "Generale! Polecenia są niejasne!";
             commandInput.textComponent.color = Color.red;
-
-            // Uruchom odliczanie do zniknięcia
             StartCoroutine(HideErrorAfterDelay());
         }
     }
 
-    // Czyści błąd, gdy gracz kliknie w pole, żeby pisać od nowa
     void OnInputSelected(string val)
     {
         if (commandInput.textComponent.color == Color.red)
         {
-            StopAllCoroutines(); // Anulujemy znikanie, bo gracz przejął kontrolę
+            StopAllCoroutines();
             commandInput.text = "";
-            commandInput.textComponent.color = originalTextColor; // Przywracamy czarny (lub domyślny)
+            commandInput.textComponent.color = originalTextColor;
         }
     }
 
     System.Collections.IEnumerator HideErrorAfterDelay()
     {
-        yield return new WaitForSeconds(2.0f); // Czekaj 2 sekundy
+        yield return new WaitForSeconds(2.0f);
 
-        // Sprawdzamy, czy tekst nadal jest czerwony (czy gracz nie zaczął pisać w międzyczasie)
         if (commandInput != null && commandInput.textComponent.color == Color.red)
         {
             commandInput.text = "";
-            commandInput.textComponent.color = originalTextColor; // Wracamy do czarnego koloru gotowości
+            commandInput.textComponent.color = originalTextColor;
         }
     }
 
@@ -159,7 +139,7 @@ public class LLMCommander : MonoBehaviour
             AICommandResponse response = JsonUtility.FromJson<AICommandResponse>(jsonResponse);
             if (response == null || response.commands == null || response.commands.Count == 0)
             {
-                ShowErrorInInput(); // Wyświetlamy błąd logiczny (AI nie zwróciło komend)
+                ShowErrorInInput();
                 return;
             }
             if (!string.IsNullOrEmpty(response.ai_thought))
@@ -173,11 +153,9 @@ public class LLMCommander : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError("Błąd interpretacji rozkazu: " + e.Message);
-            ShowErrorInInput(); // Wyświetlamy błąd parsowania
+            ShowErrorInInput();
         }
     }
-
-    // --- LOGIKA JEDNOSTEK ---
 
     string GetCustomUnitNames()
     {
@@ -198,7 +176,6 @@ public class LLMCommander : MonoBehaviour
 
     void ProcessSingleCommand(AICommand cmd)
     {
-        // 1. Znajdź jednostki
         List<TacticalGroup> myUnits = (playerSide == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
         List<TacticalGroup> selectedUnits = new List<TacticalGroup>();
 
@@ -212,7 +189,6 @@ public class LLMCommander : MonoBehaviour
             }
             if (lowerTag == "selected")
             {
-                // Pobieramy listę, którą kliknąłeś myszką w UI
                 var manualSelection = armyManager.GetSelectedGroups();
                 foreach (var g in manualSelection)
                 {
@@ -232,10 +208,10 @@ public class LLMCommander : MonoBehaviour
                 }
             }
         }
-        bool useCursor = (cmd.target_location.ToLower() == "cursor" || cmd.target_location.ToLower() == "marker");
 
-        // Jeśli LLM prosi o kursor, ale gracz nie kliknął - przerywamy lub używamy pozycji grupy
+        bool useCursor = (cmd.target_location.ToLower() == "cursor" || cmd.target_location.ToLower() == "marker");
         Vector3? targetCursorPos = null;
+
         if (useCursor)
         {
             if (armyManager.hasCursorPosition)
@@ -250,7 +226,6 @@ public class LLMCommander : MonoBehaviour
             TacticalGroup targetEnemy = null;
             Vector3? flankPosition = null;
 
-            // A. Czy to atak kierunkowy (Flank)?
             if (cmd.target_location.StartsWith("Flank"))
             {
                 Vector3 centerPoint = GetEnemyArmyCenter();
@@ -260,18 +235,14 @@ public class LLMCommander : MonoBehaviour
                     targetEnemy = armyManager.selectedEnemyGroup;
                 }
 
-                // Inicjalizujemy flankPosition jako null
                 float offset = 70.0f;
                 string dir = cmd.target_location.ToLower();
 
-                // Sprawdzamy kierunki
                 if (dir.Contains("north")) flankPosition = centerPoint + new Vector3(0, 0, offset);
                 else if (dir.Contains("south")) flankPosition = centerPoint + new Vector3(0, 0, -offset);
                 else if (dir.Contains("east")) flankPosition = centerPoint + new Vector3(offset, 0, 0);
                 else if (dir.Contains("west")) flankPosition = centerPoint + new Vector3(-offset, 0, 0);
-                
-                // POPRAWKA: Jeśli AI podało dziwny kierunek (np. Flank_Back), ustawiamy domyślną flankę (np. Wschód)
-                // Dzięki temu flankPosition nigdy nie będzie nullem w pętli poniżej.
+
                 if (flankPosition == null)
                 {
                     Debug.LogWarning($"[LLMCommander] AI podało nieznaną flankę: '{cmd.target_location}'. Ustawiam domyślną (East).");
@@ -280,49 +251,35 @@ public class LLMCommander : MonoBehaviour
 
                 foreach (var group in selectedUnits)
                 {
-                    // Teraz flankPosition.Value jest bezpieczne, bo obsłużyliśmy null powyżej
                     Vector3 lookDir = (centerPoint - flankPosition.Value).normalized;
                     StartCoroutine(FlankAndStrikeSequence(group, flankPosition.Value, lookDir, targetEnemy));
                 }
                 return;
             }
-            // B. Priorytet Ręczny (Marker)
             else if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
             {
                 targetEnemy = armyManager.selectedEnemyGroup;
             }
-            // C. Priorytet Nazwy (Prompt)
             else if (cmd.target_location != "Enemy_Army" && !string.IsNullOrEmpty(cmd.target_location))
             {
                 targetEnemy = armyManager.GetGroupByName(cmd.target_location);
             }
 
-            // --- WYKONANIE ATAKU ---
-
-            // SCENARIUSZ 1: ATAK Z FLANKI (Kierunkowy)
             if (flankPosition.HasValue)
             {
                 foreach (var group in selectedUnits)
                 {
                     group.assignedFeature = null;
-
-                    // Jeśli mamy konkretny cel (targetEnemy), przypisujemy go, 
-                    // żeby jednostki wiedziały kogo bić jak dobiegną na flankę.
-                    // Jeśli nie (atak na armię), chaseTarget = null (biją najbliższego po dobiegnięciu).
                     group.chaseTarget = targetEnemy;
 
-                    // Obliczamy wektor patrzenia: Z pozycji flanki W STRONĘ WROGA (czyli w stronę środka)
-                    // Muszą patrzeć tam, gdzie atakują
                     Vector3 lookDir = (GetEnemyArmyCenter() - flankPosition.Value).normalized;
                     if (targetEnemy != null) lookDir = (targetEnemy.groupCenter - flankPosition.Value).normalized;
 
-                    // Wydajemy rozkaz ruchu bojowego na pozycję flanki
                     armyManager.ApplyFormation(group, "Line", flankPosition.Value, lookDir);
                 }
                 return;
             }
 
-            // SCENARIUSZ 2: ATAK NA KONKRETNY CEL (Bez flankowania, najkrótsza droga)
             if (targetEnemy != null)
             {
                 foreach (var group in selectedUnits)
@@ -335,7 +292,6 @@ public class LLMCommander : MonoBehaviour
                 return;
             }
 
-            // SCENARIUSZ 3: OGÓLNY ATAK (Attack Move)
             List<TacticalGroup> allEnemies = (playerSide == "SideA") ? armyManager.factionBGroups : armyManager.factionAGroups;
             foreach (var group in selectedUnits)
             {
@@ -358,30 +314,24 @@ public class LLMCommander : MonoBehaviour
             }
             return;
         }
-        // --- OBSŁUGA ROZKAZU STOP ---
         if (cmd.action == "STOP")
         {
             foreach (var group in selectedUnits)
             {
-                group.chaseTarget = null; // Przestań gonić, bo masz stać
+                group.chaseTarget = null;
                 group.isMoving = false;
                 group.isReforming = false;
                 group.currentDestination = group.groupCenter;
-                group.targetFacingDirection = Vector3.zero; // Resetujemy wymuszony obrót
+                group.targetFacingDirection = Vector3.zero;
                 Debug.Log($"Grupa {group.groupName} zatrzymana na rozkaz.");
                 group.assignedFeature = null;
             }
             return;
         }
 
-        // --- OBSŁUGA FORMACJI ---
         if (cmd.action == "FORM")
         {
-            string formType = cmd.target_location; // Domyślnie typ formacji jest w target_location
-
-            // Czasami LLM może zwrócić np. target_location: "Cursor", a typ w jakimś innym polu, 
-            // ale dla uproszczenia załóżmy, że jeśli to formacja, to nazwa formacji jest kluczowa.
-            // Zróbmy tak: Jeśli gracz kliknął na mapę, a komenda to FORM, to ZAWSZE używamy kursora jako celu.
+            string formType = cmd.target_location;
 
             if (armyManager.hasCursorPosition)
             {
@@ -390,8 +340,7 @@ public class LLMCommander : MonoBehaviour
 
             foreach (var g in selectedUnits)
             {
-                g.chaseTarget = null; // Formowanie przerywa pościg
-                // Wywołujemy zmodyfikowaną funkcję z punktem docelowym
+                g.chaseTarget = null;
                 armyManager.ApplyFormation(g, formType, targetCursorPos);
             }
             return;
@@ -408,13 +357,12 @@ public class LLMCommander : MonoBehaviour
             return;
         }
 
-        // --- OBSŁUGA RUCHU RELATYWNEGO (np. "Forward 100m", "Backward 50m") ---
         if (cmd.target_location.StartsWith("Relative_"))
         {
             string[] parts = cmd.target_location.Split('_');
             if (parts.Length == 3)
             {
-                string directionStr = parts[1].ToLower(); // np. "forward", "backward"
+                string directionStr = parts[1].ToLower();
                 float distance = 0;
                 if (float.TryParse(parts[2], out distance))
                 {
@@ -422,11 +370,8 @@ public class LLMCommander : MonoBehaviour
                     {
                         if (group.unitMatrices.Count == 0) continue;
 
-                        // 1. Pobieramy rotację i pozycję
                         Quaternion groupRotation = group.unitMatrices[0].rotation;
                         Vector3 currentForward = groupRotation * Vector3.forward;
-
-                        // 2. Obliczamy wektor ruchu LOKALNIE
                         Vector3 localDirection = Vector3.forward;
 
                         switch (directionStr)
@@ -437,8 +382,6 @@ public class LLMCommander : MonoBehaviour
                             case "right": localDirection = groupRotation * Vector3.right; break;
                         }
 
-                        // 3. LOGIKA OBROTU (Fix dla wycofywania)
-                        // Jeśli idziemy do tyłu, chcemy nadal patrzeć na wroga (przód)
                         if (directionStr == "backward")
                         {
                             group.targetFacingDirection = currentForward;
@@ -449,20 +392,17 @@ public class LLMCommander : MonoBehaviour
                         }
                         else
                         {
-                            // Przy ruchu w bok, niech patrzą tam gdzie idą (chyba że wolisz inaczej)
                             group.targetFacingDirection = localDirection.normalized;
                         }
 
-                        // 4. Aplikujemy przesunięcie
                         Vector3 newPos = group.groupCenter + (localDirection * distance);
 
-                        // Clamp (ograniczenie do mapy)
                         float clampedX = Mathf.Clamp(newPos.x, armyManager.minX, armyManager.maxX);
                         float clampedZ = Mathf.Clamp(newPos.z, armyManager.minZ, armyManager.maxZ);
                         group.chaseTarget = null;
                         group.currentDestination = new Vector3(clampedX, group.groupCenter.y, clampedZ);
                         group.isMoving = true;
-                        group.isReforming = true; // Włączamy reforming, żeby użyli precyzyjnego ruchu
+                        group.isReforming = true;
                     }
                     Debug.Log($"Przesuwam jednostki o {distance}m ({directionStr})");
                     return;
@@ -470,11 +410,8 @@ public class LLMCommander : MonoBehaviour
             }
         }
 
-        // --- OBSŁUGA RUCHU DO KONKRETNEGO OBIEKTU (Lasy, Rzeki) ---
         TerrainFeature targetFeature = null;
-        string targetSuffix = ""; // "Top", "Front", "Back"
-
-        // Parsowanie sufiksów (Hill_North_Back -> feature: Hill_North, suffix: Back)
+        string targetSuffix = "";
         string cleanLocName = cmd.target_location;
 
         if (cleanLocName.EndsWith("_Front")) { targetSuffix = "Front"; cleanLocName = cleanLocName.Replace("_Front", ""); }
@@ -491,10 +428,8 @@ public class LLMCommander : MonoBehaviour
             }
         }
 
-        // JEŚLI TO FEATURE Z LINIĄ (Las, Rzeka, Wzgórze)
         if (targetFeature == null && !cleanLocName.Contains("Relative") && !cleanLocName.Contains("Flank") && !useCursor && !cleanLocName.Contains("Enemy"))
         {
-            // Pokaż graczowi (i programiście), że nazwy się nie zgadzają
             string available = string.Join(", ", allFeatures.Select(f => f.featureName));
             Debug.LogWarning($"[LLMCommander] AI zwróciło nazwę: '{cleanLocName}', ale nie znaleziono takiego obiektu!\nDOSTĘPNE: {available}");
         }
@@ -507,14 +442,12 @@ public class LLMCommander : MonoBehaviour
             return;
         }
 
-        // --- OBSŁUGA RUCHU STANDARDOWEGO (Zwykły punkt na mapie) ---
         Vector3 targetPosition = Vector3.zero;
         bool positionFound = CalculateTargetPosition(cmd.target_location, out targetPosition);
 
         if (positionFound)
         {
             Vector3 enemyCenter = GetEnemyArmyCenter();
-            // Jeśli mamy zaznaczonego konkretnego wroga, bierzemy jego pozycję jako centrum
             if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
             {
                 enemyCenter = armyManager.selectedEnemyGroup.groupCenter;
@@ -524,7 +457,6 @@ public class LLMCommander : MonoBehaviour
 
             foreach (var group in selectedUnits)
             {
-                // Domyślny cel to punkt obliczony (np. 50m od wroga)
                 Vector3 finalDest = new Vector3(Mathf.Clamp(targetPosition.x, armyManager.minX, armyManager.maxX),
                                                 targetPosition.y,
                                                 Mathf.Clamp(targetPosition.z, armyManager.minZ, armyManager.maxZ));
@@ -533,31 +465,15 @@ public class LLMCommander : MonoBehaviour
 
                 if (isFlankingCommand)
                 {
-                    // --- POPRAWKA AGRESYWNOŚCI ---
-
-                    // 1. Obliczamy wektor, w którą stronę musimy patrzeć, żeby widzieć wroga
                     Vector3 directionToEnemy = (enemyCenter - finalDest).normalized;
-
-                    // 2. Zamiast iść w "puste miejsce" obok wroga (finalDest), 
-                    //    każemy im iść BEZPOŚREDNIO NA WROGA, ale zachowując formację.
-                    //    Dzięki temu wejdą w zasięg ataku (3.5f) i kolizje ich zatrzymają na styku armii.
-
-                    // Nadpisujemy cel podróży na środek wroga
                     Vector3 attackDest = enemyCenter;
 
-                    // Opcjonalnie: Cofamy cel o 2-3 metry od środka wroga w naszą stronę, 
-                    // żeby nie próbowali przeniknąć na drugą stronę oddziału, tylko uderzyli w pierwszą linię.
                     attackDest -= directionToEnemy * 2.0f;
-
-                    // Wywołujemy formację celującą we wroga
                     armyManager.ApplyFormation(group, "Line", attackDest, directionToEnemy);
-
-                    // Wymuszamy odświeżenie destination (na wypadek gdyby ApplyFormation coś nadpisało)
                     group.currentDestination = attackDest;
                 }
                 else
                 {
-                    // Zwykły ruch (nie flankujący)
                     group.currentDestination = finalDest;
                     group.targetFacingDirection = Vector3.zero;
                     group.isReforming = false;
@@ -569,12 +485,9 @@ public class LLMCommander : MonoBehaviour
         }
     }
 
-    // --- POMOCNICZA FUNKCJA DO KIERUNKÓW RELATYWNYCH ---
     Vector3 GetDirectionVector(string dirName)
     {
         bool isSideA = (playerSide == "SideA");
-        // SideA (Rzym): Patrzy w Z+ (Góra). Prawo to X+.
-        // SideB (Goci): Patrzy w Z- (Dół). Prawo to X- (z ich perspektywy).
 
         Vector3 forward = isSideA ? Vector3.forward : Vector3.back;
         Vector3 right = isSideA ? Vector3.right : Vector3.left;
@@ -589,8 +502,6 @@ public class LLMCommander : MonoBehaviour
         }
     }
 
-    // --- LOGIKA CELÓW ABSOLUTNYCH (Strony świata, Obiekty) ---
-
     bool CalculateTargetPosition(string locationName, out Vector3 position)
     {
         position = Vector3.zero;
@@ -598,9 +509,8 @@ public class LLMCommander : MonoBehaviour
 
         float centerX = (armyManager.minX + armyManager.maxX) / 2;
         float centerZ = (armyManager.minZ + armyManager.maxZ) / 2;
-        float mapMargin = 150f; // Margines od krawędzi mapy
+        float mapMargin = 150f;
 
-        // 1. Sprawdzanie dokładnych nazw (TerrainFeature)
         TerrainFeature[] allFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
         foreach (var feature in allFeatures)
         {
@@ -611,25 +521,15 @@ public class LLMCommander : MonoBehaviour
             }
         }
 
-        // 2. Komendy ogólne
         if (loc.Contains("center")) { position = new Vector3(centerX, 0, centerZ); return true; }
         if (loc.Contains("enemy") || loc.Contains("attack")) { position = GetEnemyArmyCenter(); return true; }
-
-        // Baza - tu logika jest zależna od gracza, bo "baza" to pojęcie relatywne
         if (loc.Contains("base") || loc.Contains("retreat"))
         {
-            bool isSideA = (playerSide == "SideA"); // SideA ma bazę na dole (MinZ)
+            bool isSideA = (playerSide == "SideA");
             float retreatZ = isSideA ? (armyManager.minZ + 150) : (armyManager.maxZ - 150);
             position = new Vector3(centerX, 0, retreatZ);
             return true;
         }
-
-        // --- ABSOLUTNE STRONY ŚWIATA (KOMPAS) ---
-        // Niezależnie od tego gdzie patrzy kamera:
-        // North = MAX Z
-        // South = MIN Z
-        // East  = MAX X
-        // West  = MIN X
 
         if (loc == "north")
         {
@@ -652,30 +552,25 @@ public class LLMCommander : MonoBehaviour
             return true;
         }
 
-        // --- FLANKOWANIE (ABSOLUTNE) ---
         if (loc.StartsWith("flank"))
         {
-            // 1. Ustalamy cel (Wroga)
             Vector3 targetPoint = GetEnemyArmyCenter();
             if (armyManager.selectedEnemyGroup != null && armyManager.selectedEnemyGroup.unitMatrices.Count > 0)
             {
                 targetPoint = armyManager.selectedEnemyGroup.groupCenter;
             }
 
-            // 2. Ustalamy offset (Dystans flankowania) - zmniejszony, aby byli blisko walki
-            float offset = 15.0f; // Blisko, żeby od razu atakować
+            float offset = 15.0f; 
 
-            // 3. Sztywna matematyka wektorów świata
-            if (loc.Contains("north")) position = targetPoint + new Vector3(0, 0, offset);  // +Z
-            else if (loc.Contains("south")) position = targetPoint + new Vector3(0, 0, -offset); // -Z
-            else if (loc.Contains("east")) position = targetPoint + new Vector3(offset, 0, 0);  // +X
-            else if (loc.Contains("west")) position = targetPoint + new Vector3(-offset, 0, 0); // -X
-            else position = targetPoint + new Vector3(offset, 0, 0); // Domyślnie wschód
+            if (loc.Contains("north")) position = targetPoint + new Vector3(0, 0, offset); 
+            else if (loc.Contains("south")) position = targetPoint + new Vector3(0, 0, -offset); 
+            else if (loc.Contains("east")) position = targetPoint + new Vector3(offset, 0, 0);  
+            else if (loc.Contains("west")) position = targetPoint + new Vector3(-offset, 0, 0); 
+            else position = targetPoint + new Vector3(offset, 0, 0); 
 
             return true;
         }
 
-        // Fallback dla obiektów nazwanych (np. "Góra Czaszki")
         GameObject featureObj = GameObject.Find(locationName);
         if (featureObj != null)
         {
@@ -687,26 +582,17 @@ public class LLMCommander : MonoBehaviour
     }
     System.Collections.IEnumerator FlankAndStrikeSequence(TacticalGroup group, Vector3 flankPos, Vector3 lookDir, TacticalGroup targetEnemy)
     {
-        // KROK 1: Rozkaz ruchu na pozycję flankującą
-        // Ważne: chaseTarget = null, żeby nie biegli na wroga, tylko na pozycję
         group.chaseTarget = null;
         group.assignedFeature = null;
-
-        // ApplyFormation z lookDir ustawi ich frontem do wroga (tworząc linię prostopadłą do niego)
         armyManager.ApplyFormation(group, "Line", flankPos, lookDir);
 
         Debug.Log($"[FLANK] {group.groupName} rozpoczyna manewr na pozycję...");
 
-        // KROK 2: Czekanie na dotarcie do celu
-        // Sprawdzamy co 0.5s czy grupa jest blisko celu (< 10m)
         while (group != null && group.unitMatrices.Count > 0)
         {
             float dist = Vector3.Distance(group.groupCenter, flankPos);
 
-            // Jeśli dotarliśmy
             if (dist < 12.0f && !group.isMoving) break;
-
-            // ZABEZPIECZENIE: Jeśli gracz w międzyczasie wydał inny rozkaz (zmienił cel), przerywamy korutynę!
             if (Vector3.Distance(group.currentDestination, flankPos) > 1.0f)
             {
                 Debug.Log($"[FLANK] Manewr przerwany przez gracza dla {group.groupName}");
@@ -718,25 +604,18 @@ public class LLMCommander : MonoBehaviour
 
         if (group == null || group.unitMatrices.Count == 0) yield break;
 
-        // KROK 3: "Po chwili" - pauza na wyrównanie oddechu i szyku
         Debug.Log($"[FLANK] {group.groupName} na pozycji. Wyrównanie szyku...");
         yield return new WaitForSeconds(1.5f); // 1.5 sekundy pauzy
 
-        // KROK 4: Ruszają na nią (Atak właściwy)
         if (targetEnemy != null && targetEnemy.unitMatrices.Count > 0)
         {
             Debug.Log($"[FLANK] {group.groupName} SZARŻUJE na {targetEnemy.groupName}!");
-
-            // Teraz ustawiamy cel pościgu
             group.chaseTarget = targetEnemy;
-
-            // I wydajemy rozkaz ataku
             Vector3 attackDir = (targetEnemy.groupCenter - group.groupCenter).normalized;
             armyManager.ApplyFormation(group, "Line", targetEnemy.groupCenter, attackDir);
         }
         else
         {
-            // Jeśli wróg uciekł/zginął w międzyczasie -> Attack Move na środek
             Vector3 fallback = GetEnemyArmyCenter();
             armyManager.ApplyFormation(group, "Line", fallback, (fallback - group.groupCenter).normalized);
         }
@@ -915,9 +794,7 @@ User: Zaznaczone jednostki do lasu!
         var myUnits = (playerSide == "SideA") ? armyManager.factionAGroups : armyManager.factionBGroups;
         foreach (var g in myUnits) myCount += g.unitMatrices.Count;
 
-        // NOWOŚĆ: Sprawdzamy czy mamy zaznaczonego konkretnego wroga
         string enemyInfo = "No specific enemy unit targeted.";
-        // Musisz dodać publiczny getter w ArmyHierarchyManager lub zmienić selectedEnemyGroup na public
         var selectedEnemy = armyManager.selectedEnemyGroup;
         if (selectedEnemy != null && selectedEnemy.unitMatrices.Count > 0)
         {

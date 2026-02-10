@@ -5,8 +5,8 @@ public enum UnitType { Infantry, Archer, Cavalry }
 public enum PendingOrderType
 {
     None,
-    MoveOrForm, // Zwykły ruch lub zmiana formacji
-    FeatureMove // Ruch do lasu/rzeki
+    MoveOrForm,
+    FeatureMove
 }
 
 [System.Serializable]
@@ -14,13 +14,10 @@ public struct PendingOrderData
 {
     public PendingOrderType type;
 
-    // Dane dla ruchu/formacji
     public string formationName;
     public Vector3 destination;
     public Vector3 lookDirection;
-    public TacticalGroup chaseTarget; // Jeśli to był atak
-
-    // Dane dla terenu
+    public TacticalGroup chaseTarget;
     public TerrainFeature feature;
 }
 [System.Serializable]
@@ -28,19 +25,12 @@ public class UnitArchetype
 {
     public UnitType type;
     public Mesh unitMesh;
-
-    // Materiał aktualny (może być zielony jak zaznaczysz)
     public Material unitMaterial;
-    // Materiał oryginalny (zapamiętany do odznaczenia) - NOWOŚĆ
     public Material originalMaterial;
-
     public Mesh arrowMesh;
     public Material arrowMaterial;
-
     public float speedMultiplier = 1.0f;
-
     public List<Matrix4x4[]> batchBuffers = new List<Matrix4x4[]>();
-
     public int currentCount = 0;
 }
 
@@ -54,7 +44,6 @@ public class TacticalGroup
 
     public List<UnitArchetype> archetypes = new List<UnitArchetype>();
     public List<int> unitArchetypeIndices = new List<int>();
-
     public List<Matrix4x4> unitMatrices = new List<Matrix4x4>();
     public List<float> unitHealth = new List<float>();
     public List<float> attackCooldowns = new List<float>();
@@ -64,7 +53,7 @@ public class TacticalGroup
     public bool isReforming = false;
     public Vector3 currentDestination;
     public bool isMoving = false;
-    public TacticalGroup chaseTarget = null; // Kogo gonimy?
+    public TacticalGroup chaseTarget = null;
     public PendingOrderData pendingOrder;
     public Vector3 groupCenter;
     public float groupRadius = 5.0f;
@@ -82,7 +71,7 @@ public class TacticalGroup
         baseArch.type = unitType;
         baseArch.unitMesh = mesh;
         baseArch.unitMaterial = mat;
-        baseArch.originalMaterial = mat; // Zapamiętujemy oryginał
+        baseArch.originalMaterial = mat;
         baseArch.speedMultiplier = 1.0f;
         archetypes.Add(baseArch);
 
@@ -94,7 +83,7 @@ public class TacticalGroup
         unitMatrices.Add(matrix);
         unitHealth.Add(hp);
         attackCooldowns.Add(0f);
-        lastCombatTimes.Add(-100f); // -100 oznacza, że dawno nie walczył
+        lastCombatTimes.Add(-100f);
         lastPositions.Add((Vector3)matrix.GetColumn(3));
         unitArchetypeIndices.Add(archetypeIndex);
         formationTargets.Add((Vector3)matrix.GetColumn(3));
@@ -202,18 +191,14 @@ public class TacticalGroup
         Vector3 sum = Vector3.zero;
         int validCount = 0;
 
-        // Zmienne do obliczania granic (Bounds)
         float minX = float.MaxValue, maxX = float.MinValue;
         float minZ = float.MaxValue, maxZ = float.MinValue;
-
-        int step = Mathf.Max(1, unitMatrices.Count / 50); // Optymalizacja: próbkowanie co X jednostek
+        int step = Mathf.Max(1, unitMatrices.Count / 50);
 
         for (int i = 0; i < unitMatrices.Count; i += step)
         {
             Vector3 pos = (Vector3)unitMatrices[i].GetColumn(3);
 
-            // --- POPRAWKA: Ignorujemy jednostki w (0,0,0), chyba że to jedyna jednostka ---
-            // To naprawi problem "wielkiej czerwonej kuli", jeśli jakiś żołnierz się zbugował przy starcie
             if (pos.sqrMagnitude < 0.1f && unitMatrices.Count > 1) continue;
 
             sum += pos;
@@ -232,12 +217,10 @@ public class TacticalGroup
             float sizeX = maxX - minX;
             float sizeZ = maxZ - minZ;
 
-            // Promień to połowa większego boku + margines
             groupRadius = (Mathf.Max(sizeX, sizeZ) * 0.5f) + 1.0f;
         }
         else
         {
-            // Fallback, jeśli wszyscy są w 0,0,0
             groupCenter = (Vector3)unitMatrices[0].GetColumn(3);
             groupRadius = 2.0f;
         }
@@ -275,7 +258,6 @@ public class TacticalGroup
     }
 }
 
-// Hierarchia
 public enum HierarchyRank
 {
     Squad = 10,

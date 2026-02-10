@@ -3,7 +3,7 @@ using UnityEngine.SceneManagement;
 
 public class PauseMenuController : MonoBehaviour
 {
-    public GameObject pauseMenuPrefab; // Twój prefab menu
+    public GameObject pauseMenuPrefab;
     private GameObject pauseMenuInstance;
     private bool isPaused = false;
 
@@ -11,13 +11,12 @@ public class PauseMenuController : MonoBehaviour
     {
         if (pauseMenuPrefab != null)
         {
-            // Tworzymy instancjê prefab, ale od razu ukrywamy
             pauseMenuInstance = Instantiate(pauseMenuPrefab);
             pauseMenuInstance.SetActive(false);
         }
         else
         {
-            Debug.LogError("Prefab Pause Menu nie zosta³ przypisany!");
+            Debug.LogError("Prefab Pause Menu nie zostaï¿½ przypisany!");
         }
     }
 
@@ -41,7 +40,7 @@ public class PauseMenuController : MonoBehaviour
         if (pauseMenuInstance != null)
         {
             pauseMenuInstance.SetActive(true);
-            Time.timeScale = 0f; // zatrzymuje grê
+            Time.timeScale = 0f;
             isPaused = true;
         }
     }
@@ -51,12 +50,11 @@ public class PauseMenuController : MonoBehaviour
         if (pauseMenuInstance != null)
         {
             pauseMenuInstance.SetActive(false);
-            Time.timeScale = 1f; // wznawia grê
+            Time.timeScale = 1f;
             isPaused = false;
         }
     }
 
-    // Funkcja dla przycisku "Kontynuuj" w menu
     public void OnResumeButton()
     {
         Resume();

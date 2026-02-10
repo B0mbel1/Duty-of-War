@@ -54,11 +54,10 @@ public class UnitsSpawnCustom : MonoBehaviour
     public string waterTag = "Water";
     public float swimmingDepth = 0.5f;
 
-    // --- USTAWIENIA ROTACJI I WYMIARÓW ---
     [Header("Spawn Orientation & Logic")]
     public SpawnShape factionAShape = SpawnShape.Rectangle;
     public SpawnShape factionBShape = SpawnShape.Rectangle;
-    
+
     [Tooltip("PRIORYTET 1: Użyj rotacji Cube'a.")]
     public bool useSpawnBoxRotation = true;
 
@@ -78,7 +77,6 @@ public class UnitsSpawnCustom : MonoBehaviour
     public float cameraDistanceBack = 40f;
     public float cameraAngle = 55f;
 
-    // Listy macierzy
     public List<Matrix4x4> listA_Inf = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Arc = new List<Matrix4x4>();
     public List<Matrix4x4> listA_Cav = new List<Matrix4x4>();
@@ -113,10 +111,7 @@ public class UnitsSpawnCustom : MonoBehaviour
         LoadCustomSettings();
         DetectWater();
 
-        // 1. Spawnujemy Frakcję A
         HandleFactionSpawning(factionA_Army, spawnAreaA, spawnAreaA_Secondary, true, factionAShape, null);
-        
-        // 2. Spawnujemy Frakcję B
         HandleFactionSpawning(factionB_Army, spawnAreaB, spawnAreaB_Secondary, false, factionBShape, spawnAreaA);
 
         RebuildAllBatches();
@@ -168,7 +163,6 @@ public class UnitsSpawnCustom : MonoBehaviour
         Vector3 forwardDir;
         Vector3 rightDir;
 
-        // --- 1. USTALANIE KIERUNKU ---
         if (useSpawnBoxRotation)
         {
             forwardDir = spawnArea.transform.forward;
@@ -184,24 +178,20 @@ public class UnitsSpawnCustom : MonoBehaviour
             if (forwardDir == Vector3.zero) forwardDir = Vector3.forward;
         }
 
-        // Zabezpieczenie przed zerowym wektorem (zapobiega sklejaniu w punkcie 0,0,0)
         forwardDir.y = 0;
         if (forwardDir.sqrMagnitude < 0.001f) forwardDir = Vector3.forward;
         forwardDir.Normalize();
 
         rightDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
 
-        // --- 2. USTALANIE SZEROKOŚCI (FIX dla Pal Galur) ---
         float usableWidth = 100f;
         float depthSize = 100f;
 
-        // A) Manual Override - Ostateczne rozwiązanie
         if (manualFormationWidth > 10f)
         {
             usableWidth = manualFormationWidth;
-            depthSize = 50f; // Domyślna głębokość punktu startu
+            depthSize = 50f; 
         }
-        // B) Smart Projection - Dobre na góry/wąwozy
         else if (useSmartWidthProjection)
         {
             float projectedWidthX = Mathf.Abs(Vector3.Dot(spawnArea.transform.right * areaSize.x, rightDir));
@@ -212,26 +202,22 @@ public class UnitsSpawnCustom : MonoBehaviour
             float projectedDepthZ = Mathf.Abs(Vector3.Dot(spawnArea.transform.forward * areaSize.z, forwardDir));
             depthSize = projectedDepthX + projectedDepthZ;
         }
-        // C) Standard Mode - Dobre na płaskie (poprawiona logika)
         else
         {
-            // Sprawdzamy, która oś lokalna Boxa jest bardziej równoległa do naszej linii frontu (rightDir)
             float alignmentX = Mathf.Abs(Vector3.Dot(spawnArea.transform.right, rightDir));
-            
-            if (alignmentX > 0.5f) // Box jest ustawiony bokiem wzdłuż frontu
+
+            if (alignmentX > 0.5f)
             {
                 usableWidth = areaSize.x * 0.9f;
                 depthSize = areaSize.z;
             }
-            else // Box jest ustawiony głębokością wzdłuż frontu (albo obrócony o 90 stopni)
+            else
             {
                 usableWidth = areaSize.z * 0.9f;
                 depthSize = areaSize.x;
             }
         }
 
-        // --- ZABEZPIECZENIE ANTI-GLUE ---
-        // Jeśli z jakiegoś powodu szerokość wyszła mikroskopijna, wymuś minimum.
         if (usableWidth < 50f) usableWidth = 50f;
 
         Vector3 frontLineCenter = areaCenter + (forwardDir * (depthSize * 0.4f));
@@ -256,7 +242,6 @@ public class UnitsSpawnCustom : MonoBehaviour
             {
                 int countInThisGroup = Mathf.Min(groupSize, totalCount - unitsSpawned);
 
-                // Sprawdzamy czy mieścimy się w rzędzie
                 if (currentXOffset + dynamicBlockSize > usableWidth)
                 {
                     currentXOffset = 0;
@@ -264,7 +249,7 @@ public class UnitsSpawnCustom : MonoBehaviour
                 }
 
                 Vector3 groupCenter = rowStart + (rightDir * (currentXOffset + dynamicBlockSize * 0.5f));
-                
+
                 SpawnTightGroupRect(type, countInThisGroup, groupCenter, isFactionA, rightDir, forwardDir);
 
                 currentXOffset += (dynamicBlockSize + gapBetweenGroups);
@@ -274,10 +259,10 @@ public class UnitsSpawnCustom : MonoBehaviour
 
         SpawnTypeSequence(UnitType.Infantry, army.infantryCount);
         if (army.infantryCount > 0) { currentXOffset = 0; rowStart -= forwardDir * 40.0f; }
-        
+
         SpawnTypeSequence(UnitType.Archer, army.archerCount);
         if (army.archerCount > 0) { currentXOffset = 0; rowStart -= forwardDir * 30.0f; }
-        
+
         SpawnTypeSequence(UnitType.Cavalry, army.cavalryCount);
     }
 
@@ -310,11 +295,11 @@ public class UnitsSpawnCustom : MonoBehaviour
             int row = i / cols;
 
             Vector3 localPos = startOffset + (rightDir * col * spacingX) - (forwardDir * row * spacingZ);
-            
+
             if (randomness > 0)
             {
-                 localPos += (rightDir * Random.Range(-randomness, randomness) * 0.2f) +
-                             (forwardDir * Random.Range(-randomness, randomness) * 0.2f);
+                localPos += (rightDir * Random.Range(-randomness, randomness) * 0.2f) +
+                            (forwardDir * Random.Range(-randomness, randomness) * 0.2f);
             }
 
             Vector3 rawPos = center + localPos;
@@ -365,24 +350,23 @@ public class UnitsSpawnCustom : MonoBehaviour
         }
         else if (!isFactionA && forceEnemyAlignmentToPlayer && area == spawnAreaB && spawnAreaA != null)
         {
-             Vector3 playerFwd = spawnAreaA.transform.forward;
-             playerFwd.y = 0; playerFwd.Normalize();
-             forward = -playerFwd;
+            Vector3 playerFwd = spawnAreaA.transform.forward;
+            playerFwd.y = 0; playerFwd.Normalize();
+            forward = -playerFwd;
         }
         else
         {
-             forward = area.transform.forward;
+            forward = area.transform.forward;
         }
 
-        forward.y = 0; 
-        if(forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
+        forward.y = 0;
+        if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
         forward.Normalize();
         Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
 
         Gizmos.DrawLine(center, center + forward * 30f);
         Gizmos.DrawSphere(center + forward * 30f, 2f);
-        
-        // Wizualizacja szerokości
+
         float vizWidth = 100f;
         if (manualFormationWidth > 10f) vizWidth = manualFormationWidth;
         else
@@ -396,7 +380,6 @@ public class UnitsSpawnCustom : MonoBehaviour
             }
             else
             {
-                // Simple logic visualization
                 float alignmentX = Mathf.Abs(Vector3.Dot(area.transform.right, right));
                 vizWidth = (alignmentX > 0.5f) ? areaSize.x : areaSize.z;
                 vizWidth *= 0.9f;

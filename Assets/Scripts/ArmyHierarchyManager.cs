@@ -628,7 +628,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         float separationRadius = 1.1f;
-        float separationStrength = isChasing ? 0.8f : 2.0f; // Słabsza separacja w ataku
+        float separationStrength = isChasing ? 0.8f : 2.0f;
         float maxSeparationForce = 0.5f;
 
         for (int i = 0; i < group.unitMatrices.Count; i++)
@@ -812,7 +812,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                 else newPos.y = terrainY;
             }
 
-            // --- E. ROTACJA  ---
             Quaternion targetUnitRot;
 
             if (isInAttackRange)
@@ -841,7 +840,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, finalRot, scaleVec);
         }
 
-        // --- F. FINALIZACJA ---
         if (group.isReforming && unitsReachedTarget >= group.unitMatrices.Count)
         {
             group.isReforming = false;
@@ -959,7 +957,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             gapSize = availableSpaceForGaps / (countInMyLayer - 1);
         }
 
-        gapSize = Mathf.Clamp(gapSize, 5.0f, 200.0f); // Min 5m odstępu, Max 200m
+        gapSize = Mathf.Clamp(gapSize, 5.0f, 200.0f);
         float totalFormationWidth = totalWidthOfUnits + ((countInMyLayer - 1) * gapSize);
         float startX = -(totalFormationWidth * 0.5f) + (singleGroupWidth * 0.5f);
         float xOffset = startX + (myIndexInLayer * (singleGroupWidth + gapSize));
@@ -1614,7 +1612,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                 }
             }
         }
-        // 2. CZWOROBOK (SQUARE)
         else if (typeLower.Contains("square") || typeLower.Contains("czworobok"))
         {
             float spacing = 1.5f;
@@ -1646,7 +1643,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                 SetFormationPoint(group, i, pos);
             }
         }
-        // 3. KOLUMNA
         else if (typeLower.Contains("column") || typeLower.Contains("kolumna"))
         {
             int cols = 5;
@@ -1664,7 +1660,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                 SetFormationPoint(group, i, pos);
             }
         }
-        // 4. LUŹNA
         else if (typeLower.Contains("loose") || typeLower.Contains("luźna"))
         {
             int cols = Mathf.CeilToInt(Mathf.Sqrt(count) * 2);
@@ -1682,7 +1677,6 @@ public class ArmyHierarchyManager : MonoBehaviour
                 SetFormationPoint(group, i, pos);
             }
         }
-        // 5. STANDARD (LINIA)
         else
         {
             int targetRows = 3;

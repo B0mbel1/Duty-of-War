@@ -96,7 +96,6 @@ public class FlowLayoutGroup : LayoutGroup
             float childWidth = LayoutUtility.GetPreferredWidth(child);
             float childHeight = LayoutUtility.GetPreferredHeight(child);
 
-            // Jeśli element wychodzi poza szerokość kontenera -> Nowa linia
             if (xOffset + childWidth > groupWidth - padding.right && xOffset > padding.left)
             {
                 xOffset = padding.left;
@@ -104,11 +103,11 @@ public class FlowLayoutGroup : LayoutGroup
                 currentRowHeight = 0f;
             }
 
-            if (axis == 0) // Horizontal pass
+            if (axis == 0)
             {
                 SetChildAlongAxis(child, 0, xOffset, childWidth);
             }
-            else // Vertical pass
+            else
             {
                 SetChildAlongAxis(child, 1, yOffset, childHeight);
             }
@@ -117,7 +116,6 @@ public class FlowLayoutGroup : LayoutGroup
             currentRowHeight = Mathf.Max(currentRowHeight, childHeight);
         }
         
-        // Opcjonalnie: Powiększanie kontenera w pionie
         if (axis == 1)
         {
             float totalHeight = yOffset + currentRowHeight + padding.bottom;

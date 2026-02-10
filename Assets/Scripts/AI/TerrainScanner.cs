@@ -17,16 +17,14 @@ public class TerrainScanner : MonoBehaviour
     public float minDistanceBetweenPeaks = 50.0f;
 
     [Header("Wykrywanie Lasów")]
-    public string forestLayerName = "Forest"; // [cite: 83]
+    public string forestLayerName = "Forest";
     [Range(0.1f, 1f)] public float forestDensityThreshold = 0.5f;
     public int scanResolutionDivisor = 4;
     public int minForestSize = 50;
 
     [Header("Wykrywanie Wody (Rzeki)")]
-    public string waterLayerName = "Water"; // Nazwa warstwy texture w Terrain
+    public string waterLayerName = "Water";
     public float riverWidthMultiplier = 0.4f;
-
-    // Lista użytych nazw, aby uniknąć duplikatów
     private HashSet<string> usedNames = new HashSet<string>();
 
     class ForestCluster
@@ -55,8 +53,6 @@ public class TerrainScanner : MonoBehaviour
 
     void Start()
     {
-        // ZMIANA: Sprawdzamy, czy punkty już istnieją na scenie (np. ustawione ręcznie).
-        // Jeśli tak - nie robimy nic, zostawiamy Twoje ustawienie.
         var existingFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
         if (existingFeatures.Length > 0)
         {
@@ -64,19 +60,15 @@ public class TerrainScanner : MonoBehaviour
             return;
         }
 
-        // Jeśli punktów nie ma, generujemy je automatycznie (fallback)
         GenerateAllFeatures();
     }
 
-    // --- PRZYCISK W INSPECTORZE (Prawy przycisk myszy na skrypt -> Skanuj Teren Teraz) ---
     [ContextMenu("Skanuj Teren Teraz")]
     public void GenerateAllFeatures()
     {
         if (terrain == null) terrain = Terrain.activeTerrain;
         if (terrain == null) return;
 
-        // Czyścimy stare znaczniki "Auto_" (tylko te wygenerowane przez skrypt)
-        // Dzięki temu możesz wygenerować na nowo, jeśli coś popsujesz, ale Twoje ręczne (jeśli zmieniłeś nazwę) zostaną
         var oldFeatures = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
         foreach (var f in oldFeatures)
         {
@@ -105,7 +97,6 @@ public class TerrainScanner : MonoBehaviour
         int waterIdx = -1;
         for (int i = 0; i < data.terrainLayers.Length; i++)
         {
-            // Szukamy warstwy wody
             if (data.terrainLayers[i].name == waterLayerName)
             {
                 waterIdx = i;
@@ -113,11 +104,11 @@ public class TerrainScanner : MonoBehaviour
             }
         }
 
-        if (waterIdx == -1) return; // Brak wody na mapie
+        if (waterIdx == -1) return; 
 
         float[,,] maps = data.GetAlphamaps(0, 0, alphaW, alphaH);
         bool[,] visited = new bool[alphaW, alphaH];
-        List<ForestCluster> rivers = new List<ForestCluster>(); // Używamy tej samej klasy co lasy
+        List<ForestCluster> rivers = new List<ForestCluster>();
 
         int step = scanResolutionDivisor;
 
@@ -126,7 +117,7 @@ public class TerrainScanner : MonoBehaviour
             for (int y = 0; y < alphaH; y += step)
             {
                 if (visited[x, y]) continue;
-                if (maps[y, x, waterIdx] > 0.5f) // Jeśli to woda
+                if (maps[y, x, waterIdx] > 0.5f)
                 {
                     ForestCluster cluster = PerformFloodFill(x, y, alphaW, alphaH, maps, waterIdx, visited, step);
                     if (cluster.points.Count > minForestSize) rivers.Add(cluster);
@@ -149,15 +140,11 @@ public class TerrainScanner : MonoBehaviour
         float widthX = river.maxX - river.minX;
         float depthZ = river.maxZ - river.minZ;
 
-        // Rzeka zazwyczaj płynie wzdłuż dłuższej krawędzi
         Vector3 orientation = (widthX > depthZ) ? Vector3.right : Vector3.forward;
         float length = (widthX > depthZ) ? widthX : depthZ;
-
-        // Tworzymy znacznik
-        // WAŻNE: Ostatni parametr to isRiver = true
         CreateMarker(center, baseID, "Rzeka", Color.blue, length * riverWidthMultiplier, orientation, true);
     }
-    // --- WZGÓRZA ---
+
     void ScanForHills_Improved()
     {
         TerrainData data = terrain.terrainData;
@@ -166,9 +153,8 @@ public class TerrainScanner : MonoBehaviour
         Vector3 size = data.size;
 
         List<Vector3> peaks = new List<Vector3>();
-        int step = 20; // Zwiększony krok skanowania (mniej punktów)
+        int step = 20; 
 
-        // 1. Znajdź tylko najwyższe punkty (szczyty)
         for (int x = 0; x < res; x += step)
         {
             for (int y = 0; y < res; y += step)
@@ -186,10 +172,9 @@ public class TerrainScanner : MonoBehaviour
             }
         }
 
-        // 2. Sortuj od najwyższego i filtruj bliskie
         peaks = peaks.OrderByDescending(v => v.y).ToList();
         List<Vector3> finalHills = new List<Vector3>();
-        float minHillDist = 150.0f; // Duży dystans, żeby nie tworzyć klastrów wzgórz
+        float minHillDist = 150.0f;
 
         foreach (var p in peaks)
         {
@@ -199,15 +184,10 @@ public class TerrainScanner : MonoBehaviour
             }
         }
 
-        // 3. Twórz obiekty TerrainFeature (Wzgórza)
         foreach (var hillCenter in finalHills)
         {
-            string dirName = GetLocationName(hillCenter); // np. "North"
-
-            // ZMIANA: Tłumaczymy kierunek na polski rzeczownik (North -> Północ)
+            string dirName = GetLocationName(hillCenter); 
             string plDir = TranslateDirNoun(dirName);
-
-            // Tworzymy nazwę: "Wzgórze Północ", "Wzgórze Centrum"
             string uniqueName = GetUniqueName("Wzgórze " + plDir);
 
             Vector3 orient = (dirName == "East" || dirName == "West") ? Vector3.forward : Vector3.right;
@@ -225,13 +205,12 @@ public class TerrainScanner : MonoBehaviour
         feature.description = desc;
         feature.debugColor = Color.yellow;
 
-        // Konfiguracja pod wzgórze
         feature.isHill = true;
-        feature.lineLength = 60.0f; // Domyślna długość grzbietu
+        feature.lineLength = 60.0f; 
         feature.lineOrientation = orient;
-        feature.widthOffset = 25.0f; // Dystans od szczytu do podnóża
+        feature.widthOffset = 25.0f;
     }
-    // --- LASY (Zachowana Twoja logika klastrów) ---
+
     void ScanForForests_Clustered()
     {
         TerrainData data = terrain.terrainData;
@@ -330,42 +309,30 @@ public class TerrainScanner : MonoBehaviour
         return cluster;
     }
 
-    // --- LOGIKA NAZEWNICTWA ---
-
     void GenerateMarkersForCluster(ForestCluster forest)
     {
         Vector3 center = forest.GetCenter();
         string dirName = GetLocationName(center);
 
-        // ZMIANA: Polska nazwa
         string plDir = TranslateDirNoun(dirName);
         string baseID = GetUniqueName("Las " + plDir);
         string plDesc = "Las (" + plDir + ")";
-
-        // Obliczamy wymiary lasu
         float widthX = forest.maxX - forest.minX;
         float depthZ = forest.maxZ - forest.minZ;
-
-        // Domyślne ustawienia linii
         float calculatedLength = 50f;
         Vector3 calculatedOrientation = Vector3.right;
 
-        // LOGIKA AUTOMATYCZNEGO DOPASOWANIA LINII:
-        // Jeśli las jest na Północy/Południu -> Linia powinna być pozioma (oś X)
-        // Jeśli las jest na Wschodzie/Zachodzie -> Linia powinna być pionowa (oś Z)
-        // Jeśli Centrum -> Bierzemy dłuższą oś lasu
-
         if (dirName == "North" || dirName == "South")
         {
-            calculatedOrientation = Vector3.right; // Poziomo
-            calculatedLength = widthX * 0.8f; // 80% szerokości lasu
+            calculatedOrientation = Vector3.right;
+            calculatedLength = widthX * 0.8f; 
         }
         else if (dirName == "East" || dirName == "West")
         {
-            calculatedOrientation = Vector3.forward; // Pionowo
-            calculatedLength = depthZ * 0.8f; // 80% głębokości lasu
+            calculatedOrientation = Vector3.forward;
+            calculatedLength = depthZ * 0.8f;
         }
-        else // Center
+        else
         {
             if (widthX > depthZ)
             {
@@ -379,7 +346,6 @@ public class TerrainScanner : MonoBehaviour
             }
         }
 
-        // Tworzymy znacznik z danymi o linii
         CreateMarker(center, baseID, plDesc, Color.green, calculatedLength, calculatedOrientation);
     }
     string TranslateDirNoun(string enDir)
@@ -408,9 +374,8 @@ public class TerrainScanner : MonoBehaviour
         feature.lineLength = len;
         feature.lineOrientation = orient;
 
-        // NOWOŚĆ: Ustawiamy czy to rzeka i szerokość brzegu
         feature.isRiver = isRiver;
-        if (isRiver) feature.riverBankOffset = 15.0f; // np. 15 metrów od środka wody
+        if (isRiver) feature.riverBankOffset = 15.0f;
     }
 
     string GetLocationName(Vector3 pos)

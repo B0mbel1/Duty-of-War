@@ -8,16 +8,16 @@ public class TerrainFeature : MonoBehaviour
 
     [Header("Ustawienia Linii")]
     public float lineLength = 20.0f;
-    public Vector3 lineOrientation = Vector3.right; // To teraz jest kierunek LOKALNY
+    public Vector3 lineOrientation = Vector3.right; 
 
     [Header("Typ Terenu")]
-    public bool isHill = false; // NOWOŚĆ: Czy to wzgórze?
+    public bool isHill = false;
     public float widthOffset = 15.0f;
 
 
     [Header("Ustawienia Rzeczne")]
-    public bool isRiver = false; // Czy to jest rzeka?
-    public float riverBankOffset = 10.0f; // Jak daleko od środka rzeki jest brzeg (bezpieczna strefa)
+    public bool isRiver = false; 
+    public float riverBankOffset = 10.0f;
 
     [Header("Debug")]
     public Color debugColor = Color.green;
@@ -40,14 +40,10 @@ public class TerrainFeature : MonoBehaviour
         Gizmos.DrawLine(start, start + Vector3.up * 5);
         Gizmos.DrawLine(end, end + Vector3.up * 5);
 
-        // Wizualizacja brzegów (tylko dla rzek)
         if (isRiver || isHill)
         {
             Gizmos.color = isRiver ? Color.blue : Color.yellow;
-            // Obliczamy prostopadłą względem kierunku świata
             Vector3 perp = Vector3.Cross(Vector3.up, worldDir) * widthOffset;
-
-            // Strefy
             Gizmos.DrawLine(start + perp, end + perp);
             Gizmos.DrawLine(start - perp, end - perp);
 

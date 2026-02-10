@@ -4,32 +4,25 @@ using System.Collections;
 
 public class BackToMenu : MonoBehaviour
 {
-    [Header("Przypisz tutaj ca³y obiekt panelu Menu (to co ma znikn¹æ)")]
+    [Header("Przypisz tutaj caï¿½y obiekt panelu Menu (to co ma zniknï¿½ï¿½)")]
     public GameObject menuPanel;
 
-    // --- Ta funkcja jest do przycisku "Wróæ do Menu" ---
     public void LoadScene(string sceneName)
     {
         Time.timeScale = 1f;
         StartCoroutine(LoadSceneAsyncRoutine(sceneName));
     }
 
-    // --- NOWA FUNKCJA: Do przycisku "Wróæ do gry" ---
     public void ResumeGame()
     {
-        // 1. Odpauzowanie czasu (wa¿ne, ¿eby gra ruszy³a)
         Time.timeScale = 1f;
-
-        // 2. Wy³¹czenie panelu menu
         if (menuPanel != null)
         {
             menuPanel.SetActive(false);
         }
         else
         {
-            // Opcja zapasowa: jeœli zapomnia³eœ przypisaæ panelu, 
-            // a skrypt le¿y bezpoœrednio na nim, to wy³¹czy sam siebie.
-            Debug.LogWarning("BackToMenu: Nie przypisano 'menuPanel', próbujê wy³¹czyæ ten obiekt.");
+            Debug.LogWarning("BackToMenu: Nie przypisano 'menuPanel', prï¿½bujï¿½ wyï¿½ï¿½czyï¿½ ten obiekt.");
             gameObject.SetActive(false);
         }
     }
