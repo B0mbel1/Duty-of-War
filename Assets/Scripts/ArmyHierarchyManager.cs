@@ -151,6 +151,9 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (namingPanel != null) namingPanel.SetActive(false);
         if (confirmNameButton != null) confirmNameButton.onClick.AddListener(OnMergeConfirmed);
+
+        Time.timeScale = 5.0f;
+        Debug.Log("Faza Deployment: Czas przyspieszony x5.");
     }
 
     TacticalGroup FindGroupUnderCursor(Ray ray, List<TacticalGroup> potentialGroups)
@@ -378,9 +381,31 @@ public class ArmyHierarchyManager : MonoBehaviour
                 if (namingPanel != null && namingPanel.activeSelf) namingPanel.SetActive(false);
                 else if (selectedGroups.Count > 1) OpenNamingPanel();
             }
-            if (Input.GetKeyDown(KeyCode.Return) && isDeploymentPhase) StartBattle();
+            if (Input.GetKeyDown(KeyCode.Return) && isDeploymentPhase)
+            {
+                // Dodatkowe zabezpieczenie dla Entera
+                if (!CheckIfAnyGroupIsMoving()) StartBattle();
+            }
         }
+        if (isDeploymentPhase && startBattleButton != null)
+        {
+            bool isAnyoneMoving = CheckIfAnyGroupIsMoving();
 
+            // Pobieramy komponent Button (upewnij się, że StartBattleButton ma komponent Button)
+            UnityEngine.UI.Button btn = startBattleButton.GetComponent<UnityEngine.UI.Button>();
+            if (btn != null)
+            {
+                // Przycisk aktywny tylko gdy nikt się nie rusza
+                btn.interactable = !isAnyoneMoving;
+
+                // Opcjonalnie: zmiana koloru lub tekstu, żeby gracz wiedział dlaczego nie może klikać
+                var btnText = startBattleButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (btnText != null)
+                {
+                    btnText.text = isAnyoneMoving ? "Czekanie na rozkazy..." : "ROZPOCZNIJ BITWĘ";
+                }
+            }
+        }
         foreach (var g in factionAGroups) UpdateChaseLogic(g);
         foreach (var g in factionBGroups) UpdateChaseLogic(g);
 
@@ -450,7 +475,20 @@ public class ArmyHierarchyManager : MonoBehaviour
             activeCursorMarker.SetActive(false);
         }
     }
-
+    public bool CheckIfAnyGroupIsMoving()
+    {
+        // Sprawdzamy gracza A
+        foreach (var g in factionAGroups)
+        {
+            if (g.unitMatrices.Count > 0 && (g.isMoving || g.isReforming)) return true;
+        }
+        // Sprawdzamy gracza B (AI)
+        foreach (var g in factionBGroups)
+        {
+            if (g.unitMatrices.Count > 0 && (g.isMoving || g.isReforming)) return true;
+        }
+        return false;
+    }
     public TacticalGroup GetGroupByName(string name)
     {
         foreach (var g in factionAGroups)
@@ -1480,6 +1518,8 @@ public class ArmyHierarchyManager : MonoBehaviour
     public void StartBattle()
     {
         isDeploymentPhase = false;
+        Time.timeScale = 1.0f;
+        Debug.Log("Bitwa rozpoczęta! Czas przywrócony do x1.");
         if (startBattleButton != null) startBattleButton.SetActive(false);
         Debug.Log("Faza rozstawiania zakończona. Wykonywanie zaplanowanych rozkazów...");
 
