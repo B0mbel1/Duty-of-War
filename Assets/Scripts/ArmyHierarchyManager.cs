@@ -113,7 +113,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     private List<TacticalGroup> selectedGroups = new List<TacticalGroup>();
     private TacticalGroup lastSelectedGroup = null;
 
-    private bool groupsInitialized = false;
+    public bool groupsInitialized = false;
     private Terrain terrain;
     private TerrainData terrainData;
 
@@ -421,8 +421,7 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         // 2. Czy Wróg może ruszać jednostki?
         // TYLKO jeśli bitwa się zaczęła i nie ma pauzy
-        bool canMoveEnemy = !isDeploymentPhase && !isTacticalPause;
-
+        bool canMoveEnemy = !isTacticalPause;
         // 3. Czy walka jest aktywna?
         // TYLKO jeśli bitwa się zaczęła i nie ma pauzy
         bool isCombatActive = !isDeploymentPhase && !isTacticalPause;
@@ -986,17 +985,17 @@ public class ArmyHierarchyManager : MonoBehaviour
         string pSide = PlayerPrefs.GetString("PlayerSide", "SideA");
         bool isPlayerGroup = (pSide == "SideA" && factionAGroups.Contains(group)) ||
                              (pSide == "SideB" && factionBGroups.Contains(group));
-        if (isDeploymentPhase && !isPlayerGroup)
-        {
-            group.pendingOrder = new PendingOrderData
-            {
-                type = PendingOrderType.FeatureMove,
-                feature = feature,
-                chaseTarget = null
-            };
-            group.isMoving = false;
-            return;
-        }
+        // if (isDeploymentPhase && !isPlayerGroup)
+        // {
+        //     group.pendingOrder = new PendingOrderData
+        //     {
+        //         type = PendingOrderType.FeatureMove,
+        //         feature = feature,
+        //         chaseTarget = null
+        //     };
+        //     group.isMoving = false;
+        //     return;
+        // }
 
         if (group.unitMatrices.Count == 0) return;
 
@@ -1718,22 +1717,22 @@ public class ArmyHierarchyManager : MonoBehaviour
         Vector3 finalLookDir = rotation * Vector3.forward; // To jest wektor "Do Wroga"
 
         // --- OBSŁUGA DEPLOYMENT PHASE ---
-        if (isDeploymentPhase && !isPlayerGroup)
-        {
-            group.pendingOrder = new PendingOrderData
-            {
-                type = PendingOrderType.MoveOrForm,
-                formationName = formationType,
-                destination = center,
-                lookDirection = finalLookDir,
-                chaseTarget = group.chaseTarget
-            };
-            group.chaseTarget = null;
-            group.isMoving = false;
-            group.isReforming = false;
-            // Debug.Log($"[PLANOWANIE AI] Formacja {formationType} zakolejkowana.");
-            return;
-        }
+        // if (isDeploymentPhase && !isPlayerGroup)
+        // {
+        //     group.pendingOrder = new PendingOrderData
+        //     {
+        //         type = PendingOrderType.MoveOrForm,
+        //         formationName = formationType,
+        //         destination = center,
+        //         lookDirection = finalLookDir,
+        //         chaseTarget = group.chaseTarget
+        //     };
+        //     group.chaseTarget = null;
+        //     group.isMoving = false;
+        //     group.isReforming = false;
+        //     // Debug.Log($"[PLANOWANIE AI] Formacja {formationType} zakolejkowana.");
+        //     return;
+        // }
 
         if (group.unitMatrices.Count == 0) return;
         group.assignedFeature = null;

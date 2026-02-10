@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54f14b7cad714f041b7b62e44372e868, type: 3}
+  m_Name: Adrianopol_AI_Rzym
+  m_EditorClassIdentifier: Assembly-CSharp::AIStrategyProfile
+  description: "AI (Rzym) jest pewne siebie, dysponuje \u017Celazn\u0105 dyscyplin\u0105,
+    ale jest niecierpliwe. D\u0105\u017Cy do zwarcia piechot\u0105, ignoruj\u0105c
+    trudny teren (rzek\u0119)."
+  battlePhases:
+  - phaseName: Formowanie Linii
+    trigger: 3
+    triggerValue: 0
+    commands:
+    - note: "Rzymianie ustawiaj\u0105 si\u0119 w szerokim szyku przed Wzg\xF3rzem
+        Po\u0142udniowym."
+      action: 2
+      unitTag: Infantry
+      targetName: "Wzg\xF3rze Po\u0142udnie"
+      formation: Line
+    - note: "Rzymianie ustawiaj\u0105 si\u0119 w szerokim szyku przed Wzg\xF3rzem
+        Po\u0142udniowym."
+      action: 2
+      unitTag: Cavalry
+      targetName: "Wzg\xF3rze Po\u0142udnie"
+      formation: Line
+  - phaseName: Forsowanie Rzeki
+    trigger: 0
+    triggerValue: 10
+    commands:
+    - note: "Rzymianie ruszaj\u0105 ca\u0142\u0105 \u0142aw\u0105 przez rzek\u0119.
+        To moment krytyczny."
+      action: 0
+      unitTag: Infantry
+      targetName: "Wzg\xF3rze P\xF3\u0142noc_Front"
+      formation: Turtle
+    - note: "Rzymianie ustawiaj\u0105 si\u0119 w szerokim szyku przed Wzg\xF3rzem
+        Po\u0142udniowym."
+      action: 2
+      unitTag: Cavalry
+      targetName: Flank_West
+      formation: 
+  - phaseName: "Szturm na Wzg\xF3rze"
+    trigger: 1
+    triggerValue: 50
+    commands:
+    - note: "Po przebyciu rzeki, AI atakuje pozycje gracza (Got\xF3w) na wzg\xF3rzu"
+      action: 5
+      unitTag: Infantry
+      targetName: B_Infantry
+      formation: 
+    - note: "Po przebyciu rzeki, AI atakuje pozycje gracza (Got\xF3w) na wzg\xF3rzu"
+      action: 3
+      unitTag: Cavalry
+      targetName: Flank_West
+      formation: 

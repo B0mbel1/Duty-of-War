@@ -2,231 +2,322 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-// Definicja stanów AI
-public enum GeneralState
-{
-    Deployment,      // Faza rozstawiania (oczekiwanie)
-    InitialAdvance,  // Marsz w stronę wroga
-    Combat,          // Walka kontaktowa
-    Chase            // Pościg
-}
-
 public class EnemyGeneral : MonoBehaviour
 {
-    [Header("Konfiguracja AI")]
-    // Jak często AI podejmuje decyzje (w sekundach).
-    public float decisionInterval = 5.0f;
+    [Header("Strategia Bitwy")]
+    public AIStrategyProfile strategyProfile; // TU WRZUCASZ PLIK SCRITABLE OBJECT
+    public string side = "SideB"; // SideB to zazwyczaj AI (Goci)
 
-    // To zostanie nadpisane automatycznie w Start(), ale widoczne w inspektorze
-    public string side = "SideB";
+    [Header("Dostępne Profile")]
+    public AIStrategyProfile profileForGoths; // Przeciągnij tu Adrianopol_AI_Goci
+    public AIStrategyProfile profileForRomans;
+
+    [Header("Status")]
+    public int currentPhaseIndex = -1;
+    public string currentPhaseName = "Oczekiwanie";
 
     [Header("Referencje")]
     public ArmyHierarchyManager armyManager;
 
     // Zmienne wewnętrzne
-    private GeneralState currentState = GeneralState.Deployment;
-    private float deploymentTimer = 0f; // Zmieniłem nazwę z deploymentTime na Timer dla jasności
-    private float nextDecisionTime = 0f;
-
-    // Listy jednostek (Cache)
+    private float battleStartTime;
+    private float phaseStartTime;
+    private bool battleStarted = false;
     private List<TacticalGroup> myGroups = new List<TacticalGroup>();
     private List<TacticalGroup> enemyGroups = new List<TacticalGroup>();
 
+    // Cache początkowej liczebności do liczenia strat
+    private int startingUnitCount = 0;
+
     void Start()
     {
-        // 1. Znajdź Managera Armii
-        if (armyManager == null)
-            armyManager = FindAnyObjectByType<ArmyHierarchyManager>();
+        if (armyManager == null) armyManager = FindAnyObjectByType<ArmyHierarchyManager>();
 
-        if (armyManager == null)
-        {
-            Debug.LogError("EnemyGeneral: KRYTYCZNY BŁĄD - Brak ArmyHierarchyManager na scenie!");
-            this.enabled = false;
-            return;
-        }
-
-        // 2. AUTOMATYCZNY WYBÓR STRONY
+        // Auto-wykrywanie strony na podstawie PlayerPrefs (żebyś mógł grać obiema stronami)
         string playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
-
         if (playerSide == "SideA")
         {
-            side = "SideB"; // Gracz = Rzym, AI = Goci
-            Debug.Log($"EnemyGeneral: Gracz to {playerSide}. AI przejmuje dowodzenie nad {side} (Goci).");
+            side = "SideB";
+            strategyProfile = profileForGoths;
         }
         else
         {
-            side = "SideA"; // Gracz = Goci, AI = Rzym
-            Debug.Log($"EnemyGeneral: Gracz to {playerSide}. AI przejmuje dowodzenie nad {side} (Rzym).");
+            side = "SideA";
+            strategyProfile = profileForRomans;
         }
 
-        // 3. Startowe ustawienia
-        currentState = GeneralState.Deployment;
-        deploymentTimer = Time.time + 5.0f; // 5 sekund na start
+        Debug.Log($"[EnemyGeneral] Przejmuję dowodzenie nad {side} używając strategii: {(strategyProfile ? strategyProfile.name : "BRAK")}");
     }
-
-    // Podmień całą metodę Update:
 
     void Update()
     {
-        // --- FAZA 1: DEPLOYMENT (OCZEKIWANIE) ---
-        // ZMIANA: AI nie decyduje o końcu fazy. Czeka na sygnał od ArmyManagera (przycisku gracza).
-        if (armyManager.isDeploymentPhase)
+        if (armyManager == null || !armyManager.groupsInitialized) return;
+        if (!battleStarted)
         {
-            currentState = GeneralState.Deployment;
-            return; // AI nic nie robi, póki trwa faza rozstawiania
+            battleStarted = true;
+            battleStartTime = Time.time;
+
+            // Teraz lista jednostek na pewno nie będzie pusta
+            RefreshUnitLists();
+            startingUnitCount = CountMyUnits();
+
+            // To wyśle Gocjan na wzgórze (Phase 0)
+            AdvancePhase();
         }
 
-        // Jeśli faza rozstawiania się skończyła (gracz kliknął Start), a my wciąż jesteśmy w stanie Deployment:
-        if (currentState == GeneralState.Deployment && !armyManager.isDeploymentPhase)
+        if (armyManager.isDeploymentPhase) return;
+
+        // 3. Normalna logika bitewna (po wciśnięciu Start)
+        if (strategyProfile == null || currentPhaseIndex >= strategyProfile.battlePhases.Count) return;
+
+        CheckPhaseTriggers();
+    }
+
+    void CheckPhaseTriggers()
+    {
+        if (currentPhaseIndex < 0) return;
+
+        AIPhase currentPhase = strategyProfile.battlePhases[currentPhaseIndex];
+        bool triggerMet = false;
+
+        switch (currentPhase.trigger)
         {
-            currentState = GeneralState.InitialAdvance;
-            Debug.Log($"EnemyGeneral ({side}): Gracz rozpoczął bitwę. Przechodzę do ataku!");
+            case AITriggerType.TimeElapsed:
+                // Czas liczymy od rozpoczęcia AKTUALNEJ fazy
+                if (Time.time - phaseStartTime >= currentPhase.triggerValue) triggerMet = true;
+                break;
+
+            case AITriggerType.EnemyDistance:
+                float dist = GetDistanceToNearestEnemy();
+                if (dist <= currentPhase.triggerValue) triggerMet = true;
+                break;
+
+            case AITriggerType.CasualtiesPercent:
+                float currentCount = CountMyUnits();
+                float lossRatio = 1.0f - (currentCount / (float)startingUnitCount);
+                if (lossRatio >= currentPhase.triggerValue) triggerMet = true;
+                break;
+
+            case AITriggerType.Immediate:
+                triggerMet = true;
+                break;
         }
 
-        // --- FAZA 2: TIMER DECYZYJNY ---
-        if (Time.time < nextDecisionTime) return;
-        nextDecisionTime = Time.time + decisionInterval;
-
-        // --- FAZA 3: ODŚWIEŻENIE DANYCH ---
-        RefreshUnitLists();
-
-        if (myGroups.Count == 0) return; // Przegrana
-
-        // --- FAZA 4: LOGIKA STANU ---
-        switch (currentState)
+        if (triggerMet)
         {
-            case GeneralState.InitialAdvance:
-                ExecuteAdvanceLogic();
-                break;
-
-            case GeneralState.Combat:
-                ExecuteCombatLogic();
-                break;
-
-            case GeneralState.Chase:
-                ExecuteChaseLogic();
-                break;
+            AdvancePhase();
         }
     }
 
-    // --- LOGIKA TAKTYCZNA ---
-
-    void ExecuteAdvanceLogic()
+    void AdvancePhase()
     {
-        if (enemyGroups.Count == 0) return;
-
-        Vector3 myCenter = GetArmyCenter(myGroups);
-        Vector3 enemyCenter = GetArmyCenter(enemyGroups);
-        float dist = Vector3.Distance(myCenter, enemyCenter);
-
-        // Jeśli blisko (np. 100m), przejdź do zwarcia
-        if (dist < 100.0f)
+        currentPhaseIndex++;
+        if (strategyProfile != null && currentPhaseIndex < strategyProfile.battlePhases.Count)
         {
-            currentState = GeneralState.Combat;
-            Debug.Log("EnemyGeneral: Kontakt wzrokowy! Przełączam na tryb COMBAT.");
-            ExecuteCombatLogic();
+            AIPhase nextPhase = strategyProfile.battlePhases[currentPhaseIndex];
+            currentPhaseName = nextPhase.phaseName;
+            phaseStartTime = Time.time;
+
+            Debug.Log($"<color=red>[GENERAL {side}] Rozpoczynam fazę: {nextPhase.phaseName}</color>");
+            ExecuteCommands(nextPhase.commands);
+
+            // Jeśli wyzwalacz to Immediate, sprawdzamy go w następnej klatce (lub rekurencyjnie, ale bezpieczniej w Update)
         }
         else
         {
-            // Marsz całą armią w stronę wroga
-            Vector3 dir = (enemyCenter - myCenter).normalized;
-            OrderAllGroups("Line", enemyCenter, dir);
+            currentPhaseName = "Bitwa Zakończona / Brak Rozkazów";
         }
     }
 
-    void ExecuteCombatLogic()
+    void ExecuteCommands(List<AICommandData> commands)
     {
-        if (enemyGroups.Count == 0)
+        RefreshUnitLists();
+
+        foreach (var cmd in commands)
         {
-            currentState = GeneralState.Chase;
-            return;
-        }
+            // 1. Wybierz jednostki
+            List<TacticalGroup> selectedUnits = FilterUnits(cmd.unitTag);
+            if (selectedUnits.Count == 0) continue;
 
-        foreach (var group in myGroups)
-        {
-            if (group == null) continue;
-
-            // Używamy groupCenter zamiast transform.position
-            TacticalGroup target = FindClosestEnemy(group.groupCenter);
-
-            if (target != null)
+            // 2. Wykonaj akcję
+            foreach (var group in selectedUnits)
             {
-                group.chaseTarget = target;
-                // Używamy groupCenter zamiast transform.position
-                Vector3 direction = (target.groupCenter - group.groupCenter).normalized;
-                armyManager.ApplyFormation(group, "Line", target.groupCenter, direction);
+                ProcessSingleCommand(group, cmd);
             }
         }
     }
 
-    void ExecuteChaseLogic()
+    void ProcessSingleCommand(TacticalGroup group, AICommandData cmd)
     {
-        ExecuteCombatLogic();
+        Vector3 targetPos = Vector3.zero;
+        Vector3 lookDir = Vector3.zero;
+        TerrainFeature feature = null;
+
+        switch (cmd.action)
+        {
+            case AIActionType.MoveTo:
+                // Szukanie markera na mapie lub obliczanie pozycji
+                targetPos = CalculatePosition(cmd.targetName);
+                armyManager.ApplyFormation(group, cmd.formation, targetPos);
+                break;
+
+            case AIActionType.DefendFeature:
+                // Szukanie terenu (Las, Wzgórze)
+                feature = FindFeature(cmd.targetName);
+                if (feature != null)
+                {
+                    // "Top", "Front", "Back" można dokleić do nazwy w ScriptableObject, tu upraszczamy
+                    armyManager.MoveGroupToLineFeature(group, feature, "Top");
+                }
+                break;
+
+            case AIActionType.AttackMove:
+                // Atak na ogólną pozycję wroga
+                Vector3 enemyCenter = GetEnemyArmyCenter();
+                lookDir = (enemyCenter - group.groupCenter).normalized;
+                group.chaseTarget = null; // Attack move bez konkretnego celu = bicie najbliższego
+                armyManager.ApplyFormation(group, cmd.formation, enemyCenter, lookDir);
+                break;
+
+            case AIActionType.ChargeTarget:
+                // Atak na konkretny oddział (jeśli znajdzie po tagu/nazwie)
+                TacticalGroup specificEnemy = FindEnemyByNameOrTag(cmd.targetName);
+                if (specificEnemy != null)
+                {
+                    group.chaseTarget = specificEnemy;
+                    armyManager.ApplyFormation(group, cmd.formation, specificEnemy.groupCenter);
+                }
+                else
+                {
+                    // Fallback: Atak ogólny
+                    Vector3 eCenter = GetEnemyArmyCenter();
+                    armyManager.ApplyFormation(group, cmd.formation, eCenter);
+                }
+                break;
+
+            case AIActionType.Flank:
+                Vector3 enemyC = GetEnemyArmyCenter();
+                Vector3 flankOffset = Vector3.zero;
+
+                if (cmd.targetName.Contains("West")) flankOffset = new Vector3(-100, 0, 0);
+                else if (cmd.targetName.Contains("East")) flankOffset = new Vector3(100, 0, 0);
+                else if (cmd.targetName.Contains("North")) flankOffset = new Vector3(0, 0, 100);
+                else if (cmd.targetName.Contains("South")) flankOffset = new Vector3(0, 0, -100);
+
+                Vector3 flankPos = enemyC + flankOffset;
+                Vector3 flankDir = (enemyC - flankPos).normalized;
+
+                armyManager.ApplyFormation(group, cmd.formation, flankPos, flankDir);
+                break;
+
+            case AIActionType.HoldPosition:
+                group.isMoving = false;
+                group.chaseTarget = null;
+                break;
+        }
     }
 
-    // --- METODY POMOCNICZE ---
+    // --- HELPERY ---
+
+    List<TacticalGroup> FilterUnits(string tag)
+    {
+        if (tag.ToLower() == "all") return new List<TacticalGroup>(myGroups);
+
+        List<TacticalGroup> result = new List<TacticalGroup>();
+        foreach (var g in myGroups)
+        {
+            // Sprawdzamy czy nazwa grupy zawiera tag (np. "Cavalry" w "B_Cavalry_1")
+            // Lub czy typ jednostki pasuje
+            bool nameMatch = g.groupName.ToLower().Contains(tag.ToLower());
+            bool typeMatch = g.archetypes.Count > 0 && g.archetypes[0].type.ToString().ToLower() == tag.ToLower();
+
+            if (nameMatch || typeMatch) result.Add(g);
+        }
+        return result;
+    }
+
+    Vector3 CalculatePosition(string name)
+    {
+        // 1. Szukamy obiektu w scenie (np. pusty GameObject "Marker_Attack")
+        GameObject obj = GameObject.Find(name);
+        if (obj != null) return obj.transform.position;
+
+        // 2. Stałe punkty
+        if (name == "Center") return new Vector3((armyManager.minX + armyManager.maxX) / 2, 0, (armyManager.minZ + armyManager.maxZ) / 2);
+
+        return GetEnemyArmyCenter(); // Domyślnie na wroga
+    }
+
+    TerrainFeature FindFeature(string name)
+    {
+        var features = FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None);
+        foreach (var f in features)
+        {
+            if (f.featureName.ToLower().Contains(name.ToLower())) return f;
+        }
+        return null;
+    }
+
+    TacticalGroup FindEnemyByNameOrTag(string name)
+    {
+        foreach (var e in enemyGroups)
+        {
+            if (e.groupName.ToLower().Contains(name.ToLower())) return e;
+        }
+        return null; // Można dodać logikę szukania najbliższego danego typu
+    }
 
     void RefreshUnitLists()
     {
         myGroups.Clear();
         enemyGroups.Clear();
-
         if (armyManager == null) return;
 
-        if (side == "SideB") // AI to Goci
+        if (side == "SideB")
         {
-            if (armyManager.factionBGroups != null) myGroups.AddRange(armyManager.factionBGroups);
-            if (armyManager.factionAGroups != null) enemyGroups.AddRange(armyManager.factionAGroups);
+            myGroups.AddRange(armyManager.factionBGroups);
+            enemyGroups.AddRange(armyManager.factionAGroups);
         }
-        else // AI to Rzym (SideA)
+        else
         {
-            if (armyManager.factionAGroups != null) myGroups.AddRange(armyManager.factionAGroups);
-            if (armyManager.factionBGroups != null) enemyGroups.AddRange(armyManager.factionBGroups);
+            myGroups.AddRange(armyManager.factionAGroups);
+            enemyGroups.AddRange(armyManager.factionBGroups);
         }
-
         myGroups.RemoveAll(x => x == null);
         enemyGroups.RemoveAll(x => x == null);
+
+        // --- POPRAWKA: Naprawiamy "Problem Zera" ---
+        // Wymuszamy obliczenie pozycji, żeby AI nie myślało, że wszyscy są w punkcie (0,0,0)
+        foreach (var g in myGroups) g.RecalculateCenter();
+        foreach (var g in enemyGroups) g.RecalculateCenter();
+    }
+
+    int CountMyUnits()
+    {
+        int count = 0;
+        foreach (var g in myGroups) count += g.unitMatrices.Count;
+        return count;
+    }
+
+    float GetDistanceToNearestEnemy()
+    {
+        Vector3 myCenter = GetArmyCenter(myGroups);
+        float minDist = float.MaxValue;
+        foreach (var e in enemyGroups)
+        {
+            float d = Vector3.Distance(myCenter, e.groupCenter);
+            if (d < minDist) minDist = d;
+        }
+        return minDist;
     }
 
     Vector3 GetArmyCenter(List<TacticalGroup> groups)
     {
-        if (groups == null || groups.Count == 0) return Vector3.zero;
+        if (groups.Count == 0) return Vector3.zero;
         Vector3 sum = Vector3.zero;
-        foreach (var g in groups)
-        {
-            // POPRAWKA: Używamy groupCenter zamiast transform.position
-            if (g != null) sum += g.groupCenter;
-        }
+        foreach (var g in groups) sum += g.groupCenter;
         return sum / groups.Count;
     }
 
-    TacticalGroup FindClosestEnemy(Vector3 fromPos)
-    {
-        TacticalGroup bestTarget = null;
-        float minDst = float.MaxValue;
-
-        foreach (var enemy in enemyGroups)
-        {
-            if (enemy == null) continue;
-            // POPRAWKA: Używamy groupCenter zamiast transform.position
-            float d = Vector3.Distance(fromPos, enemy.groupCenter);
-            if (d < minDst)
-            {
-                minDst = d;
-                bestTarget = enemy;
-            }
-        }
-        return bestTarget;
-    }
-
-    void OrderAllGroups(string formation, Vector3 targetPos, Vector3 lookDir)
-    {
-        foreach (var group in myGroups)
-        {
-            if (group != null)
-            {
-                armyManager.ApplyFormation(group, formation, targetPos, lookDir);
-            }
-        }
-    }
+    Vector3 GetEnemyArmyCenter() => GetArmyCenter(enemyGroups);
 }

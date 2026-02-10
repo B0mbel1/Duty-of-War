@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54f14b7cad714f041b7b62e44372e868, type: 3}
+  m_Name: Adrianopol_AI_Goci
+  m_EditorClassIdentifier: Assembly-CSharp::AIStrategyProfile
+  description: "AI gra pasywnie, zajmuje wysokie wzg\xF3rze za rzek\u0105 i czeka,
+    a\u017C gracz (Rzym) pope\u0142ni b\u0142\u0105d i zacznie przepraw\u0119. Wtedy
+    AI uderza kawaleri\u0105 z ukrycia."
+  battlePhases:
+  - phaseName: "Obrona Wzg\xF3rza"
+    trigger: 1
+    triggerValue: 100
+    commands:
+    - note: "Goci zajmuj\u0105 pozycj\u0119 na Wzg\xF3rzu P\xF3\u0142nocnym, u\u017Cywaj\u0105c
+        rzeki jako fosy"
+      action: 2
+      unitTag: Infantry
+      targetName: "Wzg\xF3rze P\xF3\u0142noc"
+      formation: Line
+    - note: "Goci zajmuj\u0105 pozycj\u0119 na Wzg\xF3rzu P\xF3\u0142nocnym, u\u017Cywaj\u0105c
+        rzeki jako fosy"
+      action: 2
+      unitTag: Archer
+      targetName: "Wzg\xF3rze P\xF3\u0142noc"
+      formation: Loose
+    - note: "Goci zajmuj\u0105 pozycj\u0119 na Wzg\xF3rzu P\xF3\u0142nocnym, u\u017Cywaj\u0105c
+        rzeki jako fosy"
+      action: 2
+      unitTag: Cavalry
+      targetName: "Wzg\xF3rze P\xF3\u0142noc_Back"
+      formation: Wedge
+  - phaseName: "Ostrza\u0142 przeprawy"
+    trigger: 1
+    triggerValue: 100
+    commands:
+    - note: "Gdy Rzymianie wejd\u0105 do wody, Goci utrzymuj\u0105 pozycj\u0119,
+        nie daj\u0105c si\u0119 wywabi\u0107"
+      action: 4
+      unitTag: All
+      targetName: 
+      formation: 
+  - phaseName: "M\u0142ot i Kowad\u0142o"
+    trigger: 0
+    triggerValue: 120
+    commands:
+    - note: "Kawaleria wraca i uderza na flank\u0119 gracza, kt\xF3ry jest zaj\u0119ty
+        walk\u0105 w rzece/na zboczu."
+      action: 3
+      unitTag: Cavalry
+      targetName: Flank_East
+      formation: Wedge
+    - note: "Kawaleria wraca i uderza na flank\u0119 gracza, kt\xF3ry jest zaj\u0119ty
+        walk\u0105 w rzece/na zboczu."
+      action: 1
+      unitTag: Infantry
+      targetName: 
+      formation: 

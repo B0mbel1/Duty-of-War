@@ -789,8 +789,20 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1064055470}
     - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: profileForGoths
+      value: 
+      objectReference: {fileID: 11400000, guid: 22ae98ed4e21cd2489115adfb07580b5, type: 2}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: decisionInterval
       value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: profileForRomans
+      value: 
+      objectReference: {fileID: 11400000, guid: 7e8987343c8943349bbf491441d2b83c, type: 2}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: currentPhaseIndex
+      value: -1
       objectReference: {fileID: 0}
     - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: scenarioInstruction
