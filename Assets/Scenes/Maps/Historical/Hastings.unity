@@ -1047,7 +1047,7 @@ GameObject:
   - component: {fileID: 1120059034}
   - component: {fileID: 1120059033}
   m_Layer: 0
-  m_Name: Auto_Forest_East
+  m_Name: Forest_East
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1101,7 +1101,7 @@ GameObject:
   - component: {fileID: 1248041321}
   - component: {fileID: 1248041320}
   m_Layer: 0
-  m_Name: Auto_Forest_West
+  m_Name: Forest_West
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

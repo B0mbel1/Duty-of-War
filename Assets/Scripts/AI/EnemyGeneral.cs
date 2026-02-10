@@ -215,11 +215,74 @@ public class EnemyGeneral : MonoBehaviour
 
     Vector3 CalculatePosition(string name)
     {
-        GameObject obj = GameObject.Find(name);
-        if (obj != null) return obj.transform.position;
+        // 1. Najpierw sprawdź, czy istnieje obiekt o dokładnej nazwie (np. "Center" albo jakiś ręczny marker)
+        GameObject directObj = GameObject.Find(name);
+        if (directObj != null) return directObj.transform.position;
 
+        // 2. Obsługa sufiksów (_Front, _Back, _Top) dla obiektów z TerrainScanner
+        string baseName = name;
+        string suffix = "";
+
+        if (name.Contains("_Front")) { baseName = name.Replace("_Front", ""); suffix = "Front"; }
+        else if (name.Contains("_Back")) { baseName = name.Replace("_Back", ""); suffix = "Back"; }
+        else if (name.Contains("_Top")) { baseName = name.Replace("_Top", ""); suffix = "Top"; }
+
+        // Szukamy obiektu bazowego (np. szukamy "Auto_Wzgórze Północ" gdy AI chce "Wzgórze Północ")
+        // Twój Scanner dodaje prefiks "Auto_", więc musimy to uwzględnić, jeśli AI poda samą nazwę
+        GameObject featureObj = GameObject.Find(baseName);
+        if (featureObj == null) featureObj = GameObject.Find("Auto_" + baseName);
+
+        if (featureObj != null)
+        {
+            TerrainFeature feature = featureObj.GetComponent<TerrainFeature>();
+            if (feature != null)
+            {
+                // Pobieramy kierunek "szerokości" (linii) obiektu
+                Vector3 rightDir = feature.GetWorldDirection();
+                // Obliczamy wektor "do przodu" (prostopadły do linii)
+                Vector3 forwardDir = Vector3.Cross(Vector3.up, rightDir).normalized;
+
+                // Zabezpieczenie: Czasami Cross product wychodzi w stronę góry mapy lub dołu, 
+                // w zależności od tego jak ułożyła się linia. 
+                // Zakładamy, że "Front" to strona skierowana do środka mapy (dla wroga) lub w stronę gracza.
+                // Ale najprościej przyjąć offset z TerrainFeature:
+
+                float offsetDist = feature.widthOffset; // Używamy widthOffset z Twojego skryptu TerrainFeature
+
+                switch (suffix)
+                {
+                    case "Front":
+                        // Pozycja "przed" obiektem (zakładamy, że front to -forwardDir lub +forwardDir)
+                        // Tutaj prosty hack: Front to zawsze "bliżej środka mapy"
+                        return featureObj.transform.position - (forwardDir * offsetDist);
+
+                    case "Back":
+                        // Pozycja "za" obiektem (ukryta)
+                        return featureObj.transform.position + (forwardDir * offsetDist);
+
+                    case "Top":
+                    default:
+                        return featureObj.transform.position;
+                }
+            }
+            return featureObj.transform.position;
+        }
+
+        // 3. Fallbacki
         if (name == "Center") return new Vector3((armyManager.minX + armyManager.maxX) / 2, 0, (armyManager.minZ + armyManager.maxZ) / 2);
+        if (name == "Enemy_Army") return GetEnemyArmyCenter();
 
+        // Obsługa Flankowania (jeśli nie znaleziono obiektu, a nazwa to np. Flank_East)
+        if (name.Contains("Flank"))
+        {
+            Vector3 enemyC = GetEnemyArmyCenter();
+            if (name.Contains("West")) return enemyC + new Vector3(-100, 0, 0);
+            if (name.Contains("East")) return enemyC + new Vector3(100, 0, 0);
+            if (name.Contains("North")) return enemyC + new Vector3(0, 0, 100);
+            if (name.Contains("South")) return enemyC + new Vector3(0, 0, -100);
+        }
+
+        Debug.LogWarning($"[EnemyGeneral] Nie znaleziono celu: {name}. Kieruję na środek armii wroga.");
         return GetEnemyArmyCenter();
     }
 
@@ -239,7 +302,7 @@ public class EnemyGeneral : MonoBehaviour
         {
             if (e.groupName.ToLower().Contains(name.ToLower())) return e;
         }
-        return null; 
+        return null;
     }
 
     void RefreshUnitLists()

@@ -141,7 +141,7 @@ GameObject:
   - component: {fileID: 237593712}
   - component: {fileID: 237593711}
   m_Layer: 0
-  m_Name: Auto_Forest_South
+  m_Name: Forest_South
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -400,6 +400,7 @@ MonoBehaviour:
     m_Bits: 4294967295
   factionAGroups: []
   factionBGroups: []
+  groupsInitialized: 0
   selectedEnemyGroup:
     groupName: 
     customName: 
@@ -905,7 +906,7 @@ GameObject:
   - component: {fileID: 1132291367}
   - component: {fileID: 1132291366}
   m_Layer: 0
-  m_Name: Auto_Forest_North
+  m_Name: Forest_North
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

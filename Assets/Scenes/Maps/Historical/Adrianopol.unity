@@ -792,7 +792,7 @@ PrefabInstance:
     - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: profileForGoths
       value: 
-      objectReference: {fileID: 11400000, guid: 22ae98ed4e21cd2489115adfb07580b5, type: 2}
+      objectReference: {fileID: 11400000, guid: 6dc0b82df9d93b8488a3a2732688c7bd, type: 2}
     - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: decisionInterval
       value: 6
@@ -800,7 +800,7 @@ PrefabInstance:
     - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: profileForRomans
       value: 
-      objectReference: {fileID: 11400000, guid: 7e8987343c8943349bbf491441d2b83c, type: 2}
+      objectReference: {fileID: 11400000, guid: a01f1362cc40a624b80ba15601d3a146, type: 2}
     - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: currentPhaseIndex
       value: -1
@@ -1614,7 +1614,7 @@ GameObject:
   - component: {fileID: 2030846733}
   - component: {fileID: 2030846732}
   m_Layer: 0
-  m_Name: "P\xF3\u0142nocne wzg\xF3rze"
+  m_Name: "Wzg\xF3rze P\xF3\u0142noc"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1700,7 +1700,7 @@ GameObject:
   - component: {fileID: 2141529659}
   - component: {fileID: 2141529658}
   m_Layer: 0
-  m_Name: "Po\u0142udniowe wzg\xF3rze"
+  m_Name: "Wzg\xF3rze Po\u0142udnie"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -821,7 +821,7 @@ GameObject:
   - component: {fileID: 965748781}
   - component: {fileID: 965748780}
   m_Layer: 0
-  m_Name: "Auto_Wzg\xF3rze Zach\xF3d"
+  m_Name: "Wzg\xF3rze Zach\xF3d"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1108,6 +1108,7 @@ MonoBehaviour:
     m_Bits: 4294967295
   factionAGroups: []
   factionBGroups: []
+  groupsInitialized: 0
   selectedEnemyGroup:
     groupName: 
     customName: 

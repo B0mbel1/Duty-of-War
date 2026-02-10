@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54f14b7cad714f041b7b62e44372e868, type: 3}
+  m_Name: Strategia_Rzym_Adrianopol 1
+  m_EditorClassIdentifier: Assembly-CSharp::AIStrategyProfile
+  description: Bitwa pod Adrianopolem - Rzymianie. Nieskoordynowany atak kawalerii
+    i desperacki szturm piechoty.
+  battlePhases:
+  - phaseName: "Podej\u015Bcie pod wzg\xF3rze"
+    trigger: 0
+    triggerValue: 0
+    commands:
+    - note: Opis rozkazu
+      action: 0
+      unitTag: All
+      targetName: "Wzg\xF3rze P\xF3\u0142noc_Front"
+      formation: Double_Line
+  - phaseName: Nieskoordynowany Atak
+    trigger: 1
+    triggerValue: 30
+    commands:
+    - note: Opis rozkazu
+      action: 5
+      unitTag: Cavalry
+      targetName: Enemy_Army
+      formation: Line
+  - phaseName: Generalny Szturm
+    trigger: 3
+    triggerValue: 0.1
+    commands:
+    - note: Opis rozkazu
+      action: 1
+      unitTag: Infantry
+      targetName: "Wzg\xF3rze P\xF3\u0142noc"
+      formation: Line
+    - note: Opis rozkazu
+      action: 1
+      unitTag: Archer
+      targetName: "Wzg\xF3rze P\xF3\u0142noc"
+      formation: Line
