@@ -360,6 +360,7 @@ MonoBehaviour:
     m_Bits: 4294967295
   factionAGroups: []
   factionBGroups: []
+  groupsInitialized: 0
   selectedEnemyGroup:
     groupName: 
     customName: 

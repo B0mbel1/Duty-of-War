@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
+using System.Linq;
+
 
 public class ArmyHierarchyManager : MonoBehaviour
 {
@@ -401,7 +403,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
             if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
             if (Input.GetKeyDown(KeyCode.Space)) ToggleTacticalPause();
-            if (Input.GetKeyDown(KeyCode.LeftControl))
+            if (Input.GetKeyDown(KeyCode.LeftAlt))
             {
                 if (namingPanel != null && namingPanel.activeSelf) namingPanel.SetActive(false);
                 else if (selectedGroups.Count > 1) OpenNamingPanel();
@@ -982,122 +984,134 @@ public class ArmyHierarchyManager : MonoBehaviour
     // Znajdź tę funkcję i podmień jej zawartość (sekcję isHill)
     public void MoveGroupToLineFeature(TacticalGroup group, TerrainFeature feature, string mode = "Top")
     {
-        string pSide = PlayerPrefs.GetString("PlayerSide", "SideA");
-        bool isPlayerGroup = (pSide == "SideA" && factionAGroups.Contains(group)) ||
-                             (pSide == "SideB" && factionBGroups.Contains(group));
-        // if (isDeploymentPhase && !isPlayerGroup)
-        // {
-        //     group.pendingOrder = new PendingOrderData
-        //     {
-        //         type = PendingOrderType.FeatureMove,
-        //         feature = feature,
-        //         chaseTarget = null
-        //     };
-        //     group.isMoving = false;
-        //     return;
-        // }
-
         if (group.unitMatrices.Count == 0) return;
 
         group.assignedFeature = feature;
 
+        // 1. Ustalanie bazowej pozycji i rotacji terenu
         Vector3 center = feature.transform.position;
-        // Uwzględniamy rotację obiektu
         Vector3 lineDir = feature.transform.TransformDirection(feature.lineOrientation).normalized;
         Vector3 featureNormal = Vector3.Cross(Vector3.up, lineDir).normalized;
-
         Vector3 faceDir = featureNormal;
 
-        // --- ZMODYFIKOWANA LOGIKA RELATYWNA (PERSPEKTYWA GRACZA) ---
+        // --- Logika orientacji (Bez zmian) ---
         if (feature.isHill)
         {
-            // 1. Sprawdzamy, kim gra gracz (pobieramy to z ustawień zapisanych w LLMCommander/MainMenu)
             string playerSide = PlayerPrefs.GetString("PlayerSide", "SideA");
-            bool amIRomans = (playerSide == "SideA"); // Zakładamy: SideA (Rzym) startuje na dole (MinZ), SideB (Goci) na górze (MaxZ)
-
-            // 2. Definiujemy wektor "w stronę mojej bazy"
-            // Jeśli jestem Rzymianinem (dół mapy), moja baza jest w kierunku -Z (Back).
-            // Jeśli jestem Gotem (góra mapy), moja baza jest w kierunku +Z (Forward).
+            bool amIRomans = (playerSide == "SideA");
             Vector3 directionToMyBase = amIRomans ? Vector3.back : Vector3.forward;
-
-            // 3. Sprawdzamy, która strona wzgórza jest bliżej mojej bazy
-            // Iloczyn skalarny powie nam, czy featureNormal celuje w stronę bazy, czy przeciwną
             float dot = Vector3.Dot(directionToMyBase, featureNormal);
-
-            // 'frontNormal' to wektor prostopadły do wzgórza, celujący w stronę GRACZA (bezpieczną)
             Vector3 frontNormal = (dot > 0) ? featureNormal : -featureNormal;
-
-            // 'backNormal' to wektor celujący w stronę WROGA (za wzgórzem)
             Vector3 backNormal = -frontNormal;
 
             switch (mode)
             {
-                case "Front": // "Przed wzgórzem" (Moja strona)
-                    // Ustawiamy się po naszej stronie
-                    center += frontNormal * feature.widthOffset;
-
-                    // Patrzymy w stronę wzgórza/wroga (czyli w kierunku backNormal)
-                    faceDir = backNormal;
-                    break;
-
-                case "Back": // "Za wzgórzem" (Strona wroga)
-                    // Przechodzimy na drugą stronę
-                    center += backNormal * feature.widthOffset;
-
-                    // Patrzymy dalej w głąb terytorium wroga (lub asekurujemy tyły)
-                    faceDir = backNormal;
-                    break;
-
-                case "Top": // "Na szczycie"
-                default:
-                    // Stoimy na środku, ale patrzymy w stronę nadchodzącego wroga
-                    faceDir = frontNormal;
-                    break;
+                case "Front": center += frontNormal * (feature.widthOffset + 10f); faceDir = frontNormal; break;
+                case "Back": center += backNormal * (feature.widthOffset + 10f); faceDir = frontNormal; break;
+                case "Top": default: faceDir = frontNormal; break;
             }
         }
         else if (feature.isRiver)
         {
-            // Dla rzeki logika pozostaje bez zmian (brzeg bliższy jednostce)
             Vector3 toWater = (feature.transform.position - center).normalized;
             if (Vector3.Dot(toWater, featureNormal) > 0) faceDir = featureNormal;
             else faceDir = -featureNormal;
             center = feature.transform.position + (-faceDir * feature.widthOffset);
         }
 
-        // --- RESZTA FUNKCJI BEZ ZMIAN ---
-        // (Obliczanie szeregów, spacingu i pozycji jednostek)
+        // --- B. LOGIKA ROZSTAWIANIA (FIX NAKŁADANIA SIĘ) ---
 
-        int myRankIndex = 0;
         List<TacticalGroup> myFaction = (factionAGroups.Contains(group)) ? factionAGroups : factionBGroups;
-        foreach (var other in myFaction)
+        var allOnFeature = myFaction.Where(g => g.assignedFeature == feature).ToList();
+
+        // 1. Podział na WARSTWY (Głębokość)
+        int myLayerIndex = 0;
+        UnitType myType = group.archetypes[0].type;
+        if (myType == UnitType.Archer) myLayerIndex = 1;
+        else if (myType == UnitType.Cavalry) myLayerIndex = 2;
+
+        var groupsInMyLayer = allOnFeature.Where(g =>
         {
-            if (other == group) break;
-            if (other.assignedFeature == feature) myRankIndex++;
+            UnitType t = g.archetypes[0].type;
+            int layer = 0;
+            if (t == UnitType.Archer) layer = 1;
+            else if (t == UnitType.Cavalry) layer = 2;
+            return layer == myLayerIndex;
+        }).ToList();
+
+        // Sortowanie (żeby nie skakali przy dodawaniu nowych)
+        groupsInMyLayer.Sort((a, b) => a.groupName.CompareTo(b.groupName));
+
+        int countInMyLayer = groupsInMyLayer.Count;
+        int myIndexInLayer = groupsInMyLayer.IndexOf(group);
+
+        // --- TU JEST KLUCZOWA ZMIANA ---
+
+        // 2. Obliczamy FIZYCZNĄ szerokość pojedynczego oddziału
+        // Zakładamy, że na długiej linii oddział się spłaszcza do 2 rzędów (desiredRowsInsideGroup = 2)
+        int desiredRows = (feature.lineLength > 50f) ? 2 : 3;
+        float unitSpacing = 1.5f;
+        // Średnia liczba kolumn w oddziale = Liczba jednostek / rzędy
+        float avgUnitsPerGroup = 150f; // Zakładamy średnią wielkość, lub bierzemy z group.unitMatrices.Count
+        if (group.unitMatrices.Count > 0) avgUnitsPerGroup = group.unitMatrices.Count;
+
+        float singleGroupWidth = (avgUnitsPerGroup / desiredRows) * unitSpacing;
+
+        // 3. Obliczamy dostępny LUŹNY obszar (Gap)
+        float usableLineLength = feature.lineLength * 0.95f; // Margines bezpieczeństwa
+        float totalWidthOfUnits = countInMyLayer * singleGroupWidth; // Ile zajmują same ciała żołnierzy
+        float availableSpaceForGaps = usableLineLength - totalWidthOfUnits;
+
+        // 4. Obliczamy wielkość odstępu (Gap)
+        float gapSize = 10.0f; // Domyślny minimalny odstęp
+        if (countInMyLayer > 1)
+        {
+            gapSize = availableSpaceForGaps / (countInMyLayer - 1);
         }
 
-        // Cofamy kolejne oddziały, żeby nie właziły na siebie
-        center -= faceDir * (myRankIndex * 12.0f);
+        // Clampowanie odstępów (żeby nie wchodzili w siebie przy braku miejsca, ani nie stali za daleko)
+        gapSize = Mathf.Clamp(gapSize, 5.0f, 200.0f); // Min 5m odstępu, Max 200m
+
+        // 5. Obliczamy całkowitą szerokość formacji (Jednostki + Odstępy)
+        // Jeśli jest za ciasno (gap=5m), to formacja może być szersza niż linia rzeki (trudno, lepiej wystawać niż się przenikać)
+        float totalFormationWidth = totalWidthOfUnits + ((countInMyLayer - 1) * gapSize);
+
+        // 6. Pozycja startowa (Najbardziej na lewo)
+        // Zaczynamy od środka rzeki (center) i cofamy się o połowę całej formacji w lewo.
+        // Dodajemy połowę szerokości pierwszego oddziału, bo pivot oddziału jest w jego środku.
+        float startX = -(totalFormationWidth * 0.5f) + (singleGroupWidth * 0.5f);
+
+        // 7. Finalny Offset dla TEGO konkretnego oddziału
+        float xOffset = startX + (myIndexInLayer * (singleGroupWidth + gapSize));
+
+        // 8. Offset Głębokości (Warstwy)
+        float zOffset = myLayerIndex * 35.0f;
+
+        // Aplikacja pozycji
+        center += lineDir * xOffset;
+        center -= faceDir * zOffset;
+
+        // --- KONIEC POPRAWKI ---
 
         group.targetFacingDirection = faceDir;
 
+        // Ustawianie pojedynczych żołnierzy wewnątrz grupy
         int unitCount = group.unitMatrices.Count;
-        float spacing = 1.5f;
-        int maxUnitsPerRow = Mathf.FloorToInt(feature.lineLength / spacing);
-        if (maxUnitsPerRow < 1) maxUnitsPerRow = 1;
 
-        float currentLineWidth = Mathf.Min(unitCount, maxUnitsPerRow) * spacing;
+        int unitsPerGroupRow = Mathf.CeilToInt((float)unitCount / desiredRows);
+        float currentLineWidth = unitsPerGroupRow * unitSpacing;
         Vector3 lineStart = center - (lineDir * currentLineWidth * 0.5f);
 
         while (group.formationTargets.Count < unitCount) group.formationTargets.Add(Vector3.zero);
 
         for (int i = 0; i < unitCount; i++)
         {
-            int row = i / maxUnitsPerRow;
-            int col = i % maxUnitsPerRow;
+            int r = i / unitsPerGroupRow;
+            int c = i % unitsPerGroupRow;
 
             Vector3 pos = lineStart
-                        + (lineDir * col * spacing)
-                        - (faceDir * row * spacing);
+                        + (lineDir * c * unitSpacing)
+                        - (faceDir * r * unitSpacing);
 
             if (terrain != null)
                 pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
