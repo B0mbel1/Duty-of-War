@@ -1093,7 +1093,13 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         // --- KONIEC POPRAWKI ---
 
-        group.targetFacingDirection = faceDir;
+        Vector3 lookTarget = GetSmartLookTarget(group);
+        Vector3 directionToEnemy = (lookTarget - center).normalized;
+
+        // Zabezpieczenie: jeśli wektor jest zerowy, użyj faceDir
+        if (directionToEnemy == Vector3.zero) directionToEnemy = faceDir;
+
+        group.targetFacingDirection = directionToEnemy;
 
         // Ustawianie pojedynczych żołnierzy wewnątrz grupy
         int unitCount = group.unitMatrices.Count;

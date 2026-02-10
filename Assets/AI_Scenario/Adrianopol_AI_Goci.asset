@@ -40,7 +40,7 @@ MonoBehaviour:
       formation: Wedge
   - phaseName: "Ostrza\u0142 przeprawy"
     trigger: 1
-    triggerValue: 100
+    triggerValue: 200
     commands:
     - note: "Gdy Rzymianie wejd\u0105 do wody, Goci utrzymuj\u0105 pozycj\u0119,
         nie daj\u0105c si\u0119 wywabi\u0107"
