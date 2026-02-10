@@ -650,6 +650,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         bool isChasing = (group.chaseTarget != null && group.chaseTarget.unitMatrices.Count > 0);
         float distToTargetSq = Vector3.SqrMagnitude(flatTarget - flatCenter);
 
+        // Warunek zatrzymania: jeśli nie gonimy, nie formujemy się i jesteśmy u celu
         if (!isChasing && !group.isReforming && distToTargetSq < 0.5f)
         {
             group.isMoving = false;
@@ -661,7 +662,7 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (groupDirection == Vector3.zero) groupDirection = group.targetFacingDirection;
         if (groupDirection == Vector3.zero) groupDirection = Vector3.forward;
 
-        // Bazowa rotacja grupy
+        // Obliczanie rotacji dla całej grupy (bazowe)
         Quaternion targetRot = Quaternion.LookRotation(groupDirection);
         if (group.isReforming && group.unitMatrices.Count > 0)
             targetRot = group.unitMatrices[0].rotation;
@@ -672,15 +673,20 @@ public class ArmyHierarchyManager : MonoBehaviour
         float globalBaseSpeed = moveSpeed * Time.deltaTime;
         int unitsReachedTarget = 0;
 
-        // Cache terenu
+        // Cache danych terenu dla lasu
         int alphaWidth = 0, alphaHeight = 0;
-        if (terrainData != null) { alphaWidth = terrainData.alphamapWidth; alphaHeight = terrainData.alphamapHeight; }
+        if (terrainData != null)
+        {
+            alphaWidth = terrainData.alphamapWidth;
+            alphaHeight = terrainData.alphamapHeight;
+        }
 
-        // --- SEPARACJA (Zmniejszamy, gdy walczą, żeby mogli podejść) ---
+        // --- Parametry SEPARACJI ---
         float separationRadius = 1.1f;
-        float separationStrength = isChasing ? 1.5f : 2.5f; // Mniej odpychania w ataku
+        float separationStrength = isChasing ? 0.8f : 2.0f; // Słabsza separacja w ataku
         float maxSeparationForce = 0.5f;
 
+        // --- PĘTLA PO JEDNOSTKACH ---
         for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             Matrix4x4 mat = group.unitMatrices[i];
@@ -688,49 +694,101 @@ public class ArmyHierarchyManager : MonoBehaviour
             Vector3 scaleVec = mat.lossyScale;
             UnitArchetype arch = group.GetUnitArchetype(i);
 
-            // Zwiększamy promień separacji dla koni
+            // Promień kolizji (dla kawalerii większy)
             float myRadius = separationRadius;
             if (arch != null && arch.type == UnitType.Cavalry) myRadius *= 1.8f;
 
-            // --- 3. Logika Walki ---
-            // Sprawdzamy czy walczył w ostatnim ułamku sekundy
-            bool isFighting = (Time.time - group.lastCombatTimes[i] < 0.5f);
-
+            // Bazowa prędkość jednostki
             float currentMoveSpeed = globalBaseSpeed;
             if (arch != null) currentMoveSpeed *= arch.speedMultiplier;
 
-            if (isFighting && arch.type != UnitType.Cavalry)
-            {
-                currentMoveSpeed = 0f;
-            }
-
             Vector3 moveDirection = Vector3.zero;
 
-            // --- 4. Wyznaczanie wektora ruchu ---
-            if (group.isReforming)
+            // Zmienne dla systemu indywidualnej walki
+            Vector3 individualTargetPos = Vector3.zero;
+            bool hasIndividualTarget = false;
+            bool isInAttackRange = false; // Czy stoję i walczę?
+
+            // --- A. NOWA LOGIKA: MAGNETYZM WALKI (Melee Magnetism) ---
+            float engagementRange = 20.0f; // Zasięg "zrywania się" do wroga
+            float stopAtEnemyDist = (arch.type == UnitType.Archer) ? attackRangeArcher * 0.9f : attackRangeMelee * 0.85f;
+
+            if (isChasing && group.chaseTarget != null)
             {
-                if (i < group.formationTargets.Count)
+                float distToEnemyGroup = Vector3.Distance(currentPos, group.chaseTarget.groupCenter);
+
+                // Jeśli jesteśmy blisko wrogiej grupy, szukamy konkretnego celu
+                if (distToEnemyGroup < engagementRange + group.chaseTarget.groupRadius)
                 {
-                    Vector3 targetPos = group.formationTargets[i];
-                    Vector3 diff = targetPos - currentPos;
-                    Vector3 flatDiff = new Vector3(diff.x, 0, diff.z);
-                    if (flatDiff.magnitude < 0.2f) { moveDirection = Vector3.zero; unitsReachedTarget++; }
-                    else moveDirection = flatDiff.normalized;
+                    Vector3 closestEnemyPos = Vector3.zero;
+                    float closestDistSq = float.MaxValue;
+                    bool foundEnemy = false;
+
+                    // Szukanie najbliższego wroga
+                    foreach (var enemyMat in group.chaseTarget.unitMatrices)
+                    {
+                        Vector3 ePos = (Vector3)enemyMat.GetColumn(3);
+                        float dSq = (ePos - currentPos).sqrMagnitude;
+                        if (dSq < closestDistSq)
+                        {
+                            closestDistSq = dSq;
+                            closestEnemyPos = ePos;
+                            foundEnemy = true;
+                        }
+                    }
+
+                    if (foundEnemy)
+                    {
+                        hasIndividualTarget = true;
+                        individualTargetPos = closestEnemyPos;
+
+                        float distToEnemy = Mathf.Sqrt(closestDistSq);
+
+                        if (distToEnemy <= stopAtEnemyDist)
+                        {
+                            // JESTEM W ZASIĘGU ATAKU -> STOP
+                            isInAttackRange = true;
+                            moveDirection = Vector3.zero;
+                            currentMoveSpeed = 0f;
+                        }
+                        else
+                        {
+                            // POZA ZASIĘGIEM -> IDŹ DO KONKRETNEGO WROGA
+                            moveDirection = (closestEnemyPos - currentPos).normalized;
+                        }
+                    }
                 }
-                else unitsReachedTarget++;
-            }
-            else
-            {
-                moveDirection = groupDirection;
             }
 
-            // --- SEPARACJA ---
-            // Nie stosujemy separacji, jeśli jednostka walczy (żeby nie odsuwała się od wroga)
-            if (moveDirection != Vector3.zero && !group.isReforming && !isFighting)
+            // --- B. STARA LOGIKA: RUCH FORMACJI ---
+            // Wykonujemy tylko, jeśli NIE mamy indywidualnego celu
+            if (!hasIndividualTarget)
+            {
+                if (group.isReforming)
+                {
+                    if (i < group.formationTargets.Count)
+                    {
+                        Vector3 targetPos = group.formationTargets[i];
+                        Vector3 diff = targetPos - currentPos;
+                        Vector3 flatDiff = new Vector3(diff.x, 0, diff.z);
+                        if (flatDiff.magnitude < 0.2f) { moveDirection = Vector3.zero; unitsReachedTarget++; }
+                        else moveDirection = flatDiff.normalized;
+                    }
+                    else unitsReachedTarget++;
+                }
+                else
+                {
+                    moveDirection = groupDirection;
+                }
+            }
+
+            // --- C. SEPARACJA (Unikanie tłoku) ---
+            // Wyłączamy separację TYLKO gdy stoimy i walczymy (isInAttackRange), żeby nie drgać
+            if (!isInAttackRange && moveDirection != Vector3.zero)
             {
                 Vector3 separationForce = Vector3.zero;
                 int neighborsCount = 0;
-                int checkRange = 6;
+                int checkRange = 4;
                 int startCheck = Mathf.Max(0, i - checkRange);
                 int endCheck = Mathf.Min(group.unitMatrices.Count, i + checkRange + 1);
 
@@ -757,19 +815,25 @@ public class ArmyHierarchyManager : MonoBehaviour
                     separationForce /= neighborsCount;
                     separationForce *= separationStrength;
                     separationForce = Vector3.ClampMagnitude(separationForce, maxSeparationForce);
+
+                    // Jeśli atakujemy, separacja jest słabsza (pozwala na ścisk)
+                    if (hasIndividualTarget) separationForce *= 0.4f;
+
                     moveDirection += separationForce;
                     moveDirection.Normalize();
                 }
             }
 
-            // --- 5. Aplikowanie RUCHU ---
+            // --- D. APLIKOWANIE RUCHU Z FIZYKĄ TERENU I LASU ---
             Vector3 newPos = currentPos;
 
-            if (moveDirection != Vector3.zero && currentMoveSpeed > 0.001f)
+            // Ruszamy się tylko, jeśli nie walczymy w miejscu (isInAttackRange == false)
+            if (!isInAttackRange && moveDirection != Vector3.zero && currentMoveSpeed > 0.001f)
             {
-                // -- Fizyka Terenu --
+                // 1. Woda
                 float terrainY = currentPos.y;
                 if (terrain != null) terrainY = terrain.SampleHeight(currentPos) + terrain.transform.position.y;
+
                 bool inWater = false;
                 float waterHeight = -1000f;
                 RaycastHit hit;
@@ -778,72 +842,91 @@ public class ArmyHierarchyManager : MonoBehaviour
                     if (hit.point.y > terrainY - 0.1f) { inWater = true; waterHeight = hit.point.y; }
                 }
 
+                // 2. Nachylenie (Slope)
                 float slopeMod = 1.0f;
                 if (terrain != null && !inWater)
                 {
                     Vector3 probePos = currentPos + (moveDirection * slopeCheckDistance);
                     float nextY = terrain.SampleHeight(probePos) + terrain.transform.position.y;
                     float angle = Mathf.Atan2(nextY - terrainY, slopeCheckDistance) * Mathf.Rad2Deg;
+
                     if (angle > steepSlopeAngle) slopeMod = uphillSteepMult;
                     else if (angle > lightSlopeAngle) slopeMod = uphillLightMult;
                     else if (angle < -steepSlopeAngle) slopeMod = downhillSteepMult;
                     else if (angle < -lightSlopeAngle) slopeMod = downhillLightMult;
                 }
+
+                // 3. Las (Forest)
                 float forestMod = 1.0f;
                 if (forestLayerIndex != -1 && !inWater && terrainData != null)
                 {
                     int mapX = Mathf.RoundToInt(((currentPos.x - terrain.transform.position.x) / terrainData.size.x) * alphaWidth);
                     int mapZ = Mathf.RoundToInt(((currentPos.z - terrain.transform.position.z) / terrainData.size.z) * alphaHeight);
+
                     if (mapX >= 0 && mapX < alphaWidth && mapZ >= 0 && mapZ < alphaHeight)
                     {
+                        // Sprawdzamy, czy w tym punkcie jest tekstura lasu
                         if (terrainData.GetAlphamaps(mapX, mapZ, 1, 1)[0, 0, forestLayerIndex] > 0.5f)
                         {
-                            if (arch != null) forestMod = (arch.type == UnitType.Cavalry) ? forestCavalryPenalty : forestInfantryPenalty;
+                            if (arch != null)
+                                forestMod = (arch.type == UnitType.Cavalry) ? forestCavalryPenalty : forestInfantryPenalty;
                         }
                     }
                 }
 
+                // 4. Finalna prędkość
                 float finalMod = slopeMod * forestMod;
                 if (inWater) finalMod *= waterSpeedPenalty;
 
                 newPos = currentPos + (moveDirection * currentMoveSpeed * finalMod);
+
+                // Clamp mapy
                 newPos.x = Mathf.Clamp(newPos.x, minX, maxX);
                 newPos.z = Mathf.Clamp(newPos.z, minZ, maxZ);
 
+                // Ustalenie wysokości Y
                 if (inWater) newPos.y = waterHeight - swimmingDepth;
                 else if (terrain != null) newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y + 0.5f;
                 else newPos.y = terrainY;
             }
 
-            // --- 6. Aplikowanie ROTACJI (FIX DRŻENIA) ---
+            // --- E. ROTACJA (Najważniejsze dla anty-jitter) ---
             Quaternion targetUnitRot;
 
-            if (isFighting)
+            if (isInAttackRange)
             {
-                // ZMIANA KLUCZOWA:
-                // Jeśli walczysz, NIE OBRACAJ SIĘ w stronę grupy.
-                // Zachowaj obecną rotację (tę, przy której uderzyłeś wroga).
-                // To eliminuje konflikt: "Uderzam w lewo" vs "Grupa idzie w prawo".
-                targetUnitRot = mat.rotation;
+                // Jeśli walczę, patrzę SZTYWNO na wroga
+                Vector3 dirToTarget = (individualTargetPos - currentPos).normalized;
+                if (dirToTarget != Vector3.zero)
+                    targetUnitRot = Quaternion.LookRotation(dirToTarget);
+                else
+                    targetUnitRot = mat.rotation;
             }
-            else if (isChasing)
+            else if (hasIndividualTarget)
             {
-                targetUnitRot = Quaternion.LookRotation(groupDirection);
+                // Jeśli biegnę na wroga, patrzę w kierunku biegu
+                targetUnitRot = Quaternion.LookRotation(moveDirection);
             }
             else if (group.isReforming && moveDirection.sqrMagnitude > 0.1f)
             {
+                // Jeśli formuję szyk
                 targetUnitRot = Quaternion.LookRotation(moveDirection);
             }
             else
             {
+                // Zwykły marsz / stanie
                 targetUnitRot = nextRot;
             }
 
-            Quaternion finalRot = Quaternion.Slerp(mat.rotation, targetUnitRot, 10f * Time.deltaTime);
+            // Jeśli walczymy (isInAttackRange), obrót jest szybszy (20f), żeby nie było opóźnienia
+            float rotSpeed = isInAttackRange ? 20f : 10f;
+            Quaternion finalRot = Quaternion.Slerp(mat.rotation, targetUnitRot, rotSpeed * Time.deltaTime);
 
+            // Zapis macierzy
             group.unitMatrices[i] = Matrix4x4.TRS(newPos, finalRot, scaleVec);
         }
 
+        // --- F. FINALIZACJA ---
         if (group.isReforming && unitsReachedTarget >= group.unitMatrices.Count)
         {
             group.isReforming = false;
