@@ -1,10 +1,10 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
 
 public class BackToMenu : MonoBehaviour
 {
-    [Header("Przypisz tutaj ca�y obiekt panelu Menu (to co ma znikn��)")]
+    [Header("Przypisz tutaj cały obiekt panelu Menu (to co ma zniknąć)")]
     public GameObject menuPanel;
 
     public void LoadScene(string sceneName)
@@ -22,7 +22,7 @@ public class BackToMenu : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("BackToMenu: Nie przypisano 'menuPanel', pr�buj� wy��czy� ten obiekt.");
+            Debug.LogWarning("BackToMenu: Nie przypisano 'menuPanel', próbuję wyłączyć ten obiekt.");
             gameObject.SetActive(false);
         }
     }

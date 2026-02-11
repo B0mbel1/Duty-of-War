@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class PauseMenuController : MonoBehaviour
@@ -16,7 +16,7 @@ public class PauseMenuController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("Prefab Pause Menu nie zosta� przypisany!");
+            Debug.LogError("Prefab Pause Menu nie został przypisany!");
         }
     }
 
