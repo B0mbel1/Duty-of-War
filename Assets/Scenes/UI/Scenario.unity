@@ -257,8 +257,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Adrianopol
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -393,8 +393,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -529,8 +529,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -665,8 +665,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Hastings
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1144,8 +1144,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Graj
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1356,8 +1356,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Lechowe Pole
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1923,8 +1923,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Las Teutoborski
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2445,8 +2445,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Wr\xF3\u0107"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3642,8 +3642,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Ajn D\u017Calat"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -4595,8 +4595,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Grunwald
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -5039,8 +5039,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Jarmuk
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

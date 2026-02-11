@@ -413,6 +413,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e01d258ac35abc04cb0a8689b506428c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TerrainScanner
+  edgeInset: 0.15
   terrain: {fileID: 0}
   markerPrefab: {fileID: 0}
   heightThreshold: 10
@@ -421,6 +422,8 @@ MonoBehaviour:
   forestDensityThreshold: 0.5
   scanResolutionDivisor: 4
   minForestSize: 50
+  waterLayerName: Water
+  riverWidthMultiplier: 0.4
 --- !u!1 &935478258473247211
 GameObject:
   m_ObjectHideFlags: 0
@@ -768,8 +771,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -904,8 +907,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Zatwierd\u017A"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1155,8 +1158,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Oddzia\u0142y:"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1528,7 +1531,7 @@ MonoBehaviour:
   m_CaretWidth: 1
   m_ReadOnly: 0
   m_RichText: 1
-  m_GlobalFontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_GlobalFontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_OnFocusSelectAll: 1
   m_ResetOnDeActivation: 1
   m_KeepTextSelectionVisible: 0
@@ -1605,8 +1608,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Wprowad\u017A nazw\u0119 dla jednostki...\u200B"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1898,8 +1901,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Rozpocznij bitw\u0119"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2189,8 +2192,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Enter text...
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2345,8 +2348,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Wprowad\u017A rozkazy:"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
+  m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

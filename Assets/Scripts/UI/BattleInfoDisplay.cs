@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -189,50 +189,50 @@ public class BattleInfoDisplay : MonoBehaviour
 
     public void Battle_Grunwald(Button btn)
     {
-        string opis = "Bitwa pod Grunwaldem (1410 r.)\n\nWojska polsko-litewskie pod wodz� W�adys�awa Jagie��y rozgromi�y Zakon Krzy�acki. Jedno z najwi�kszych star� �redniowiecza, kt�re z�ama�o pot�g� Krzy�ak�w.";
+        string opis = "Bitwa pod Grunwaldem (1410 r.)\n\nWojska polsko-litewskie pod wodzą Władysława Jagiełły rozgromiły Zakon Krzyżacki. Jedno z największych starć średniowiecza, które złamało potęgę Krzyżaków.";
         string opisterenu = "<color=#663300>Wzniesienia terenu</color>";
-        ShowBattleInfo("Korona Kr�lestwa Polskiego", "Zakon Krzy�acki", btn, rzeczpol, teutonic, opis, Grunwald, opisterenu);
+        ShowBattleInfo("Korona Królestwa Polskiego", "Zakon Krzyżacki", btn, rzeczpol, teutonic, opis, Grunwald, opisterenu);
     }
 
     public void Battle_Hastings(Button btn)
     {
-        string opis = "Bitwa pod Hastings (1066 r.)\n\nNormanowie Wilhelma Zdobywcy pokonali anglosask� armi� kr�la Harolda II. Bitwa zapocz�tkowa�a norma�skie panowanie w Anglii.";
+        string opis = "Bitwa pod Hastings (1066 r.)\n\nNormanowie Wilhelma Zdobywcy pokonali anglosaską armię króla Harolda II. Bitwa zapoczątkowała normańskie panowanie w Anglii.";
         string opisterenu = "<color=#009933>Teren zalesiony</color>";
-        ShowBattleInfo("Ksi�stwo Normandii", "Anglosasi", btn, normandia, anglosas, opis, Hastings, opisterenu);
+        ShowBattleInfo("Księstwo Normandii", "Anglosasi", btn, normandia, anglosas, opis, Hastings, opisterenu);
     }
 
     public void Battle_Jarmuk(Button btn)
     {
-        string opis = "Bitwa pod Jarmukiem (636 r.)\n\nDecyduj�ce zwyci�stwo Arab�w nad Bizancjum. Armia kalifatu Raszidun rozgromi�a wojska cesarza Herakliusza, otwieraj�c drog� do podboju Syrii i Lewantu.";
-        string opisterenu = "<color=#6d6d6d>Teren g�rzysty</color> | <color=#3399ff>Przeprawa przez wod�</color>";
+        string opis = "Bitwa pod Jarmukiem (636 r.)\n\nDecydujące zwycięstwo Arabów nad Bizancjum. Armia kalifatu Raszidun rozgromiła wojska cesarza Herakliusza, otwierając drogę do podboju Syrii i Lewantu.";
+        string opisterenu = "<color=#6d6d6d>Teren górzysty</color> | <color=#3399ff>Przeprawa przez wodę</color>";
         ShowBattleInfo("Bizancjum", "Arabowie", btn, bizantium, arabs, opis, Jarmuk, opisterenu);
     }
 
     public void Battle_AjnDzalat(Button btn)
     {
-        string opis = "Bitwa pod Ajn D�alat (1260 r.)\n\nMamelucy pod dow�dztwem Kutuzza i Bajbarsa pokonali armi� mongolsk�. By�o to pierwsze zdecydowane zwyci�stwo nad Mongo�ami, kt�re zatrzyma�o ich ekspansj� na Bliski Wsch�d.";
+        string opis = "Bitwa pod Ajn Dżalat (1260 r.)\n\nMamelucy pod dowództwem Kutuzza i Bajbarsa pokonali armię mongolską. Było to pierwsze zdecydowane zwycięstwo nad Mongołami, które zatrzymało ich ekspansję na Bliski Wschód.";
         string opisterenu = "<color=#663300>Wzniesienia terenu</color>";
         ShowBattleInfo("Mamelucy", "Imperium Mongolskie", btn, mamelucy, mongol, opis, AjnDzalut, opisterenu);
     }
 
     public void Battle_TeutoburgForest(Button btn)
     {
-        string opis = "Bitwa w Lesie Teutoburskim (9 r. n.e.)\n\nZasadzka germa�skich plemion dowodzonych przez Arminiusza na trzy rzymskie legiony Warusa. Rzymianie ponie�li druzgoc�c� kl�sk�, trac�c kontrol� nad Germani�.";
+        string opis = "Bitwa w Lesie Teutoburskim (9 r. n.e.)\n\nZasadzka germańskich plemion dowodzonych przez Arminiusza na trzy rzymskie legiony Warusa. Rzymianie ponieśli druzgocącą klęskę, tracąc kontrolę nad Germanią.";
         string opisterenu = "<color=#009933>Teren zalesiony</color>";
         ShowBattleInfo("Cesarstwo Rzymskie","Germanie", btn, roma, germania, opis, LasTeutoburski, opisterenu);
     }
 
     public void Battle_LechowePole(Button btn)
     {
-        string opis = "Bitwa na Lechowym Polu (955 r.)\n\nKr�lestwo Frank�w pod wodz� Ottona I pokona�o najazd W�gr�w. Zwyci�stwo zako�czy�o w�gierskie najazdy na Europ� Zachodni� i wzmocni�o w�adz� cesarsk�.";
-        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wod�</color>";
+        string opis = "Bitwa na Lechowym Polu (955 r.)\n\nKrólestwo Franków pod wodzą Ottona I pokonało najazd Węgrów. Zwycięstwo zakończyło węgierskie najazdy na Europę Zachodnią i wzmocniło władzę cesarską.";
+        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodę</color>";
         ShowBattleInfo("Pa�stwo wschodniofrankijskie", "W�gry", btn, frankowie, wegry, opis, LechowePole, opisterenu);
     }
 
     public void Battle_Adrianopol(Button btn)
     {
-        string opis = "Bitwa pod Adrianopolem (378 r.)\n\nStarcie Cesarstwa Rzymskiego z Gotami. Rzym poni�s� wielk� pora�k�, zgin�� cesarz Walens, a bitwa zapocz�tkowa�a upadek zachodniego cesarstwa.";
-        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wod�</color>";
+        string opis = "Bitwa pod Adrianopolem (378 r.)\n\nStarcie Cesarstwa Rzymskiego z Gotami. Rzym poniósł wielką porażkę, zginął cesarz Walens, a bitwa zapoczątkowała upadek zachodniego cesarstwa.";
+        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodę</color>";
         ShowBattleInfo("Cesarstwo Rzymskie", "Goci", btn, roma, goci, opis, Adrianopol, opisterenu);
     }
 }
