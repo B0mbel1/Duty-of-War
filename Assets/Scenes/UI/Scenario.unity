@@ -3640,7 +3640,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Ajn D\u017Calat"
+  m_text: Ajn Dzalut
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
