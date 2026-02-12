@@ -399,18 +399,21 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             bool isAnyoneMoving = CheckIfAnyGroupIsMoving();
 
-            // Pobieramy komponent Button (upewnij się, że StartBattleButton ma komponent Button)
             UnityEngine.UI.Button btn = startBattleButton.GetComponent<UnityEngine.UI.Button>();
             if (btn != null)
             {
-                // Przycisk aktywny tylko gdy nikt się nie rusza
-                btn.interactable = !isAnyoneMoving;
+                // ZMIANA: Przycisk jest teraz ZAWSZE aktywny, nawet jeśli AI się jeszcze ustawia.
+                // Pozwala to "odciąć" fazę przygotowań w dowolnym momencie.
+                btn.interactable = true;
 
-                // Opcjonalnie: zmiana koloru lub tekstu, żeby gracz wiedział dlaczego nie może klikać
+                // Opcjonalnie zmieniamy tekst, żebyś wiedział, co się dzieje
                 var btnText = startBattleButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (btnText != null)
                 {
-                    btnText.text = isAnyoneMoving ? "Czekanie na rozkazy..." : "ROZPOCZNIJ BITWĘ";
+                    if (isAnyoneMoving)
+                        btnText.text = "WYMUŚ START (Jednostki w ruchu)";
+                    else
+                        btnText.text = "ROZPOCZNIJ BITWĘ";
                 }
             }
         }
@@ -973,7 +976,7 @@ public class ArmyHierarchyManager : MonoBehaviour
             string n = g.groupName.ToLower() + " " + g.customName.ToLower();
 
             // Sprawdzamy nazwę
-            if (n.Contains("Cavalry")||n.Contains("Cav") || n.Contains("jazda") || n.Contains("konne") || n.Contains("horse")) return UnitType.Cavalry;
+            if (n.Contains("Cavalry") || n.Contains("Cav") || n.Contains("jazda") || n.Contains("konne") || n.Contains("horse")) return UnitType.Cavalry;
             if (n.Contains("arch") || n.Contains("ucznik") || n.Contains("strzel")) return UnitType.Archer;
 
             // Sprawdzamy ustawienia w Archetypie (Inspector)
@@ -1620,16 +1623,24 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     public void StartBattle()
     {
-        isDeploymentPhase = false;
-        Time.timeScale = 1.0f;
-        Debug.Log("Bitwa rozpoczęta! Czas przywrócony do x1.");
-        if (startBattleButton != null) startBattleButton.SetActive(false);
-        Debug.Log("Faza rozstawiania zakończona. Wykonywanie zaplanowanych rozkazów...");
+        if (!isDeploymentPhase) return;
 
+        Debug.Log("Generale! Bitwa rozpoczęta.");
+
+        // To jest "spust", na który czeka EnemyGeneral w nowym kodzie Update
+        isDeploymentPhase = false;
+
+        Time.timeScale = 1.0f;
+
+        // Ukrycie przycisku
+        if (startBattleButton != null) startBattleButton.SetActive(false);
+
+        // Wykonanie ewentualnych rozkazów zakolejkowanych przez gracza
         ExecutePendingOrdersForFaction(factionAGroups);
+
+        // (Opcjonalnie) AI też może wykonać swoje, ale EnemyGeneral zaraz przejmie kontrolę
         ExecutePendingOrdersForFaction(factionBGroups);
     }
-
     void ToggleTacticalPause()
     {
         if (isDeploymentPhase || isBattleOver) return;

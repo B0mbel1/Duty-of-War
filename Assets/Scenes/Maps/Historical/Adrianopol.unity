@@ -1640,7 +1640,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TerrainFeature
   featureName: "Wzg\xF3rze P\xF3\u0142noc"
   description: "Wzg\xF3rze"
-  lineLength: 1000
+  lineLength: 900
   lineOrientation: {x: 0, y: 0, z: 1}
   isHill: 1
   widthOffset: 60
@@ -1726,7 +1726,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TerrainFeature
   featureName: "Wzg\xF3rze Po\u0142udnie"
   description: "Wzg\xF3rze"
-  lineLength: 1000
+  lineLength: 900
   lineOrientation: {x: 1, y: 0, z: 0}
   isHill: 1
   widthOffset: 50

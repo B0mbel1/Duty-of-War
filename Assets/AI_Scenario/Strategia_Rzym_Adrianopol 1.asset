@@ -17,7 +17,7 @@ MonoBehaviour:
   battlePhases:
   - phaseName: "Podej\u015Bcie pod wzg\xF3rze"
     trigger: 0
-    triggerValue: 0
+    triggerValue: 30
     commands:
     - note: Opis rozkazu
       action: 0
@@ -40,10 +40,10 @@ MonoBehaviour:
     - note: Opis rozkazu
       action: 1
       unitTag: Infantry
-      targetName: "Wzg\xF3rze P\xF3\u0142noc"
-      formation: Line
+      targetName: Enemy_Army
+      formation: 
     - note: Opis rozkazu
       action: 1
       unitTag: Archer
-      targetName: "Wzg\xF3rze P\xF3\u0142noc"
-      formation: Line
+      targetName: Enemy_Army
+      formation: 

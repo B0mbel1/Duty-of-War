@@ -12,43 +12,57 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54f14b7cad714f041b7b62e44372e868, type: 3}
   m_Name: Strategia_Goci_Adrianopol
   m_EditorClassIdentifier: Assembly-CSharp::AIStrategyProfile
-  description: "Bitwa pod Adrianopolem - Goci. Obrona na wzg\xF3rzu i uderzenie kawalerii
-    z flanki."
+  description: "Goci: Obrona wzg\xF3rza do momentu podej\u015Bcia wroga, chwila napi\u0119cia
+    i generalny szturm."
   battlePhases:
-  - phaseName: Obrona Taboru
-    trigger: 0
-    triggerValue: 0
+  - phaseName: Obrona Pozycji
+    trigger: 1
+    triggerValue: 30
     commands:
-    - note: Opis rozkazu
+    - note: "Piechota broni wzg\xF3rza"
       action: 2
       unitTag: Infantry
       targetName: "Wzg\xF3rze P\xF3\u0142noc"
       formation: Line
-    - note: Opis rozkazu
+    - note: Lucznicy na szczyt
       action: 2
       unitTag: Archer
       targetName: "Wzg\xF3rze P\xF3\u0142noc"
       formation: Line
-    - note: Opis rozkazu
+    - note: Jazda czeka przed wzgorzem
       action: 0
       unitTag: Cavalry
       targetName: "Wzg\xF3rze P\xF3\u0142noc_Front"
       formation: Double_Line
-  - phaseName: "Powr\xF3t Alatheusa i Saphraxa"
-    trigger: 2
-    triggerValue: 50
+  - phaseName: "Ma\u0142y atak"
+    trigger: 3
+    triggerValue: 0
     commands:
-    - note: Opis rozkazu
-      action: 3
+    - note: 
+      action: 1
+      unitTag: Infantry
+      targetName: Enemy_Army
+      formation: 
+    - note: 
+      action: 1
+      unitTag: Archer
+      targetName: Enemy_Army
+      formation: 
+  - phaseName: Generalny Szturm
+    trigger: 3
+    triggerValue: 0
+    commands:
+    - note: Szarza Kawalerii
+      action: 5
       unitTag: Cavalry
-      targetName: Flank_East
-      formation: Wedge
-    - note: Opis rozkazu
+      targetName: Enemy_Army
+      formation: Line
+    - note: Atak Piechoty
       action: 1
       unitTag: Infantry
       targetName: Enemy_Army
       formation: Line
-    - note: Opis rozkazu
+    - note: Atak Lucznikow
       action: 1
       unitTag: Archer
       targetName: Enemy_Army

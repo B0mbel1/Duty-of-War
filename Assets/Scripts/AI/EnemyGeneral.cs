@@ -22,6 +22,7 @@ public class EnemyGeneral : MonoBehaviour
     private float battleStartTime;
     private float phaseStartTime;
     private bool battleStarted = false;
+    private bool initialDeploymentDone = false; // Nowa flaga: czy wydano rozkazy startowe?
     private List<TacticalGroup> myGroups = new List<TacticalGroup>();
     private List<TacticalGroup> enemyGroups = new List<TacticalGroup>();
 
@@ -49,22 +50,113 @@ public class EnemyGeneral : MonoBehaviour
     void Update()
     {
         if (armyManager == null || !armyManager.groupsInitialized) return;
+
+        // KROK 1: Wykonaj rozkazy Fazy 0 (np. "Zajmij Wzgórze") natychmiast po starcie sceny.
+        // Dzięki temu AI rusza się, gdy gracz jeszcze planuje.
+        if (!initialDeploymentDone)
+        {
+            RefreshUnitLists();
+            startingUnitCount = CountMyUnits();
+
+            // Uruchamiamy komendy Fazy 0, ale NIE włączamy jeszcze zegara tej fazy
+            if (strategyProfile != null && strategyProfile.battlePhases.Count > 0)
+            {
+                currentPhaseIndex = 0; // Ustawiamy indeks na 0
+                var phase0 = strategyProfile.battlePhases[0];
+                currentPhaseName = phase0.phaseName;
+                ExecuteCommands(phase0.commands); // AI rusza na pozycje
+                Debug.Log($"<color=orange>[AI PRE-BATTLE]</color> Wykonuję manewry wstępne: {currentPhaseName}");
+            }
+
+            initialDeploymentDone = true;
+        }
+
+        // KROK 2: Jeśli trwa faza rozstawiania (gracz NIE kliknął START),
+        // przerywamy Update. AI stoi na pozycjach z Fazy 0 i nie sprawdza triggerów.
+        if (armyManager.isDeploymentPhase)
+        {
+            return;
+        }
+
+        // KROK 3: Moment kliknięcia przycisku "Start Bitwy"
+        // Wykonuje się tylko RAZ, w pierwszej klatce po kliknięciu przycisku.
         if (!battleStarted)
         {
             battleStarted = true;
             battleStartTime = Time.time;
 
-            RefreshUnitLists();
-            startingUnitCount = CountMyUnits();
-            AdvancePhase();
+            // RESETUJEMY LICZNIK CZASU DLA FAZY 0
+            // Dzięki temu te 60 sekund z Inspektora zacznie lecieć dopiero TERAZ.
+            phaseStartTime = Time.time;
+
+            Debug.Log($"Bitwa rozpoczęta! AI będzie bronić pozycji przez czas określony w Trigger Value.");
+            return;
         }
 
-        if (armyManager.isDeploymentPhase) return;
+        // KROK 4: Normalna logika bitewna (sprawdzanie czy przejść do Fazy 1)
         if (strategyProfile == null || currentPhaseIndex >= strategyProfile.battlePhases.Count) return;
 
         CheckPhaseTriggers();
     }
+    public void OrderAttackOnPlayer(string attackerTag, string targetName = "Nearest")
+    {
+        // 1. Pobierz jednostki AI, które mają wykonać atak
+        List<TacticalGroup> attackers = FilterUnits(attackerTag);
 
+        if (attackers.Count == 0)
+        {
+            Debug.LogWarning($"[EnemyGeneral] Nie znaleziono jednostek AI o tagu: {attackerTag}");
+            return;
+        }
+
+        foreach (var attackerGroup in attackers)
+        {
+            TacticalGroup finalTarget = null;
+
+            // 2. Znajdź cel
+            if (string.IsNullOrEmpty(targetName) || targetName.ToLower() == "nearest")
+            {
+                // Znajdź najbliższego wroga z listy enemyGroups (zdefiniowanej w EnemyGeneral)
+                finalTarget = armyManager.FindClosestEnemy(attackerGroup.groupCenter, enemyGroups);
+            }
+            else
+            {
+                // Próba znalezienia konkretnego oddziału gracza
+                finalTarget = FindEnemyByNameOrTag(targetName);
+
+                // Fallback: jeśli nie znaleziono konkretnego, atakuj najbliższego
+                if (finalTarget == null)
+                {
+                    finalTarget = armyManager.FindClosestEnemy(attackerGroup.groupCenter, enemyGroups);
+                }
+            }
+
+            // 3. Wykonanie ataku
+            if (finalTarget != null && finalTarget.unitMatrices.Count > 0)
+            {
+                // Ważne: Ustawiamy chaseTarget, aby ArmyManager wiedział, że to pościg/walka
+                attackerGroup.chaseTarget = finalTarget;
+
+                // Resetujemy przypisanie do terenu (żeby nie broniły rzeki/wzgórza podczas ataku)
+                attackerGroup.assignedFeature = null;
+
+                // Obliczamy kierunek ataku
+                Vector3 directionToEnemy = (finalTarget.groupCenter - attackerGroup.groupCenter).normalized;
+
+                // Wywołujemy formację "Line" (najskuteczniejsza do ataku) w miejscu wroga
+                // ArmyHierarchyManager zajmie się ruchem i logiką walki (ResolveCombatRoundRobin)
+                armyManager.ApplyFormation(attackerGroup, "Line", finalTarget.groupCenter, directionToEnemy);
+
+                Debug.Log($"<color=red>[GENERAL AI]</color> {attackerGroup.groupName} otrzymał rozkaz ataku na: {finalTarget.groupName}");
+            }
+            else
+            {
+                // Jeśli nie ma wrogów, idź na środek mapy lub pozycję domyślną wroga
+                Vector3 fallbackPos = GetEnemyArmyCenter();
+                armyManager.ApplyFormation(attackerGroup, "Line", fallbackPos, (fallbackPos - attackerGroup.groupCenter).normalized);
+            }
+        }
+    }
     void CheckPhaseTriggers()
     {
         if (currentPhaseIndex < 0) return;
@@ -124,59 +216,76 @@ public class EnemyGeneral : MonoBehaviour
 
         foreach (var cmd in commands)
         {
+            // =================================================================================
+            // 1. NOWA LOGIKA: PRZECHWYCENIE ROZKAZU ATAKU
+            // =================================================================================
+            // Jeśli w Inspectorze wybrano "ChargeTarget", używamy nowej metody OrderAttackOnPlayer.
+            // Pozwala to na inteligentne szukanie wrogów zamiast sztywnego ustawiania się w linii.
+
+            if (cmd.action == AIActionType.ChargeTarget)
+            {
+                // Jeśli cel nie jest podany lub nazywa się ogólnie "Enemy_Army", uznajemy, że cel to "Najbliższy"
+                string smartTargetName = (string.IsNullOrEmpty(cmd.targetName) || cmd.targetName == "Enemy_Army")
+                                         ? "Nearest"
+                                         : cmd.targetName;
+
+                // Wywołujemy metodę, którą dodałeś wcześniej
+                OrderAttackOnPlayer(cmd.unitTag, smartTargetName);
+
+                // Przechodzimy do następnego rozkazu, pomijając starą logikę pozycjonowania dla tego ataku
+                continue;
+            }
+            // =================================================================================
+
+
+            // =================================================================================
+            // 2. STARA LOGIKA: RUCH, OBRONA TERENU, FLANKI
+            // =================================================================================
+
             List<TacticalGroup> selectedUnits = FilterUnits(cmd.unitTag);
             if (selectedUnits.Count == 0) continue;
 
-            // 1. Sortowanie (ważne dla spójności linii)
+            // Sortowanie dla zachowania spójności (żeby oddziały nie zamieniały się miejscami losowo)
             selectedUnits.Sort((a, b) => a.groupName.CompareTo(b.groupName));
 
             Vector3 enemyCenter = GetEnemyArmyCenter();
             Vector3 myArmyCenter = GetArmyCenter(selectedUnits);
 
-            // Zmienne do ustalenia orientacji linii
-            Vector3 rightDir = Vector3.zero; // W którą stronę rozstawiać kolejne jednostki
-            Vector3 mainLookDir = Vector3.zero; // Gdzie mają patrzeć
-
-            // 2. SPRAWDZAMY CZY CEL TO TEREN (WZGÓRZE/RZEKA)
-            // Musimy oczyścić nazwę z sufiksów (_Front, _Top) żeby znaleźć obiekt
+            // A. Czyścimy nazwę celu (usuwamy sufiksy _Front, _Top itp., żeby znaleźć obiekt na scenie)
             string cleanName = cmd.targetName.Replace("_Front", "").Replace("_Back", "").Replace("_Top", "");
 
-            // Szukamy obiektu (bez Auto_ i z Auto_)
+            // B. Szukamy obiektu terenu (Wzgórze, Las, Rzeka)
             TerrainFeature feature = FindFeature(cleanName);
             if (feature == null) feature = FindFeature("Auto_" + cleanName);
 
+            // C. Sprawdzamy, czy mamy ustawić się wzdłuż terenu (Obrona/Ruch)
             bool alignToFeature = (feature != null && (cmd.action == AIActionType.DefendFeature || cmd.action == AIActionType.MoveTo));
+
+            Vector3 rightDir = Vector3.zero; // W którą stronę rozstawiać kolejne jednostki (w prawo)
+            Vector3 mainLookDir = Vector3.zero; // Gdzie mają patrzeć (przód)
 
             if (alignToFeature)
             {
                 // === LOGIKA USTAWIANIA WZDŁUŻ TERENU ===
-
-                // Pobieramy kierunek linii terenu (np. wzdłuż grzbietu wzgórza)
                 Vector3 featureDir = feature.GetWorldDirection();
-
-                // Ustawiamy rozstawianie wzdłuż tej linii
                 rightDir = featureDir;
 
-                // Obliczamy wektor prostopadły (gdzie mają patrzeć - "przód")
+                // Wektor prostopadły (przód)
                 Vector3 perpDir = Vector3.Cross(Vector3.up, rightDir).normalized;
 
-                // Sprawdzamy, po której stronie jest wróg, żeby nie stały tyłem do niego
-                // Jeśli iloczyn skalarny jest ujemny, znaczy że perpDir celuje "od wroga", więc odwracamy
+                // Sprawdzamy, po której stronie jest wróg. Nie chcemy stać tyłem do wroga.
                 Vector3 toEnemy = (enemyCenter - feature.transform.position).normalized;
                 if (Vector3.Dot(perpDir, toEnemy) < 0)
                 {
                     perpDir = -perpDir;
-                    // Opcjonalnie: odwracamy też rightDir, żeby 'pierwszy' oddział był z lewej, a nie prawej
-                    rightDir = -rightDir;
+                    rightDir = -rightDir; // Odwracamy też linię rozstawienia
                 }
 
                 mainLookDir = perpDir;
             }
             else
             {
-                // === LOGIKA STANDARDOWA (DO WROGA) ===
-                // Używana w szczerym polu lub przy ataku
-
+                // === LOGIKA STANDARDOWA (SZCZERE POLE) ===
                 mainLookDir = (enemyCenter - myArmyCenter).normalized;
                 if (mainLookDir == Vector3.zero) mainLookDir = Vector3.forward;
 
@@ -184,8 +293,8 @@ public class EnemyGeneral : MonoBehaviour
                 rightDir = Vector3.Cross(Vector3.up, mainLookDir).normalized;
             }
 
-            // 3. Rozstawianie w linii
-            // spacing = szerokość grupy (zależy od skali, tutaj przyjąłem 55.0f jako bezpieczny standard dla kompanii)
+            // D. Obliczanie pozycji dla każdego oddziału w linii
+            // Spacing zależy od tego, jak szeroko mają stać (np. 65 jednostek)
             float spacing = 65.0f;
 
             for (int i = 0; i < selectedUnits.Count; i++)
@@ -193,10 +302,10 @@ public class EnemyGeneral : MonoBehaviour
                 // Matematyka środkowania linii: (i - środek) * odstęp
                 float offset = (i - (selectedUnits.Count - 1) / 2.0f) * spacing;
 
-                // Przesuwamy wzdłuż wyznaczonego rightDir (czy to terenu, czy wroga)
+                // Przesunięcie względem punktu docelowego (w lewo/prawo)
                 Vector3 positionOffset = rightDir * offset;
 
-                // Wykonujemy rozkaz z uwzględnieniem offsetu i wspólnego kierunku patrzenia
+                // Wykonanie pojedynczego rozkazu ruchu
                 ProcessSingleCommand(selectedUnits[i], cmd, positionOffset, mainLookDir);
             }
         }
@@ -390,14 +499,35 @@ public class EnemyGeneral : MonoBehaviour
 
     float GetDistanceToNearestEnemy()
     {
-        Vector3 myCenter = GetArmyCenter(myGroups);
-        float minDist = float.MaxValue;
-        foreach (var e in enemyGroups)
+        float globalMinDist = float.MaxValue;
+
+        // Sprawdzamy każdy nasz oddział...
+        foreach (var myGroup in myGroups)
         {
-            float d = Vector3.Distance(myCenter, e.groupCenter);
-            if (d < minDist) minDist = d;
+            if (myGroup.unitMatrices.Count == 0) continue; // Pomiń martwe oddziały
+
+            // ...z każdym oddziałem wroga
+            foreach (var enemyGroup in enemyGroups)
+            {
+                if (enemyGroup.unitMatrices.Count == 0) continue;
+
+                // Liczymy dystans między środkami konkretnych grup
+                float d = Vector3.Distance(myGroup.groupCenter, enemyGroup.groupCenter);
+
+                // Odejmujemy promienie grup, żeby liczyć dystans "od krawędzi do krawędzi", a nie "od środka do środka"
+                // Dzięki temu trigger zadziała, gdy jednostki faktycznie są blisko siebie
+                float actualDistance = d - myGroup.groupRadius - enemyGroup.groupRadius;
+
+                // Zabezpieczenie, żeby nie wyszło ujemne (gdy grupy na siebie nachodzą)
+                if (actualDistance < 0) actualDistance = 0;
+
+                if (actualDistance < globalMinDist)
+                {
+                    globalMinDist = actualDistance;
+                }
+            }
         }
-        return minDist;
+        return globalMinDist;
     }
 
     Vector3 GetArmyCenter(List<TacticalGroup> groups)
