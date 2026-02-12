@@ -315,6 +315,12 @@ MonoBehaviour:
   indicatorMeshInfantry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   indicatorMeshArcher: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   indicatorMeshCavalry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  cavSpacing: 10
+  cavGap: 30
+  cavRows: 2
+  cavPadding: 10
+  infSpacing: 1.5
+  infGap: 5
   groupSize: 150
   moveSpeed: 5
   rotationSpeed: 1.2

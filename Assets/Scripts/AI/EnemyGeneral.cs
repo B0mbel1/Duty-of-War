@@ -127,73 +127,149 @@ public class EnemyGeneral : MonoBehaviour
             List<TacticalGroup> selectedUnits = FilterUnits(cmd.unitTag);
             if (selectedUnits.Count == 0) continue;
 
-            foreach (var group in selectedUnits)
+            // 1. Sortowanie (ważne dla spójności linii)
+            selectedUnits.Sort((a, b) => a.groupName.CompareTo(b.groupName));
+
+            Vector3 enemyCenter = GetEnemyArmyCenter();
+            Vector3 myArmyCenter = GetArmyCenter(selectedUnits);
+
+            // Zmienne do ustalenia orientacji linii
+            Vector3 rightDir = Vector3.zero; // W którą stronę rozstawiać kolejne jednostki
+            Vector3 mainLookDir = Vector3.zero; // Gdzie mają patrzeć
+
+            // 2. SPRAWDZAMY CZY CEL TO TEREN (WZGÓRZE/RZEKA)
+            // Musimy oczyścić nazwę z sufiksów (_Front, _Top) żeby znaleźć obiekt
+            string cleanName = cmd.targetName.Replace("_Front", "").Replace("_Back", "").Replace("_Top", "");
+
+            // Szukamy obiektu (bez Auto_ i z Auto_)
+            TerrainFeature feature = FindFeature(cleanName);
+            if (feature == null) feature = FindFeature("Auto_" + cleanName);
+
+            bool alignToFeature = (feature != null && (cmd.action == AIActionType.DefendFeature || cmd.action == AIActionType.MoveTo));
+
+            if (alignToFeature)
             {
-                ProcessSingleCommand(group, cmd);
+                // === LOGIKA USTAWIANIA WZDŁUŻ TERENU ===
+
+                // Pobieramy kierunek linii terenu (np. wzdłuż grzbietu wzgórza)
+                Vector3 featureDir = feature.GetWorldDirection();
+
+                // Ustawiamy rozstawianie wzdłuż tej linii
+                rightDir = featureDir;
+
+                // Obliczamy wektor prostopadły (gdzie mają patrzeć - "przód")
+                Vector3 perpDir = Vector3.Cross(Vector3.up, rightDir).normalized;
+
+                // Sprawdzamy, po której stronie jest wróg, żeby nie stały tyłem do niego
+                // Jeśli iloczyn skalarny jest ujemny, znaczy że perpDir celuje "od wroga", więc odwracamy
+                Vector3 toEnemy = (enemyCenter - feature.transform.position).normalized;
+                if (Vector3.Dot(perpDir, toEnemy) < 0)
+                {
+                    perpDir = -perpDir;
+                    // Opcjonalnie: odwracamy też rightDir, żeby 'pierwszy' oddział był z lewej, a nie prawej
+                    rightDir = -rightDir;
+                }
+
+                mainLookDir = perpDir;
+            }
+            else
+            {
+                // === LOGIKA STANDARDOWA (DO WROGA) ===
+                // Używana w szczerym polu lub przy ataku
+
+                mainLookDir = (enemyCenter - myArmyCenter).normalized;
+                if (mainLookDir == Vector3.zero) mainLookDir = Vector3.forward;
+
+                // W prawo względem patrzenia
+                rightDir = Vector3.Cross(Vector3.up, mainLookDir).normalized;
+            }
+
+            // 3. Rozstawianie w linii
+            // spacing = szerokość grupy (zależy od skali, tutaj przyjąłem 55.0f jako bezpieczny standard dla kompanii)
+            float spacing = 65.0f;
+
+            for (int i = 0; i < selectedUnits.Count; i++)
+            {
+                // Matematyka środkowania linii: (i - środek) * odstęp
+                float offset = (i - (selectedUnits.Count - 1) / 2.0f) * spacing;
+
+                // Przesuwamy wzdłuż wyznaczonego rightDir (czy to terenu, czy wroga)
+                Vector3 positionOffset = rightDir * offset;
+
+                // Wykonujemy rozkaz z uwzględnieniem offsetu i wspólnego kierunku patrzenia
+                ProcessSingleCommand(selectedUnits[i], cmd, positionOffset, mainLookDir);
             }
         }
     }
 
-    void ProcessSingleCommand(TacticalGroup group, AICommandData cmd)
+    void ProcessSingleCommand(TacticalGroup group, AICommandData cmd, Vector3 offsetVector, Vector3 forcedLookDir)
     {
-        Vector3 targetPos = Vector3.zero;
-        Vector3 lookDir = Vector3.zero;
-        TerrainFeature feature = null;
+        Vector3 basePos = CalculatePosition(cmd.targetName);
+        Vector3 finalPos = basePos + offsetVector;
+
+        // Jeśli nie podano wymuszonego kierunku, oblicz go standardowo
+        if (forcedLookDir == Vector3.zero) forcedLookDir = (GetEnemyArmyCenter() - group.groupCenter).normalized;
 
         switch (cmd.action)
         {
             case AIActionType.MoveTo:
-                targetPos = CalculatePosition(cmd.targetName);
-                armyManager.ApplyFormation(group, cmd.formation, targetPos);
+                // Używamy forcedLookDir, żeby szły równo
+                armyManager.ApplyFormation(group, cmd.formation, finalPos, forcedLookDir);
                 break;
 
             case AIActionType.DefendFeature:
-                feature = FindFeature(cmd.targetName);
+                TerrainFeature feature = FindFeature(cmd.targetName);
                 if (feature != null)
                 {
+                    // MoveGroupToLineFeature ma własną logikę kierunku (prostopadle do rzeki/wzgórza)
                     armyManager.MoveGroupToLineFeature(group, feature, "Top");
+                }
+                else
+                {
+                    armyManager.ApplyFormation(group, cmd.formation, finalPos, forcedLookDir);
                 }
                 break;
 
             case AIActionType.AttackMove:
-                Vector3 enemyCenter = GetEnemyArmyCenter();
-                lookDir = (enemyCenter - group.groupCenter).normalized;
                 group.chaseTarget = null;
-                armyManager.ApplyFormation(group, cmd.formation, enemyCenter, lookDir);
+                // TU BYŁ BŁĄD: Wcześniej liczyliśmy kierunek do wroga dla każdej grupy osobno.
+                // Teraz używamy forcedLookDir (wspólnego), więc idą ławą.
+                armyManager.ApplyFormation(group, cmd.formation, finalPos, forcedLookDir);
                 break;
 
             case AIActionType.ChargeTarget:
-                TacticalGroup specificEnemy = FindEnemyByNameOrTag(cmd.targetName);
-                if (specificEnemy != null)
                 {
-                    group.chaseTarget = specificEnemy;
-                    armyManager.ApplyFormation(group, cmd.formation, specificEnemy.groupCenter);
-                }
-                else
-                {
-                    Vector3 eCenter = GetEnemyArmyCenter();
-                    armyManager.ApplyFormation(group, cmd.formation, eCenter);
+                    TacticalGroup specificEnemy = FindEnemyByNameOrTag(cmd.targetName);
+                    if (specificEnemy != null)
+                    {
+                        group.chaseTarget = specificEnemy;
+                        // Przy szarży na konkretny cel, celujemy w niego (tu akurat zbieżność jest ok)
+                        armyManager.ApplyFormation(group, cmd.formation, specificEnemy.groupCenter);
+                    }
+                    else
+                    {
+                        // Szarża ogólna - zachowujemy linię
+                        armyManager.ApplyFormation(group, cmd.formation, finalPos, forcedLookDir);
+                    }
                 }
                 break;
 
             case AIActionType.Flank:
+                // Logika flanki pozostaje podobna, ale uwzględniamy offset w pozycji
                 Vector3 enemyC = GetEnemyArmyCenter();
-                Vector3 flankOffset = Vector3.zero;
+                Vector3 flankBaseOffset = Vector3.zero;
 
-                if (cmd.targetName.Contains("West")) flankOffset = new Vector3(-100, 0, 0);
-                else if (cmd.targetName.Contains("East")) flankOffset = new Vector3(100, 0, 0);
-                else if (cmd.targetName.Contains("North")) flankOffset = new Vector3(0, 0, 100);
-                else if (cmd.targetName.Contains("South")) flankOffset = new Vector3(0, 0, -100);
+                if (cmd.targetName.Contains("West")) flankBaseOffset = new Vector3(-100, 0, 0);
+                else if (cmd.targetName.Contains("East")) flankBaseOffset = new Vector3(100, 0, 0);
+                else if (cmd.targetName.Contains("North")) flankBaseOffset = new Vector3(0, 0, 100);
+                else if (cmd.targetName.Contains("South")) flankBaseOffset = new Vector3(0, 0, -100);
 
-                Vector3 flankPos = enemyC + flankOffset;
+                Vector3 flankPos = enemyC + flankBaseOffset + offsetVector;
+
+                // Flanka zawsze patrzy w stronę środka wroga
                 Vector3 flankDir = (enemyC - flankPos).normalized;
 
                 armyManager.ApplyFormation(group, cmd.formation, flankPos, flankDir);
-                break;
-
-            case AIActionType.HoldPosition:
-                group.isMoving = false;
-                group.chaseTarget = null;
                 break;
         }
     }
@@ -215,11 +291,9 @@ public class EnemyGeneral : MonoBehaviour
 
     Vector3 CalculatePosition(string name)
     {
-        // 1. Najpierw sprawdź, czy istnieje obiekt o dokładnej nazwie (np. "Center" albo jakiś ręczny marker)
         GameObject directObj = GameObject.Find(name);
         if (directObj != null) return directObj.transform.position;
 
-        // 2. Obsługa sufiksów (_Front, _Back, _Top) dla obiektów z TerrainScanner
         string baseName = name;
         string suffix = "";
 
@@ -227,8 +301,6 @@ public class EnemyGeneral : MonoBehaviour
         else if (name.Contains("_Back")) { baseName = name.Replace("_Back", ""); suffix = "Back"; }
         else if (name.Contains("_Top")) { baseName = name.Replace("_Top", ""); suffix = "Top"; }
 
-        // Szukamy obiektu bazowego (np. szukamy "Auto_Wzgórze Północ" gdy AI chce "Wzgórze Północ")
-        // Twój Scanner dodaje prefiks "Auto_", więc musimy to uwzględnić, jeśli AI poda samą nazwę
         GameObject featureObj = GameObject.Find(baseName);
         if (featureObj == null) featureObj = GameObject.Find("Auto_" + baseName);
 
@@ -237,42 +309,23 @@ public class EnemyGeneral : MonoBehaviour
             TerrainFeature feature = featureObj.GetComponent<TerrainFeature>();
             if (feature != null)
             {
-                // Pobieramy kierunek "szerokości" (linii) obiektu
                 Vector3 rightDir = feature.GetWorldDirection();
-                // Obliczamy wektor "do przodu" (prostopadły do linii)
                 Vector3 forwardDir = Vector3.Cross(Vector3.up, rightDir).normalized;
-
-                // Zabezpieczenie: Czasami Cross product wychodzi w stronę góry mapy lub dołu, 
-                // w zależności od tego jak ułożyła się linia. 
-                // Zakładamy, że "Front" to strona skierowana do środka mapy (dla wroga) lub w stronę gracza.
-                // Ale najprościej przyjąć offset z TerrainFeature:
-
-                float offsetDist = feature.widthOffset; // Używamy widthOffset z Twojego skryptu TerrainFeature
+                float offsetDist = feature.widthOffset;
 
                 switch (suffix)
                 {
-                    case "Front":
-                        // Pozycja "przed" obiektem (zakładamy, że front to -forwardDir lub +forwardDir)
-                        // Tutaj prosty hack: Front to zawsze "bliżej środka mapy"
-                        return featureObj.transform.position - (forwardDir * offsetDist);
-
-                    case "Back":
-                        // Pozycja "za" obiektem (ukryta)
-                        return featureObj.transform.position + (forwardDir * offsetDist);
-
-                    case "Top":
-                    default:
-                        return featureObj.transform.position;
+                    case "Front": return featureObj.transform.position - (forwardDir * offsetDist);
+                    case "Back": return featureObj.transform.position + (forwardDir * offsetDist);
+                    case "Top": default: return featureObj.transform.position;
                 }
             }
             return featureObj.transform.position;
         }
 
-        // 3. Fallbacki
         if (name == "Center") return new Vector3((armyManager.minX + armyManager.maxX) / 2, 0, (armyManager.minZ + armyManager.maxZ) / 2);
         if (name == "Enemy_Army") return GetEnemyArmyCenter();
 
-        // Obsługa Flankowania (jeśli nie znaleziono obiektu, a nazwa to np. Flank_East)
         if (name.Contains("Flank"))
         {
             Vector3 enemyC = GetEnemyArmyCenter();

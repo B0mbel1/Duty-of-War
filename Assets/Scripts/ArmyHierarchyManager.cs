@@ -49,6 +49,14 @@ public class ArmyHierarchyManager : MonoBehaviour
     private Mesh cachedInfantryMesh;
     private Mesh cachedArcherMesh;
     private Mesh cachedCavalryMesh;
+    [Header("Ustawienia Formacji (Edytowalne)")]
+    public float cavSpacing = 4.0f;      // Odstęp między końmi (szerokość)
+    public float cavGap = 15.0f;         // Przerwa między oddziałami jazdy
+    public int cavRows = 3;              // Ile rzędów ma jazda
+    public float cavPadding = 5.0f;      // Dodatkowy margines bezpieczeństwa
+
+    public float infSpacing = 1.5f;      // Odstęp dla piechoty
+    public float infGap = 5.0f;
 
     [Header("Hierarchy & Speed")]
     public HierarchyRank groupSize = HierarchyRank.Company;
@@ -926,10 +934,10 @@ public class ArmyHierarchyManager : MonoBehaviour
     public void MoveGroupToLineFeature(TacticalGroup group, TerrainFeature feature, string mode = "Top")
     {
         if (group.unitMatrices.Count == 0) return;
-
         group.assignedFeature = feature;
 
-        Vector3 center = feature.transform.position;
+        // --- 1. DANE TERENU ---
+        Vector3 centerBase = feature.transform.position;
         Vector3 lineDir = feature.transform.TransformDirection(feature.lineOrientation).normalized;
         Vector3 featureNormal = Vector3.Cross(Vector3.up, lineDir).normalized;
         Vector3 faceDir = featureNormal;
@@ -945,95 +953,190 @@ public class ArmyHierarchyManager : MonoBehaviour
 
             switch (mode)
             {
-                case "Front": center += frontNormal * (feature.widthOffset + 10f); faceDir = frontNormal; break;
-                case "Back": center += backNormal * (feature.widthOffset + 10f); faceDir = frontNormal; break;
-                case "Top": default: faceDir = frontNormal; break;
+                case "Front": centerBase += frontNormal * (feature.widthOffset + 10f); break;
+                case "Back": centerBase += backNormal * (feature.widthOffset + 10f); break;
+                case "Top": default: break;
             }
+            faceDir = frontNormal;
         }
         else if (feature.isRiver)
         {
-            Vector3 toWater = (feature.transform.position - center).normalized;
+            Vector3 toWater = (feature.transform.position - centerBase).normalized;
             if (Vector3.Dot(toWater, featureNormal) > 0) faceDir = featureNormal;
             else faceDir = -featureNormal;
-            center = feature.transform.position + (-faceDir * feature.widthOffset);
+            centerBase = feature.transform.position + (-faceDir * feature.widthOffset);
         }
+
+        // --- 2. LOGIKA TYPÓW (Z DIAGNOSTYKĄ) ---
+        UnitType GetRealUnitType(TacticalGroup g)
+        {
+            string n = g.groupName.ToLower() + " " + g.customName.ToLower();
+
+            // Sprawdzamy nazwę
+            if (n.Contains("Cavalry")||n.Contains("Cav") || n.Contains("jazda") || n.Contains("konne") || n.Contains("horse")) return UnitType.Cavalry;
+            if (n.Contains("arch") || n.Contains("ucznik") || n.Contains("strzel")) return UnitType.Archer;
+
+            // Sprawdzamy ustawienia w Archetypie (Inspector)
+            if (g.archetypes.Count > 0)
+            {
+                if (g.archetypes[0].type == UnitType.Cavalry) return UnitType.Cavalry;
+                if (g.archetypes[0].type == UnitType.Archer) return UnitType.Archer;
+                // Sprawdzamy prędkość (ostateczny ratunek)
+                if (g.archetypes[0].speedMultiplier > 1.4f) return UnitType.Cavalry;
+            }
+            return UnitType.Infantry;
+        }
+
+        UnitType myRealType = GetRealUnitType(group);
+        Debug.Log($"GRUPA: {group.groupName} | System widzi jako: {myRealType.ToString().ToUpper()}");
+        // !!! WAŻNE !!! Sprawdź w konsoli Unity co się tu wyświetla
+        // Debug.Log($"[DEBUG] Grupa: {group.groupName} | Wykryty Typ: {myRealType}");
+
+        int myLayerIndex = 0;
+        if (myRealType == UnitType.Archer) myLayerIndex = 1;
+        else if (myRealType == UnitType.Cavalry) myLayerIndex = 2;
 
         List<TacticalGroup> myFaction = (factionAGroups.Contains(group)) ? factionAGroups : factionBGroups;
         var allOnFeature = myFaction.Where(g => g.assignedFeature == feature).ToList();
 
-        int myLayerIndex = 0;
-        UnitType myType = group.archetypes[0].type;
-        if (myType == UnitType.Archer) myLayerIndex = 1;
-        else if (myType == UnitType.Cavalry) myLayerIndex = 2;
+        // --- 3. PARAMETRY MAPY ---
+        float mapMargin = 30.0f;
+        float mapWidth = (maxX - minX) - (mapMargin * 2);
+        float maxLineLength = mapWidth * 0.90f;
+        if (myRealType == UnitType.Cavalry) maxLineLength = mapWidth * 0.85f;
 
-        var groupsInMyLayer = allOnFeature.Where(g =>
-        {
-            UnitType t = g.archetypes[0].type;
-            int layer = 0;
-            if (t == UnitType.Archer) layer = 1;
-            else if (t == UnitType.Cavalry) layer = 2;
-            return layer == myLayerIndex;
-        }).ToList();
+        // --- 4. ODSTĘPY WARSTW (Z-Depth) ---
+        float myBaseZOffset = 0f;
+        float infantryZoneDepth = 20.0f;
+        float archerZoneDepth = 20.0f;
 
+        if (myLayerIndex == 1) myBaseZOffset = infantryZoneDepth;
+        else if (myLayerIndex == 2) myBaseZOffset = infantryZoneDepth + archerZoneDepth;
+
+        // --- 5. KONFIGURACJA Z UŻYCIEM ZMIENNYCH Z INSPECTORA ---
+        var groupsInMyLayer = allOnFeature.Where(g => GetRealUnitType(g) == myRealType).ToList();
         groupsInMyLayer.Sort((a, b) => a.groupName.CompareTo(b.groupName));
-        int countInMyLayer = groupsInMyLayer.Count;
-        int myIndexInLayer = groupsInMyLayer.IndexOf(group);
-        int desiredRows = (feature.lineLength > 50f) ? 2 : 3;
-        float unitSpacing = 1.5f;
-        float avgUnitsPerGroup = 150f;
 
-        if (group.unitMatrices.Count > 0) avgUnitsPerGroup = group.unitMatrices.Count;
+        float gapSize = infGap;
+        float unitSpacing = infSpacing;
+        int fixedRows = 3;
+        float widthPadding = 0f;
 
-        float singleGroupWidth = (avgUnitsPerGroup / desiredRows) * unitSpacing;
-        float usableLineLength = feature.lineLength * 0.95f;
-        float totalWidthOfUnits = countInMyLayer * singleGroupWidth;
-        float availableSpaceForGaps = usableLineLength - totalWidthOfUnits;
-        float gapSize = 10.0f;
-
-        if (countInMyLayer > 1)
+        if (myRealType == UnitType.Cavalry)
         {
-            gapSize = availableSpaceForGaps / (countInMyLayer - 1);
+            // Używamy zmiennych publicznych - możesz je zmienić w trakcie gry!
+            unitSpacing = cavSpacing;
+            gapSize = cavGap;
+            fixedRows = cavRows;
+            widthPadding = cavPadding;
+        }
+        else if (myRealType == UnitType.Archer)
+        {
+            unitSpacing = 1.5f;
+            gapSize = 5.0f;
+            fixedRows = 2;
+        }
+        else // Piechota
+        {
+            fixedRows = (feature.lineLength > 50f) ? 2 : 3;
         }
 
-        gapSize = Mathf.Clamp(gapSize, 5.0f, 200.0f);
-        float totalFormationWidth = totalWidthOfUnits + ((countInMyLayer - 1) * gapSize);
-        float startX = -(totalFormationWidth * 0.5f) + (singleGroupWidth * 0.5f);
-        float xOffset = startX + (myIndexInLayer * (singleGroupWidth + gapSize));
-        float zOffset = myLayerIndex * 35.0f;
+        // --- 6. UKŁADANIE W RZĘDY ---
+        List<List<TacticalGroup>> rows = new List<List<TacticalGroup>>();
+        List<float> rowWidths = new List<float>();
 
-        center += lineDir * xOffset;
-        center -= faceDir * zOffset;
-        Vector3 lookTarget = GetSmartLookTarget(group);
-        Vector3 directionToEnemy = (lookTarget - center).normalized;
-        if (directionToEnemy == Vector3.zero) directionToEnemy = faceDir;
-        group.targetFacingDirection = directionToEnemy;
-        int unitCount = group.unitMatrices.Count;
-        int unitsPerGroupRow = Mathf.CeilToInt((float)unitCount / desiredRows);
-        float currentLineWidth = unitsPerGroupRow * unitSpacing;
-        Vector3 lineStart = center - (lineDir * currentLineWidth * 0.5f);
+        List<TacticalGroup> currentRow = new List<TacticalGroup>();
+        float currentRowWidth = 0f;
+        Dictionary<TacticalGroup, float> groupWidthCache = new Dictionary<TacticalGroup, float>();
 
-        while (group.formationTargets.Count < unitCount) group.formationTargets.Add(Vector3.zero);
-
-        for (int i = 0; i < unitCount; i++)
+        foreach (var g in groupsInMyLayer)
         {
-            int r = i / unitsPerGroupRow;
-            int c = i % unitsPerGroupRow;
+            float count = (g.unitMatrices.Count > 0) ? g.unitMatrices.Count : 150f;
+            float unitsPerRow = Mathf.Ceil(count / fixedRows);
 
-            Vector3 pos = lineStart
-                        + (lineDir * c * unitSpacing)
-                        - (faceDir * r * unitSpacing);
+            // Obliczamy szerokość + padding z Inspektora
+            float gWidth = (unitsPerRow * unitSpacing) + widthPadding;
 
-            if (terrain != null)
-                pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
-            else
-                pos.y = group.groupCenter.y;
+            groupWidthCache[g] = gWidth;
 
-            group.formationTargets[i] = pos;
+            float widthWithNewGroup = currentRowWidth + gWidth + (currentRow.Count > 0 ? gapSize : 0);
+
+            if (widthWithNewGroup > maxLineLength && currentRow.Count > 0)
+            {
+                rows.Add(new List<TacticalGroup>(currentRow));
+                rowWidths.Add(currentRowWidth);
+                currentRow.Clear();
+                currentRowWidth = 0f;
+            }
+            currentRow.Add(g);
+            currentRowWidth += gWidth + (currentRow.Count > 1 ? gapSize : 0);
         }
+        if (currentRow.Count > 0) { rows.Add(currentRow); rowWidths.Add(currentRowWidth); }
 
-        group.isReforming = true;
-        group.isMoving = true;
-        group.currentDestination = center;
+        // --- 7. POZYCJONOWANIE ---
+
+        float rowBatchDepth = 12.0f;
+        if (myRealType == UnitType.Cavalry) rowBatchDepth = 45.0f;
+
+        float baseZOffset = myBaseZOffset;
+
+        for (int r = 0; r < rows.Count; r++)
+        {
+            List<TacticalGroup> groupsInThisRow = rows[r];
+            float thisRowTotalWidth = rowWidths[r];
+
+            float startX = -(thisRowTotalWidth * 0.5f);
+            float currentX = startX;
+            float wrappingZOffset = r * rowBatchDepth;
+
+            foreach (var g in groupsInThisRow)
+            {
+                float thisWidth = groupWidthCache[g];
+                float centerOffset = currentX + (thisWidth * 0.5f);
+
+                currentX += thisWidth + gapSize;
+
+                float totalZOffset = baseZOffset + wrappingZOffset;
+
+                Vector3 groupDest = centerBase + (lineDir * centerOffset) - (faceDir * totalZOffset);
+                groupDest.x = Mathf.Clamp(groupDest.x, minX + 15f, maxX - 15f);
+                groupDest.z = Mathf.Clamp(groupDest.z, minZ + 15f, maxZ - 15f);
+
+                Vector3 lookTarget = GetSmartLookTarget(g);
+                Vector3 directionToEnemy = (lookTarget - groupDest).normalized;
+                if (directionToEnemy == Vector3.zero) directionToEnemy = faceDir;
+                g.targetFacingDirection = directionToEnemy;
+
+                // --- RYSOWANIE JEDNOSTEK ---
+                int unitCount = g.unitMatrices.Count;
+                int finalRows = fixedRows;
+                int unitsPerGroupRow = Mathf.CeilToInt((float)unitCount / finalRows);
+
+                // Do rysowania używamy czystego spacingu (bez paddingu), żeby wyglądało zwarcie
+                float visualWidth = unitsPerGroupRow * unitSpacing;
+                Vector3 lineStart = groupDest - (lineDir * visualWidth * 0.5f);
+
+                while (g.formationTargets.Count < unitCount) g.formationTargets.Add(Vector3.zero);
+
+                for (int u = 0; u < unitCount; u++)
+                {
+                    int rowIdx = u / unitsPerGroupRow;
+                    int colIdx = u % unitsPerGroupRow;
+
+                    Vector3 pos = lineStart
+                                + (lineDir * colIdx * unitSpacing)
+                                - (faceDir * rowIdx * unitSpacing);
+
+                    if (terrain != null) pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
+                    else pos.y = g.groupCenter.y;
+
+                    g.formationTargets[u] = pos;
+                }
+                g.isReforming = true;
+                g.isMoving = true;
+                g.currentDestination = groupDest;
+            }
+        }
     }
     void ResolveCombatRoundRobin()
     {

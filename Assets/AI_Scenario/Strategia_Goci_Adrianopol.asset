@@ -33,7 +33,7 @@ MonoBehaviour:
       action: 0
       unitTag: Cavalry
       targetName: "Wzg\xF3rze P\xF3\u0142noc_Front"
-      formation: Line
+      formation: Double_Line
   - phaseName: "Powr\xF3t Alatheusa i Saphraxa"
     trigger: 2
     triggerValue: 50
