@@ -23,13 +23,13 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Maps/Historical/Jarmuk.unity
     guid: 7569eff7051e3314a932295f227c92c6
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Maps/Historical/LechowePole.unity
     guid: d357475eb2170e44b9785958852ee3b9
   - enabled: 1
     path: Assets/Scenes/Maps/Historical/Adrianopol.unity
     guid: 53fd89ce92e4122479c84a4af2534d3a
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Maps/Historical/TeutoburgForest.unity
     guid: 150953fa2131da046aa06f2cb4fce835
   - enabled: 1
@@ -44,10 +44,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Maps/Historical/AjnDzalut.unity
     guid: 800bf9958693b9643beea0d396f5d56e
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Maps/Custom/Orle Gniazdo.unity
     guid: f91e93c3ea14eba41b263100c66f815b
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Maps/Historical/Hastings.unity
     guid: 148b99b4701d71942b6e4e7fae642a7c
   - enabled: 0
