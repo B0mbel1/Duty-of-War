@@ -380,6 +380,16 @@ public class EnemyGeneral : MonoBehaviour
 
                 armyManager.ApplyFormation(group, cmd.formation, flankPos, flankDir);
                 break;
+            case AIActionType.HoldPosition:
+                group.chaseTarget = null;
+                group.assignedFeature = null;
+                Vector3 holdPos = (string.IsNullOrEmpty(cmd.targetName) || cmd.targetName.ToLower() == "current" || cmd.targetName.ToLower() == "none")
+                                    ? group.groupCenter
+                                    : finalPos;
+                armyManager.ApplyFormation(group, cmd.formation, holdPos, forcedLookDir);
+
+                Debug.Log($"<color=yellow>[GENERAL AI]</color> {group.groupName} otrzymał rozkaz utrzymania pozycji (HoldPosition)!");
+                break;
         }
     }
 

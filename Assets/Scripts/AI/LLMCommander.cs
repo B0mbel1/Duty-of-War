@@ -760,8 +760,8 @@ User: Jazda 100 metrów do przodu, łucznicy wycofać się 50 metrów!
 AI:
 {{
   ""commands"": [
-    {{ ""unit_tags"": [""Cavalry""], ""action"": ""MOVE"", ""target_location"": ""Relative_Forward_100"" }},
-    {{ ""unit_tags"": [""Archer""], ""action"": ""MOVE"", ""target_location"": ""Relative_Backward_50"" }}
+    {{ ""unit_tags"": [""Cavalry""], ""action"": ""MOVE"", ""target_location"": ""Relative_Forward_150"" }},
+    {{ ""unit_tags"": [""Archer""], ""action"": ""MOVE"", ""target_location"": ""Relative_Backward_150"" }}
   ],
   ""ai_thought"": ""Jazda atakuje, łucznicy robią miejsce.""
 }}

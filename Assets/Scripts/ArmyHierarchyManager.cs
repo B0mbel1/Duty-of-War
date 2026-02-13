@@ -1833,8 +1833,15 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
         else
         {
+            // --- 1. Domyślne rzędy w zależności od typu jednostki ---
             int targetRows = 3;
+            UnitType gType = group.archetypes.Count > 0 ? group.archetypes[0].type : UnitType.Infantry;
 
+            if (gType == UnitType.Cavalry) targetRows = cavRows; // Pobiera zmienną z Inspektora (domyślnie 3)
+            else if (gType == UnitType.Archer) targetRows = 2;
+            else targetRows = 3; // Standardowo piechota staje w 3 szeregach
+
+            // --- 2. Nadpisywanie rzędów jeśli nazwa formacji wyraźnie tego wymaga ---
             if (typeLower.Contains("turtle") || typeLower.Contains("żółw"))
             {
                 targetRows = Mathf.CeilToInt(Mathf.Sqrt(count));
@@ -1843,16 +1850,18 @@ public class ArmyHierarchyManager : MonoBehaviour
             {
                 targetRows = 2;
             }
-            else if (typeLower.Contains("single") || typeLower.Contains("szereg") || typeLower.Contains("line") || typeLower.Contains("linia"))
+            else if (typeLower.Contains("single") || typeLower.Contains("pojedynczy") || typeLower.Contains("jeden szereg"))
             {
-                targetRows = 1;
+                targetRows = 1; // Użyjemy 1 szeregu tylko, gdy gracz jawnie o to poprosi
             }
 
             int cols = Mathf.CeilToInt((float)count / targetRows);
             float spacing = 1.5f;
 
-            if (typeLower.Contains("turtle")) spacing = 1.1f;
-            else if (targetRows <= 2) spacing = 1.6f;
+            // --- 3. Uwzględnienie odpowiednich odstępów (np. dla jazdy z Inspektora) ---
+            if (gType == UnitType.Cavalry) spacing = cavSpacing;
+            else if (typeLower.Contains("turtle")) spacing = 1.1f;
+            else if (targetRows <= 2 && gType != UnitType.Cavalry) spacing = 1.6f;
 
             float totalWidth = (cols - 1) * spacing;
             Vector3 startPos = center - (right * totalWidth * 0.5f);

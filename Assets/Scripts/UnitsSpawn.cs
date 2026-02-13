@@ -46,7 +46,7 @@ public class UnitsSpawn : MonoBehaviour
 
     [Header("Water Settings (Spawn Correction)")]
     public string waterTag = "Water";
-    public float swimmingDepth = 0.5f; 
+    public float swimmingDepth = 0.5f;
 
     [Header("Camera Start Settings")]
     public Camera battleCamera;
@@ -214,9 +214,9 @@ public class UnitsSpawn : MonoBehaviour
 
             if (type == UnitType.Cavalry)
             {
-                groupWidth = 35.0f;
-                horizontalGap = 25.0f;
-                groupDepth = 15.0f;
+                groupWidth = 25.0f; // Zmniejszono szerokość grupy z 35.0f
+                horizontalGap = 10.0f; // Znacznie zmniejszono przerwę między grupami z 25.0f
+                groupDepth = 10.0f; // Zmniejszono głębokość z 15.0f
             }
             else if (type == UnitType.Archer)
             {
@@ -268,9 +268,9 @@ public class UnitsSpawn : MonoBehaviour
 
         if (type == UnitType.Cavalry)
         {
-            spacingMultiplier = 2.0f;
-            widthRatio = 2.2f;
-            rowSpacingMultiplier = 0.6f;
+            spacingMultiplier = 1.0f; // Znacznie zmniejszono odstęp boczny między końmi (z 2.0f)
+            widthRatio = 2.5f; // Lekko skorygowano proporcje, by przypominały piechotę
+            rowSpacingMultiplier = 0.6f; // Zwiększono nieco odstęp w rzędach, żeby zniwelować błędy przenikania
         }
         else if (type == UnitType.Archer)
         {

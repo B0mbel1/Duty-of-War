@@ -38,12 +38,12 @@ MonoBehaviour:
     triggerValue: 0.1
     commands:
     - note: Opis rozkazu
-      action: 1
+      action: 5
       unitTag: Infantry
       targetName: Enemy_Army
       formation: 
     - note: Opis rozkazu
-      action: 1
+      action: 5
       unitTag: Archer
       targetName: Enemy_Army
       formation: 
