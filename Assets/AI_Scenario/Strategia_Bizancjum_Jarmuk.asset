@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54f14b7cad714f041b7b62e44372e868, type: 3}
+  m_Name: Strategia_Bizancjum_Jarmuk
+  m_EditorClassIdentifier: Assembly-CSharp::AIStrategyProfile
+  description: "Bizancjum: Powolny, nieuchronny marsz ci\u0119\u017Ckiej piechoty.
+    W razie pora\u017Cki odwr\xF3t pod rzek\u0119."
+  battlePhases:
+  - phaseName: Marsz Falangi
+    trigger: 0
+    triggerValue: 5
+    commands:
+    - note: Piechota rusza powoli na wroga
+      action: 5
+      unitTag: Infantry
+      targetName: Enemy_Army
+      formation: 
+    - note: "Kawaleria os\u0142ania skrzyd\u0142a"
+      action: 5
+      unitTag: Cavalry
+      targetName: Enemy_Army
+      formation: 
+    - note: "Strzelcy ruszaj\u0105 za piechot\u0105"
+      action: 5
+      unitTag: Archer
+      targetName: Enemy_Army
+      formation: 
