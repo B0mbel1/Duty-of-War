@@ -988,6 +988,12 @@ MonoBehaviour:
   indicatorMeshInfantry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   indicatorMeshArcher: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   indicatorMeshCavalry: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  cavSpacing: 4
+  cavGap: 15
+  cavRows: 3
+  cavPadding: 5
+  infSpacing: 1.5
+  infGap: 5
   groupSize: 150
   moveSpeed: 5
   rotationSpeed: 1.2
@@ -1344,9 +1350,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1805836863}
     - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: profileForGoths
+      value: 
+      objectReference: {fileID: 11400000, guid: 6c2a8ada824eb0e48b6e077473d68d64, type: 2}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: decisionInterval
       value: 6
       objectReference: {fileID: 0}
+    - target: {fileID: 1919054783323582670, guid: b4a9564489828704fa71788cbc124d41, type: 3}
+      propertyPath: profileForRomans
+      value: 
+      objectReference: {fileID: 11400000, guid: 42da3ea6eb0fbfa478169390260bb213, type: 2}
     - target: {fileID: 2202242556553842332, guid: b4a9564489828704fa71788cbc124d41, type: 3}
       propertyPath: m_Name
       value: EnemyGeneral

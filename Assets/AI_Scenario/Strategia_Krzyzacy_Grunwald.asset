@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54f14b7cad714f041b7b62e44372e868, type: 3}
+  m_Name: Strategia_Krzyzacy_Grunwald
+  m_EditorClassIdentifier: Assembly-CSharp::AIStrategyProfile
+  description: "Zakon: Wyczekiwanie w s\u0142o\u0144cu na ruch wroga (Hold), a nast\u0119pnie
+    pot\u0119\u017Cne uderzenie ci\u0119\u017Ckiej jazdy."
+  battlePhases:
+  - phaseName: "Wyczekiwanie w s\u0142o\u0144cu"
+    trigger: 1
+    triggerValue: 100
+    commands:
+    - note: "Armia stoi w miejscu tam gdzie zosta\u0142a ustawiona"
+      action: 4
+      unitTag: All
+      targetName: Current
+      formation: 'Line
+
+'
+  - phaseName: Bombardy i Harcownicy
+    trigger: 3
+    triggerValue: 1
+    commands:
+    - note: "\u0141ucznicy otwieraj\u0105 ogie\u0144 (stoj\u0105c w miejscu)"
+      action: 4
+      unitTag: Archer
+      targetName: Current
+      formation: 
+    - note: "Jazda szykuje si\u0119 do szar\u017Cy (wyr\xF3wnanie linii)"
+      action: 5
+      unitTag: Cavalry
+      targetName: Enemy_Army
+      formation: 
+    - note: "Jazda szykuje si\u0119 do szar\u017Cy (wyr\xF3wnanie linii)"
+      action: 5
+      unitTag: Infantry
+      targetName: Enemy_Army
+      formation: 
