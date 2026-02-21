@@ -381,8 +381,8 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (!isTyping)
         {
-            if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
-            if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
+            // if (Input.GetKeyDown(KeyCode.X)) KillRandomUnit(true);
+            // if (Input.GetKeyDown(KeyCode.B)) KillRandomUnit(false);
             if (Input.GetKeyDown(KeyCode.Space)) ToggleTacticalPause();
             if (Input.GetKeyDown(KeyCode.LeftAlt))
             {
@@ -1468,11 +1468,11 @@ public class ArmyHierarchyManager : MonoBehaviour
         UpdateGlobalCounters();
     }
 
-    void KillRandomUnit(bool isFactionA)
-    {
-        var targetFaction = isFactionA ? factionAGroups : factionBGroups;
-        foreach (var g in targetFaction) if (g.unitMatrices.Count > 0) { KillUnit(g, g.unitMatrices.Count - 1); return; }
-    }
+    // void KillRandomUnit(bool isFactionA)
+    // {
+    //     var targetFaction = isFactionA ? factionAGroups : factionBGroups;
+    //     foreach (var g in targetFaction) if (g.unitMatrices.Count > 0) { KillUnit(g, g.unitMatrices.Count - 1); return; }
+    // }
 
     void UpdateGlobalCounters()
     {
