@@ -6,6 +6,8 @@ using UnityEngine.Networking;
 
 public class GeminiNetwork : MonoBehaviour
 {
+    [Header("Testowanie Wydajności")]
+    public bool simulateSynchronousLag = false;
     [Header("API Settings")]
     [SerializeField] private string apiKey = "WPISZ_SWOJ_KLUCZ_API";
     private string apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
@@ -29,8 +31,18 @@ public class GeminiNetwork : MonoBehaviour
             webRequest.downloadHandler = new DownloadHandlerBuffer();
             webRequest.SetRequestHeader("Content-Type", "application/json");
 
-            yield return webRequest.SendWebRequest();
-
+            // yield return webRequest.SendWebRequest();
+            if (simulateSynchronousLag)
+            {
+                // SYMULACJA ZŁEGO KODU: Wysyłamy żądanie i zamrażamy silnik gry na 1.5 sekundy
+                webRequest.SendWebRequest();
+                System.Threading.Thread.Sleep(1500);
+            }
+            else
+            {
+                // TWÓJ ZOPTYMALIZOWANY KOD: Asynchroniczne oczekiwanie (nie blokuje gry)
+                yield return webRequest.SendWebRequest();
+            }
             if (webRequest.result != UnityWebRequest.Result.Success)
             {
                 Debug.LogError("Gemini Error: " + webRequest.error + "\nTreść błędu: " + webRequest.downloadHandler.text);

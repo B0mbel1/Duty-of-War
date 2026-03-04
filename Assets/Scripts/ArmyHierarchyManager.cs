@@ -140,6 +140,11 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     public LayerMask terrainLayerMask = 1;
 
+    [Header("Testowanie Wydajności")]
+    public bool disableGPUInstancingTest = false;
+
+    public bool disableSpatialGridTest = false; // Zaznacz, by wywołać potężnego laga (O(N^2))
+
     void Start()
     {
         terrain = Terrain.activeTerrain;
@@ -433,7 +438,8 @@ public class ArmyHierarchyManager : MonoBehaviour
                     ProcessMovement(group);
                 }
 
-                group.RenderGroup();
+                if (disableGPUInstancingTest) DrawUnoptimized(group);
+                else group.RenderGroup();
                 group.RenderIndicators();
             }
         }
@@ -443,7 +449,8 @@ public class ArmyHierarchyManager : MonoBehaviour
             if (group.unitMatrices.Count > 0)
             {
                 if (canMoveEnemy && group.isMoving) ProcessMovement(group);
-                group.RenderGroup();
+                if (disableGPUInstancingTest) DrawUnoptimized(group);
+                else group.RenderGroup();
                 group.RenderIndicators();
             }
         }
@@ -477,7 +484,13 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
 
-        if (isCombatActive) ResolveCombatRoundRobin();
+        if (isCombatActive)
+        {
+            if (disableSpatialGridTest)
+                ResolveCombatBruteForce();
+            else
+                ResolveCombatRoundRobin();
+        }
     }
     public void HideCursorMarker()
     {
@@ -1189,7 +1202,38 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
         }
     }
+    void ResolveCombatBruteForce()
+    {
+        // Brak limitu budżetu! Brak siatki przestrzennej!
+        // Sprawdzamy każdego żołnierza frakcji A z KAŻDYM żołnierzem frakcji B.
 
+        foreach (var groupA in factionAGroups)
+        {
+            if (groupA.unitMatrices.Count == 0) continue;
+            for (int i = 0; i < groupA.unitMatrices.Count; i++)
+            {
+                Vector3 posA = (Vector3)groupA.unitMatrices[i].GetColumn(3);
+
+                foreach (var groupB in factionBGroups)
+                {
+                    if (groupB.unitMatrices.Count == 0) continue;
+                    for (int j = 0; j < groupB.unitMatrices.Count; j++)
+                    {
+                        Vector3 posB = (Vector3)groupB.unitMatrices[j].GetColumn(3);
+
+                        // Ciężka operacja matematyczna wykonywana miliony razy w jednej klatce
+                        float distSq = (posB - posA).sqrMagnitude;
+
+                        if (distSq < 10f) // Symulacja bycia w zasięgu
+                        {
+                            // Symulacja ataku (tylko marnujemy czas procesora na test)
+                            float dmg = CalculateDamage(groupA, groupB, i, j, posA, posB);
+                        }
+                    }
+                }
+            }
+        }
+    }
     void ProcessSingleAttacker(TacticalGroup attackerGroup, List<TacticalGroup> enemyFaction, int idx)
     {
         if (idx >= attackerGroup.attackCooldowns.Count || idx >= attackerGroup.unitMatrices.Count) return;
@@ -1576,6 +1620,20 @@ public class ArmyHierarchyManager : MonoBehaviour
             Gizmos.color = Color.blue;
             Gizmos.DrawSphere(lastCursorPosition, 1.0f);
             Gizmos.DrawLine(Camera.main.transform.position, lastCursorPosition);
+        }
+    }
+
+    void DrawUnoptimized(TacticalGroup group)
+    {
+        // Symulacja tradycyjnego podejścia (1 żołnierz = 1 Draw Call)
+        for (int i = 0; i < group.unitMatrices.Count; i++)
+        {
+            UnitArchetype arch = group.GetUnitArchetype(i);
+            if (arch != null && arch.unitMesh != null && arch.unitMaterial != null)
+            {
+                // Graphics.DrawMesh rysuje obiekt pojedynczo, bez batchowania (instancjonowania)
+                Graphics.DrawMesh(arch.unitMesh, group.unitMatrices[i], arch.unitMaterial, 0);
+            }
         }
     }
 
