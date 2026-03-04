@@ -74,7 +74,6 @@ public class TerrainScanner : MonoBehaviour
         {
             if (f.name.StartsWith("Auto_"))
             {
-                // DestroyImmediate jest wymagane w trybie Edytora (nie Play Mode)
                 if (Application.isPlaying) Destroy(f.gameObject);
                 else DestroyImmediate(f.gameObject);
             }

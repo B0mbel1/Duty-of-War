@@ -50,12 +50,12 @@ public class ArmyHierarchyManager : MonoBehaviour
     private Mesh cachedArcherMesh;
     private Mesh cachedCavalryMesh;
     [Header("Ustawienia Formacji (Edytowalne)")]
-    public float cavSpacing = 4.0f;      // Odstęp między końmi (szerokość)
-    public float cavGap = 15.0f;         // Przerwa między oddziałami jazdy
-    public int cavRows = 3;              // Ile rzędów ma jazda
-    public float cavPadding = 5.0f;      // Dodatkowy margines bezpieczeństwa
+    public float cavSpacing = 4.0f;    
+    public float cavGap = 15.0f; 
+    public int cavRows = 3; 
+    public float cavPadding = 5.0f;   
 
-    public float infSpacing = 1.5f;      // Odstęp dla piechoty
+    public float infSpacing = 1.5f; 
     public float infGap = 5.0f;
 
     [Header("Hierarchy & Speed")]
@@ -143,7 +143,7 @@ public class ArmyHierarchyManager : MonoBehaviour
     [Header("Testowanie Wydajności")]
     public bool disableGPUInstancingTest = false;
 
-    public bool disableSpatialGridTest = false; // Zaznacz, by wywołać potężnego laga (O(N^2))
+    public bool disableSpatialGridTest = false;
 
     void Start()
     {
@@ -396,7 +396,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
             if (Input.GetKeyDown(KeyCode.Return) && isDeploymentPhase)
             {
-                // Dodatkowe zabezpieczenie dla Entera
                 if (!CheckIfAnyGroupIsMoving()) StartBattle();
             }
         }
@@ -407,12 +406,9 @@ public class ArmyHierarchyManager : MonoBehaviour
             UnityEngine.UI.Button btn = startBattleButton.GetComponent<UnityEngine.UI.Button>();
             if (btn != null)
             {
-                // ZMIANA: Przycisk jest teraz ZAWSZE aktywny, nawet jeśli AI się jeszcze ustawia.
-                // Pozwala to "odciąć" fazę przygotowań w dowolnym momencie.
                 btn.interactable = true;
-
-                // Opcjonalnie zmieniamy tekst, żebyś wiedział, co się dzieje
                 var btnText = startBattleButton.GetComponentInChildren<TextMeshProUGUI>();
+
                 if (btnText != null)
                 {
                     if (isAnyoneMoving)
@@ -952,7 +948,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (group.unitMatrices.Count == 0) return;
         group.assignedFeature = feature;
 
-        // --- 1. DANE TERENU ---
         Vector3 centerBase = feature.transform.position;
         Vector3 lineDir = feature.transform.TransformDirection(feature.lineOrientation).normalized;
         Vector3 featureNormal = Vector3.Cross(Vector3.up, lineDir).normalized;
@@ -983,21 +978,17 @@ public class ArmyHierarchyManager : MonoBehaviour
             centerBase = feature.transform.position + (-faceDir * feature.widthOffset);
         }
 
-        // --- 2. LOGIKA TYPÓW (Z DIAGNOSTYKĄ) ---
         UnitType GetRealUnitType(TacticalGroup g)
         {
             string n = g.groupName.ToLower() + " " + g.customName.ToLower();
 
-            // Sprawdzamy nazwę
             if (n.Contains("Cavalry") || n.Contains("Cav") || n.Contains("jazda") || n.Contains("konne") || n.Contains("horse")) return UnitType.Cavalry;
             if (n.Contains("arch") || n.Contains("ucznik") || n.Contains("strzel")) return UnitType.Archer;
 
-            // Sprawdzamy ustawienia w Archetypie (Inspector)
             if (g.archetypes.Count > 0)
             {
                 if (g.archetypes[0].type == UnitType.Cavalry) return UnitType.Cavalry;
                 if (g.archetypes[0].type == UnitType.Archer) return UnitType.Archer;
-                // Sprawdzamy prędkość (ostateczny ratunek)
                 if (g.archetypes[0].speedMultiplier > 1.4f) return UnitType.Cavalry;
             }
             return UnitType.Infantry;
@@ -1005,8 +996,6 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         UnitType myRealType = GetRealUnitType(group);
         Debug.Log($"GRUPA: {group.groupName} | System widzi jako: {myRealType.ToString().ToUpper()}");
-        // !!! WAŻNE !!! Sprawdź w konsoli Unity co się tu wyświetla
-        // Debug.Log($"[DEBUG] Grupa: {group.groupName} | Wykryty Typ: {myRealType}");
 
         int myLayerIndex = 0;
         if (myRealType == UnitType.Archer) myLayerIndex = 1;
@@ -1014,14 +1003,11 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         List<TacticalGroup> myFaction = (factionAGroups.Contains(group)) ? factionAGroups : factionBGroups;
         var allOnFeature = myFaction.Where(g => g.assignedFeature == feature).ToList();
-
-        // --- 3. PARAMETRY MAPY ---
         float mapMargin = 30.0f;
         float mapWidth = (maxX - minX) - (mapMargin * 2);
         float maxLineLength = mapWidth * 0.90f;
-        if (myRealType == UnitType.Cavalry) maxLineLength = mapWidth * 0.85f;
 
-        // --- 4. ODSTĘPY WARSTW (Z-Depth) ---
+        if (myRealType == UnitType.Cavalry) maxLineLength = mapWidth * 0.85f;
         float myBaseZOffset = 0f;
         float infantryZoneDepth = 20.0f;
         float archerZoneDepth = 20.0f;
@@ -1029,7 +1015,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (myLayerIndex == 1) myBaseZOffset = infantryZoneDepth;
         else if (myLayerIndex == 2) myBaseZOffset = infantryZoneDepth + archerZoneDepth;
 
-        // --- 5. KONFIGURACJA Z UŻYCIEM ZMIENNYCH Z INSPECTORA ---
         var groupsInMyLayer = allOnFeature.Where(g => GetRealUnitType(g) == myRealType).ToList();
         groupsInMyLayer.Sort((a, b) => a.groupName.CompareTo(b.groupName));
 
@@ -1040,7 +1025,6 @@ public class ArmyHierarchyManager : MonoBehaviour
 
         if (myRealType == UnitType.Cavalry)
         {
-            // Używamy zmiennych publicznych - możesz je zmienić w trakcie gry!
             unitSpacing = cavSpacing;
             gapSize = cavGap;
             fixedRows = cavRows;
@@ -1052,15 +1036,13 @@ public class ArmyHierarchyManager : MonoBehaviour
             gapSize = 5.0f;
             fixedRows = 2;
         }
-        else // Piechota
+        else
         {
             fixedRows = (feature.lineLength > 50f) ? 2 : 3;
         }
 
-        // --- 6. UKŁADANIE W RZĘDY ---
         List<List<TacticalGroup>> rows = new List<List<TacticalGroup>>();
         List<float> rowWidths = new List<float>();
-
         List<TacticalGroup> currentRow = new List<TacticalGroup>();
         float currentRowWidth = 0f;
         Dictionary<TacticalGroup, float> groupWidthCache = new Dictionary<TacticalGroup, float>();
@@ -1069,12 +1051,8 @@ public class ArmyHierarchyManager : MonoBehaviour
         {
             float count = (g.unitMatrices.Count > 0) ? g.unitMatrices.Count : 150f;
             float unitsPerRow = Mathf.Ceil(count / fixedRows);
-
-            // Obliczamy szerokość + padding z Inspektora
             float gWidth = (unitsPerRow * unitSpacing) + widthPadding;
-
             groupWidthCache[g] = gWidth;
-
             float widthWithNewGroup = currentRowWidth + gWidth + (currentRow.Count > 0 ? gapSize : 0);
 
             if (widthWithNewGroup > maxLineLength && currentRow.Count > 0)
@@ -1088,8 +1066,6 @@ public class ArmyHierarchyManager : MonoBehaviour
             currentRowWidth += gWidth + (currentRow.Count > 1 ? gapSize : 0);
         }
         if (currentRow.Count > 0) { rows.Add(currentRow); rowWidths.Add(currentRowWidth); }
-
-        // --- 7. POZYCJONOWANIE ---
 
         float rowBatchDepth = 12.0f;
         if (myRealType == UnitType.Cavalry) rowBatchDepth = 45.0f;
@@ -1123,12 +1099,10 @@ public class ArmyHierarchyManager : MonoBehaviour
                 if (directionToEnemy == Vector3.zero) directionToEnemy = faceDir;
                 g.targetFacingDirection = directionToEnemy;
 
-                // --- RYSOWANIE JEDNOSTEK ---
                 int unitCount = g.unitMatrices.Count;
                 int finalRows = fixedRows;
                 int unitsPerGroupRow = Mathf.CeilToInt((float)unitCount / finalRows);
 
-                // Do rysowania używamy czystego spacingu (bez paddingu), żeby wyglądało zwarcie
                 float visualWidth = unitsPerGroupRow * unitSpacing;
                 Vector3 lineStart = groupDest - (lineDir * visualWidth * 0.5f);
 
@@ -1204,9 +1178,6 @@ public class ArmyHierarchyManager : MonoBehaviour
     }
     void ResolveCombatBruteForce()
     {
-        // Brak limitu budżetu! Brak siatki przestrzennej!
-        // Sprawdzamy każdego żołnierza frakcji A z KAŻDYM żołnierzem frakcji B.
-
         foreach (var groupA in factionAGroups)
         {
             if (groupA.unitMatrices.Count == 0) continue;
@@ -1221,12 +1192,10 @@ public class ArmyHierarchyManager : MonoBehaviour
                     {
                         Vector3 posB = (Vector3)groupB.unitMatrices[j].GetColumn(3);
 
-                        // Ciężka operacja matematyczna wykonywana miliony razy w jednej klatce
                         float distSq = (posB - posA).sqrMagnitude;
 
-                        if (distSq < 10f) // Symulacja bycia w zasięgu
+                        if (distSq < 10f) 
                         {
-                            // Symulacja ataku (tylko marnujemy czas procesora na test)
                             float dmg = CalculateDamage(groupA, groupB, i, j, posA, posB);
                         }
                     }
@@ -1625,13 +1594,11 @@ public class ArmyHierarchyManager : MonoBehaviour
 
     void DrawUnoptimized(TacticalGroup group)
     {
-        // Symulacja tradycyjnego podejścia (1 żołnierz = 1 Draw Call)
         for (int i = 0; i < group.unitMatrices.Count; i++)
         {
             UnitArchetype arch = group.GetUnitArchetype(i);
             if (arch != null && arch.unitMesh != null && arch.unitMaterial != null)
             {
-                // Graphics.DrawMesh rysuje obiekt pojedynczo, bez batchowania (instancjonowania)
                 Graphics.DrawMesh(arch.unitMesh, group.unitMatrices[i], arch.unitMaterial, 0);
             }
         }
@@ -1684,19 +1651,12 @@ public class ArmyHierarchyManager : MonoBehaviour
         if (!isDeploymentPhase) return;
 
         Debug.Log("Generale! Bitwa rozpoczęta.");
-
-        // To jest "spust", na który czeka EnemyGeneral w nowym kodzie Update
         isDeploymentPhase = false;
-
         Time.timeScale = 1.0f;
 
-        // Ukrycie przycisku
         if (startBattleButton != null) startBattleButton.SetActive(false);
 
-        // Wykonanie ewentualnych rozkazów zakolejkowanych przez gracza
         ExecutePendingOrdersForFaction(factionAGroups);
-
-        // (Opcjonalnie) AI też może wykonać swoje, ale EnemyGeneral zaraz przejmie kontrolę
         ExecutePendingOrdersForFaction(factionBGroups);
     }
     void ToggleTacticalPause()
@@ -1766,24 +1726,6 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
 
         Vector3 finalLookDir = rotation * Vector3.forward;
-
-        // --- OBSŁUGA DEPLOYMENT PHASE ---
-        // if (isDeploymentPhase && !isPlayerGroup)
-        // {
-        //     group.pendingOrder = new PendingOrderData
-        //     {
-        //         type = PendingOrderType.MoveOrForm,
-        //         formationName = formationType,
-        //         destination = center,
-        //         lookDirection = finalLookDir,
-        //         chaseTarget = group.chaseTarget
-        //     };
-        //     group.chaseTarget = null;
-        //     group.isMoving = false;
-        //     group.isReforming = false;
-        //     // Debug.Log($"[PLANOWANIE AI] Formacja {formationType} zakolejkowana.");
-        //     return;
-        // }
 
         if (group.unitMatrices.Count == 0) return;
         group.assignedFeature = null;
@@ -1891,15 +1833,13 @@ public class ArmyHierarchyManager : MonoBehaviour
         }
         else
         {
-            // --- 1. Domyślne rzędy w zależności od typu jednostki ---
             int targetRows = 3;
             UnitType gType = group.archetypes.Count > 0 ? group.archetypes[0].type : UnitType.Infantry;
 
-            if (gType == UnitType.Cavalry) targetRows = cavRows; // Pobiera zmienną z Inspektora (domyślnie 3)
+            if (gType == UnitType.Cavalry) targetRows = cavRows; 
             else if (gType == UnitType.Archer) targetRows = 2;
-            else targetRows = 3; // Standardowo piechota staje w 3 szeregach
+            else targetRows = 3; 
 
-            // --- 2. Nadpisywanie rzędów jeśli nazwa formacji wyraźnie tego wymaga ---
             if (typeLower.Contains("turtle") || typeLower.Contains("żółw"))
             {
                 targetRows = Mathf.CeilToInt(Mathf.Sqrt(count));
@@ -1910,13 +1850,12 @@ public class ArmyHierarchyManager : MonoBehaviour
             }
             else if (typeLower.Contains("single") || typeLower.Contains("pojedynczy") || typeLower.Contains("jeden szereg"))
             {
-                targetRows = 1; // Użyjemy 1 szeregu tylko, gdy gracz jawnie o to poprosi
+                targetRows = 1;
             }
 
             int cols = Mathf.CeilToInt((float)count / targetRows);
             float spacing = 1.5f;
 
-            // --- 3. Uwzględnienie odpowiednich odstępów (np. dla jazdy z Inspektora) ---
             if (gType == UnitType.Cavalry) spacing = cavSpacing;
             else if (typeLower.Contains("turtle")) spacing = 1.1f;
             else if (targetRows <= 2 && gType != UnitType.Cavalry) spacing = 1.6f;

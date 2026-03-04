@@ -31,16 +31,13 @@ public class GeminiNetwork : MonoBehaviour
             webRequest.downloadHandler = new DownloadHandlerBuffer();
             webRequest.SetRequestHeader("Content-Type", "application/json");
 
-            // yield return webRequest.SendWebRequest();
             if (simulateSynchronousLag)
             {
-                // SYMULACJA ZŁEGO KODU: Wysyłamy żądanie i zamrażamy silnik gry na 1.5 sekundy
                 webRequest.SendWebRequest();
                 System.Threading.Thread.Sleep(1500);
             }
             else
             {
-                // TWÓJ ZOPTYMALIZOWANY KOD: Asynchroniczne oczekiwanie (nie blokuje gry)
                 yield return webRequest.SendWebRequest();
             }
             if (webRequest.result != UnityWebRequest.Result.Success)

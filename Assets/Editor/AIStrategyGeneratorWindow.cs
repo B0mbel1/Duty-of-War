@@ -2,16 +2,15 @@ using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 
-// Ten skrypt działa tylko w edytorze Unity
 public class AIStrategyGeneratorWindow : EditorWindow
 {
     string battleDescription = "Np. Rzymianie atakują środkiem, a gdy podejda na 50m, kawaleria uderza z flanki wschodniej...";
     string strategyName = "NowaStrategia_Kanny";
-    string jsonResult = ""; // Tutaj wkleisz to, co wypluje Gemini
+    string jsonResult = "";
 
     Vector2 scrollPos;
 
-    [MenuItem("AI Tools/Strategy Generator")] // To doda opcję w menu na górze Unity
+    [MenuItem("AI Tools/Strategy Generator")] 
     public static void ShowWindow()
     {
         GetWindow<AIStrategyGeneratorWindow>("AI Strategy Gen");
@@ -45,14 +44,12 @@ public class AIStrategyGeneratorWindow : EditorWindow
 
     void GeneratePrompt()
     {
-        // Pobieramy obiekty z mapy, żeby AI wiedziało co istnieje
         string mapFeatures = "";
         foreach(var f in FindObjectsByType<TerrainFeature>(FindObjectsSortMode.None)) 
             mapFeatures += f.featureName + ", ";
 
         if(string.IsNullOrEmpty(mapFeatures)) mapFeatures = "Brak nazwanych obiektów na scenie (używaj nazw ogólnych).";
 
-        // Konstrukcja promptu
         string prompt = $@"
 Jesteś projektantem poziomów do gry RTS. Twoim zadaniem jest zamiana opisu historycznej bitwy na strukturę danych JSON.
 
@@ -80,7 +77,7 @@ ZADANIE: Stwórz CZYSTY JSON (bez markdown ```json) pasujący do tej struktury:
 WAŻNE: targetName musi być nazwą z KONTEKSTU MAPY lub: 'Center', 'Enemy_Army', 'Flank_West', 'Flank_East'.";
 
         Debug.Log("PROMPT SKOPIOWANY DO SCHOWKA!");
-        GUIUtility.systemCopyBuffer = prompt; // Automatycznie kopiuje do schowka systemowego
+        GUIUtility.systemCopyBuffer = prompt; 
         EditorUtility.DisplayDialog("Sukces", "Prompt został skopiowany do schowka! Wklej go teraz do Gemini/ChatGPT.", "OK");
     }
 
@@ -91,11 +88,9 @@ WAŻNE: targetName musi być nazwą z KONTEKSTU MAPY lub: 'Center', 'Enemy_Army'
             return;
         }
 
-        // Tworzymy nową instancję Twojego profilu
         AIStrategyProfile profile = CreateInstance<AIStrategyProfile>();
         
         try {
-            // Unity ma wbudowany parser, który nadpisze dane w obiekcie profile na podstawie JSONa
             JsonUtility.FromJsonOverwrite(jsonResult, profile);
         }
         catch (System.Exception e) {
@@ -103,10 +98,7 @@ WAŻNE: targetName musi być nazwą z KONTEKSTU MAPY lub: 'Center', 'Enemy_Army'
             return;
         }
 
-        // Zapisywanie pliku na dysku
         string path = $"Assets/{strategyName}.asset";
-        
-        // Unikalna nazwa, żeby nie nadpisać
         path = AssetDatabase.GenerateUniqueAssetPath(path);
 
         AssetDatabase.CreateAsset(profile, path);
