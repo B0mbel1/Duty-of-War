@@ -17,13 +17,11 @@ A tactical Real-Time Strategy (RTS) game built in **Unity (C#)** where players c
 
 A pre-compiled Windows build is available in the **[Releases](../../releases)** tab on the right side of this repository:
 
-1. Download the latest `.zip` archive (e.g., `.zip`).
+1. Download the latest `.zip`.
 2. Extract the entire archive into a folder.
 3. Run the game executable (`.exe`).
 
-### Example Commands (in Polish, as configured in the system prompt)<img width="320" height="96" alt="image" src="https://github.com/user-attachments/assets/3c7cdd15-317b-4b25-b120-144847572e99" />
-<img width="320" height="96" alt="image" src="https://github.com/user-attachments/assets/f0708bb7-7ec7-4ba9-99ed-79e28955615a" />
-:
+### Example Commands (in Polish, as configured in the system prompt):
 * *"Wszyscy do ataku!"* (All units, attack!)
 * *"Jazda, oflankować ich od zachodu!"* (Cavalry, flank them from the west!)
 * *"Łucznicy zająć wzgórze na północy!"* (Archers, take the northern hill!)
