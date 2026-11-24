@@ -176,7 +176,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Wyjd\u017A z gry"
+  m_text: Quit
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -865,7 +865,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Instrukcja
+  m_text: Instruction
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -1561,7 +1561,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Gra w\u0142asna"
+  m_text: Custom Game
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -1803,7 +1803,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Scenariusze
+  m_text: Scenarios
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -1939,7 +1939,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Ustawienia
+  m_text: Settings
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}

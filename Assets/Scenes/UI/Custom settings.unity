@@ -561,7 +561,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Wzg\xF3rza Zamieci"
+  m_text: Blizzard Hills
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -1961,7 +1961,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Wybrze\u017Ce Pal Galur"
+  m_text: Pal Galur Coast
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -2817,7 +2817,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Piechota :'
+  m_text: 'Infantry :'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -4137,7 +4137,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Wr\xF3\u0107"
+  m_text: Back
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -5148,7 +5148,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ': Strzelcy'
+  m_text: ': Archers'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -5463,7 +5463,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ': Piechota'
+  m_text: ': Infantry'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -5599,7 +5599,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Jazda :
+  m_text: 'Cavalry :
 
 '
   m_isRightToLeft: 0
@@ -6815,7 +6815,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Graj
+  m_text: Play
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -6951,7 +6951,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Strzelcy :'
+  m_text: 'Archers :'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
   m_sharedMaterial: {fileID: 5342533519370838491, guid: 83a3ad37a97334f4abc270a7950025b5, type: 2}
@@ -7087,7 +7087,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ': Jazda
+  m_text: ': Cavalry
 
 '
   m_isRightToLeft: 0
