@@ -1,10 +1,26 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
-
+using System.IO;
 public class ModelChecker : MonoBehaviour
 {
-    [SerializeField] private string apiKey = "WPISZ_SWOJ_KLUCZ_API"; 
+    private string apiKey;
+
+    [System.Serializable]
+    private class SecretConfig
+    {
+        public string geminiApiKey;
+    }
+
+    private void Awake()
+    {
+        string path = Path.Combine(Application.streamingAssetsPath, "secrets.json");
+        if (File.Exists(path))
+        {
+            SecretConfig config = JsonUtility.FromJson<SecretConfig>(File.ReadAllText(path));
+            apiKey = config != null ? config.geminiApiKey : string.Empty;
+        }
+    }
 
     public void CheckModels()
     {

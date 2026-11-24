@@ -2,19 +2,52 @@ using System;
 using System.Collections;
 using System.Text;
 using UnityEngine;
+using System.IO;
 using UnityEngine.Networking;
 
 public class GeminiNetwork : MonoBehaviour
 {
     [Header("Testowanie Wydajności")]
     public bool simulateSynchronousLag = false;
-    [Header("API Settings")]
-    [SerializeField] private string apiKey = "WPISZ_SWOJ_KLUCZ_API";
+
+    private string apiKey;
     private string apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
     public event Action<string> OnResponseReceived;
 
+    [Serializable]
+    private class SecretConfig
+    {
+        public string geminiApiKey;
+    }
+
+    private void Awake()
+    {
+        LoadApiKey();
+    }
+
+    private void LoadApiKey()
+    {
+        string path = Path.Combine(Application.streamingAssetsPath, "secrets.json");
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SecretConfig config = JsonUtility.FromJson<SecretConfig>(json);
+            apiKey = config != null ? config.geminiApiKey : string.Empty;
+        }
+        else
+        {
+            Debug.LogWarning("[GeminiNetwork] Brak pliku Assets/StreamingAssets/secrets.json. Skopiuj secrets.example.json i uzupełnij klucz API.");
+        }
+    }
+
+
     public void SendRequest(string prompt)
     {
+        if (string.IsNullOrEmpty(apiKey) || apiKey == "WPISZ_SWOJ_KLUCZ_API")
+        {
+            Debug.LogWarning("[GeminiNetwork] Brak klucza API w secrets.json.");
+            return;
+        }
         StartCoroutine(PostRequest(prompt));
     }
 
