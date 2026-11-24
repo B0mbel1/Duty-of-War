@@ -30,10 +30,29 @@ A pre-compiled Windows build is available in the **[Releases](../../releases)** 
 
 ---
 
+---
+
 ## 🛠️ Running from Source (Unity)
 
 To open and run the project in the Unity Editor:
 
 1. Clone the repository:
-   ```bash
-   git clone [https://github.com/B0mbel1/Duty-of-War.git](https://github.com/B0mbel1/Duty-of-War.git)
+   `git clone https://github.com/B0mbel1/Duty-of-War.git`
+2. Open the project folder in **Unity Hub** (use the editor version specified in `ProjectSettings/ProjectVersion.txt`).
+3. Configure your **Google Gemini API** key:
+   * Navigate to `Assets/StreamingAssets/`.
+   * Copy `secrets.example.json` and rename it to `secrets.json`.
+   * Paste your free API key generated in [Google AI Studio](https://aistudio.google.com/) in the following format:
+     `{"geminiApiKey": "YOUR_API_KEY"}`
+   *(Note: `secrets.json` is listed in `.gitignore` and is excluded from version control).*
+4. Open the battle scene (e.g., `Adrianopol`) and press **Play**.
+
+---
+
+## 🏗️ AI System Architecture (Core Scripts)
+
+* `GeminiNetwork.cs` – Asynchronous REST communication (`UnityWebRequest`) with the Google Gemini API and local configuration loading from `StreamingAssets`.
+* `LLMCommander.cs` – Constructs dynamic system prompts with live battlefield context, parses JSON responses, and translates them into unit orders.
+* `EnemyGeneral.cs` – Finite state machine and phase-based tactical controller for enemy forces.
+* `TerrainScanner.cs` & `TerrainFeature.cs` – Procedural detection of terrain obstacles and calculation of formation alignment vectors.
+
