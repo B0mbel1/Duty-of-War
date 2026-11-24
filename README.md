@@ -6,9 +6,9 @@ A tactical Real-Time Strategy (RTS) game built in **Unity (C#)** where players c
 
 ## ✨ Key Features
 
-* **Natural Language Commanding (LLM Commander):** Issue tactical orders in plain text (e.g., *"Cavalry, flank them from the east"*, *"Archers, take the northern hill"*, *"Everyone form a turtle"*). The AI model translates player intent into structured JSON commands (`MOVE`, `ATTACK`, `FORM`, `STOP`) based on the live battlefield context and currently selected units[cite: 6, 10].
-* **Tactical Enemy AI (Enemy General):** Opposing forces operate in two modes — **Historical** (driven by scripted battle phases and triggers such as elapsed time, enemy distance, or casualty percentage) and **Dynamic** (adapting tactics in real time based on the general's personality: *Aggressive*, *Defensive*, *Balanced*, *Tactician*)[cite: 7, 8].
-* **Automated Terrain Analysis (Terrain Scanner):** Scans map heightmaps and terrain layers to automatically detect strategic landmarks (hills, forests, rivers) and calculate tactical alignment vectors (*Front*, *Back*, *Top*)[cite: 8, 12, 13].
+* **Natural Language Commanding (LLM Commander):** Issue tactical orders in plain text (e.g., *"Cavalry, flank them from the east"*, *"Archers, take the northern hill"*, *"Everyone form a turtle"*). The AI model translates player intent into structured JSON commands (`MOVE`, `ATTACK`, `FORM`, `STOP`) based on the live battlefield context and currently selected units.
+* **Tactical Enemy AI (Enemy General):** Opposing forces operate in two modes — **Historical** (driven by scripted battle phases and triggers such as elapsed time, enemy distance, or casualty percentage) and **Dynamic** (adapting tactics in real time based on the general's personality: *Aggressive*, *Defensive*, *Balanced*, *Tactician*).
+* **Automated Terrain Analysis (Terrain Scanner):** Scans map heightmaps and terrain layers to automatically detect strategic landmarks (hills, forests, rivers) and calculate tactical alignment vectors (*Front*, *Back*, *Top*).
 * **Formations & Flanking Maneuvers:** Supports multiple combat formations (*Line*, *Double Line*, *Wedge*, *Turtle*, *Box*, *Square*, *Loose*, *Column*) as well as multi-stage flanking sequences.
 
 ---
@@ -21,7 +21,9 @@ A pre-compiled Windows build is available in the **[Releases](../../releases)** 
 2. Extract the entire archive into a folder.
 3. Run the game executable (`.exe`).
 
-### Example Commands (in Polish, as configured in the system prompt)[cite: 10]:
+### Example Commands (in Polish, as configured in the system prompt)<img width="320" height="96" alt="image" src="https://github.com/user-attachments/assets/3c7cdd15-317b-4b25-b120-144847572e99" />
+<img width="320" height="96" alt="image" src="https://github.com/user-attachments/assets/f0708bb7-7ec7-4ba9-99ed-79e28955615a" />
+:
 * *"Wszyscy do ataku!"* (All units, attack!)
 * *"Jazda, oflankować ich od zachodu!"* (Cavalry, flank them from the west!)
 * *"Łucznicy zająć wzgórze na północy!"* (Archers, take the northern hill!)
