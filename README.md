@@ -1,39 +1,39 @@
 # Duty of War ⚔️
 
-Taktyczna gra strategiczna czasu rzeczywistego (RTS) stworzona w silniku **Unity (C#)**, w której dowodzisz oddziałami za pomocą poleceń w języku naturalnym, interpretowanych na żywo przez model **Google Gemini AI**.
+A tactical Real-Time Strategy (RTS) game built in **Unity (C#)** where players command military units using natural language orders interpreted in real time by **Google Gemini AI**.
 
 ---
 
-## ✨ Główne funkcjonalności
+## ✨ Key Features
 
-* **Dowodzenie w języku naturalnym (LLM Commander):** Wydawanie rozkazów tekstem po polsku (np. *"Jazda, oflankuj ich od wschodu"*, *"Łucznicy zająć północne wzgórze"*, *"Wszyscy formować żółwia"*). Model AI tłumaczy intencję gracza na ustrukturyzowane komendy JSON (`MOVE`, `ATTACK`, `FORM`, `STOP`) z uwzględnieniem aktualnego kontekstu pola bitwy i zaznaczonych jednostek.
-* **Taktyczne AI przeciwnika (Enemy General):** Przeciwnik działa w dwóch trybach — **historycznym** (opartym na fazach bitwy i wyzwalaczach takich jak czas, dystans czy procent strat) oraz **dynamicznym** (adaptującym taktykę w zależności od osobowości generała: *Aggressive*, *Defensive*, *Balanced*, *Tactician*).
-* **Automatyczna analiza terenu (Terrain Scanner):** System skanujący mapę pod kątem ukształtowania wysokościowego i warstw terenu, automatycznie wyznaczający punkty strategiczne (wzgórza, lasy, rzeki) oraz ich krawędzie (*Front*, *Back*, *Top*).
-* **Formacje i manewry:** Obsługa wielu szyków bojowych (*Line*, *Double Line*, *Wedge*, *Turtle*, *Box*, *Square*, *Loose*, *Column*) oraz sekwencyjnych manewrów oskrzydlających.
-
----
-
-## 🎮 Jak zagrać (Szybki start bez Unity)
-
-Gotową, skompilowaną wersję gry dla systemu Windows znajdziesz w zakładce **[Releases](../../releases)** po prawej stronie repozytorium:
-
-1. Pobierz najnowsze archiwum `.zip`.
-2. Wypakuj całą zawartość archiwum do dowolnego folderu.
-3. Uruchom plik wykonywalny gry (`.exe`).
-
-### Przykładowe rozkazy, które możesz wpisać w trakcie bitwy:
-* *"Wszyscy do ataku!"*
-* *"Jazda, oflankować ich od zachodu!"*
-* *"Łucznicy zająć wzgórze na północy!"*
-* *"Wybrani, formacja żółwia!"*
-* *"Piechota 50 metrów do przodu!"*
+* **Natural Language Commanding (LLM Commander):** Issue tactical orders in plain text (e.g., *"Cavalry, flank them from the east"*, *"Archers, take the northern hill"*, *"Everyone form a turtle"*). The AI model translates player intent into structured JSON commands (`MOVE`, `ATTACK`, `FORM`, `STOP`) based on the live battlefield context and currently selected units[cite: 6, 10].
+* **Tactical Enemy AI (Enemy General):** Opposing forces operate in two modes — **Historical** (driven by scripted battle phases and triggers such as elapsed time, enemy distance, or casualty percentage) and **Dynamic** (adapting tactics in real time based on the general's personality: *Aggressive*, *Defensive*, *Balanced*, *Tactician*)[cite: 7, 8].
+* **Automated Terrain Analysis (Terrain Scanner):** Scans map heightmaps and terrain layers to automatically detect strategic landmarks (hills, forests, rivers) and calculate tactical alignment vectors (*Front*, *Back*, *Top*)[cite: 8, 12, 13].
+* **Formations & Flanking Maneuvers:** Supports multiple combat formations (*Line*, *Double Line*, *Wedge*, *Turtle*, *Box*, *Square*, *Loose*, *Column*) as well as multi-stage flanking sequences.
 
 ---
 
-## 🛠️ Uruchomienie z kodu źródłowego (Unity)
+## 🎮 How to Play (Quick Start without Unity)
 
-Jeśli chcesz otworzyć projekt w edytorze Unity:
+A pre-compiled Windows build is available in the **[Releases](../../releases)** tab on the right side of this repository:
 
-1. Sklonuj repozytorium:
+1. Download the latest `.zip` archive (e.g., `.zip`).
+2. Extract the entire archive into a folder.
+3. Run the game executable (`.exe`).
+
+### Example Commands (in Polish, as configured in the system prompt)[cite: 10]:
+* *"Wszyscy do ataku!"* (All units, attack!)
+* *"Jazda, oflankować ich od zachodu!"* (Cavalry, flank them from the west!)
+* *"Łucznicy zająć wzgórze na północy!"* (Archers, take the northern hill!)
+* *"Wybrani, formacja żółwia!"* (Selected units, form a turtle!)
+* *"Piechota 50 metrów do przodu!"* (Infantry, advance 50 meters!)
+
+---
+
+## 🛠️ Running from Source (Unity)
+
+To open and run the project in the Unity Editor:
+
+1. Clone the repository:
    ```bash
    git clone [https://github.com/B0mbel1/Duty-of-War.git](https://github.com/B0mbel1/Duty-of-War.git)
