@@ -131,19 +131,19 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
     public void SelectWybrzezePalGalur()
     {
         SelectMap(WybrzezePalGalur, WybrzezePalGalurButton);
-        if (terrainDescription) terrainDescription.text = "<color=#663300>Wzniesienia terenu</color> | <color=#6d6d6d>Teren górzysty</color> | <color=#3399ff>Przeprawa przez wodę</color>";
+        if (terrainDescription) terrainDescription.text = "<color=#663300>Terrain Elevationu</color> | <color=#6d6d6d>Mountainous Terrain</color> | <color=#3399ff>Water Crossing</color>";
     }
 
     public void SelectWzgorzaZamieci()
     {
         SelectMap(WzgorzaZamieci, WzgorzaZamieciButton);
-        if (terrainDescription) terrainDescription.text = "<color=#663300>Wzniesienia terenu</color> | <color=#6d6d6d>Teren górzysty</color> | <color=#009933>Teren zalesiony</color>";
+        if (terrainDescription) terrainDescription.text = "<color=#663300>Terrain Elevation</color> | <color=#6d6d6d>Mountainous Terrain</color> | <color=#009933>Forested Terrain</color>";
     }
 
     public void SelectOrleGniazdo()
     {
         SelectMap(OrleGniazdo, OrleGniazdoButton);
-        if (terrainDescription) terrainDescription.text = "<color=#663300>Duże wzniesienie terenu</color>";
+        if (terrainDescription) terrainDescription.text = "<color=#663300>High Terrain Elevation</color>";
     }
 
     private void SelectMap(Sprite map, Button btn)
@@ -172,13 +172,13 @@ public class BattleInfoDisplayOwnSettings : MonoBehaviour
 
         if (totalBlue <= 0)
         {
-            ShowErrorNotification("GRACZ MUSI MIEĆ WOJSKO!");
+            ShowErrorNotification("THE PLAYER MUST HAVE AN ARMY!");
             return;
         }
 
         if (totalRed <= 0)
         {
-            ShowErrorNotification("PRZECIWNIK MUSI MIEĆ WOJSKO!");
+            ShowErrorNotification("THE ENEMY MUST HAVE AN ARMY!");
             return; 
         }
         PlayerPrefs.SetString("PlayerSide", "SideA");

@@ -189,50 +189,50 @@ public class BattleInfoDisplay : MonoBehaviour
 
     public void Battle_Grunwald(Button btn)
     {
-        string opis = "Bitwa pod Grunwaldem (1410 r.)\n\nWojska polsko-litewskie pod wodzą Władysława Jagiełły rozgromiły Zakon Krzyżacki. Jedno z największych starć średniowiecza, które złamało potęgę Krzyżaków.";
-        string opisterenu = "<color=#663300>Wzniesienia terenu</color>";
-        ShowBattleInfo("Korona Królestwa Polskiego", "Zakon Krzyżacki", btn, rzeczpol, teutonic, opis, Grunwald, opisterenu);
+        string opis = "Battle of Grunwald (1410)\n\nPolish-Lithuanian forces led by Wladyslaw Jagiello crushed the Teutonic Order. One of the largest battles of the Middle Ages, which broke the power of the Teutonic Knights.";
+        string opisterenu = "<color=#663300>Terrain Elevation</color>";
+        ShowBattleInfo("Crown of the Kingdom of Poland", "Teutonic Order", btn, rzeczpol, teutonic, opis, Grunwald, opisterenu);
     }
 
     public void Battle_Hastings(Button btn)
     {
-        string opis = "Bitwa pod Hastings (1066 r.)\n\nNormanowie Wilhelma Zdobywcy pokonali anglosaską armię króla Harolda II. Bitwa zapoczątkowała normańskie panowanie w Anglii.";
-        string opisterenu = "<color=#009933>Teren zalesiony</color>";
-        ShowBattleInfo("Księstwo Normandii", "Anglosasi", btn, normandia, anglosas, opis, Hastings, opisterenu);
+        string opis = "Battle of Hastings (1066)\n\nWilliam the Conqueror's Normans defeated King Harold II's Anglo-Saxon army. The battle marked the beginning of Norman rule in England.";
+        string opisterenu = "<color=#009933>Forested Terrain</color>";
+        ShowBattleInfo("Duchy of Normandy", "Anglo-Saxons", btn, normandia, anglosas, opis, Hastings, opisterenu);
     }
 
     public void Battle_Jarmuk(Button btn)
     {
-        string opis = "Bitwa pod Jarmukiem (636 r.)\n\nDecydujące zwycięstwo Arabów nad Bizancjum. Armia kalifatu Raszidun rozgromiła wojska cesarza Herakliusza, otwierając drogę do podboju Syrii i Lewantu.";
-        string opisterenu = "<color=#6d6d6d>Teren górzysty</color> | <color=#3399ff>Przeprawa przez wodę</color>";
-        ShowBattleInfo("Bizancjum", "Arabowie", btn, bizantium, arabs, opis, Jarmuk, opisterenu);
+        string opis = "Battle of the Yarmouk (636)\n\nA decisive Arab victory over Byzantium. The Rashidun Caliphate army crushed the forces of Emperor Heraclius, opening the way to the conquest of Syria and the Levant.";
+        string opisterenu = "<color=#6d6d6d>Mountainous Terrain</color> | <color=#3399ff>Water Crossing</color>";
+        ShowBattleInfo("Byzantium", "Arabs", btn, bizantium, arabs, opis, Jarmuk, opisterenu);
     }
 
     public void Battle_AjnDzalat(Button btn)
     {
-        string opis = "Bitwa pod Ajn Dżalat (1260 r.)\n\nMamelucy pod dowództwem Kutuzza i Bajbarsa pokonali armię mongolską. Było to pierwsze zdecydowane zwycięstwo nad Mongołami, które zatrzymało ich ekspansję na Bliski Wschód.";
-        string opisterenu = "<color=#663300>Wzniesienia terenu</color>";
-        ShowBattleInfo("Mamelucy", "Imperium Mongolskie", btn, mamelucy, mongol, opis, AjnDzalut, opisterenu);
+        string opis = "Battle of Ain Jalut (1260)\n\nThe Mamluks under the command of Qutuz and Baibars defeated the Mongol army. It was the first decisive victory over the Mongols, halting their expansion into the Middle East.";
+        string opisterenu = "<color=#663300>Terrain Elevation</color>";
+        ShowBattleInfo("Mamluks", "Mongol Empire", btn, mamelucy, mongol, opis, AjnDzalut, opisterenu);
     }
 
     public void Battle_TeutoburgForest(Button btn)
     {
-        string opis = "Bitwa w Lesie Teutoburskim (9 r. n.e.)\n\nZasadzka germańskich plemion dowodzonych przez Arminiusza na trzy rzymskie legiony Warusa. Rzymianie ponieśli druzgocącą klęskę, tracąc kontrolę nad Germanią.";
-        string opisterenu = "<color=#009933>Teren zalesiony</color>";
-        ShowBattleInfo("Cesarstwo Rzymskie","Germanie", btn, roma, germania, opis, LasTeutoburski, opisterenu);
+        string opis = "Battle of the Teutoburg Forest (9 AD)\n\nAn ambush by Germanic tribes led by Arminius on Varus's three Roman legions. The Romans suffered a devastating defeat, losing control over Germania.";
+        string opisterenu = "<color=#009933>Forested Terrain</color>";
+        ShowBattleInfo("Roman Empire","Germanic Tribes", btn, roma, germania, opis, LasTeutoburski, opisterenu);
     }
 
     public void Battle_LechowePole(Button btn)
     {
-        string opis = "Bitwa na Lechowym Polu (955 r.)\n\nKrólestwo Franków pod wodzą Ottona I pokonało najazd Węgrów. Zwycięstwo zakończyło węgierskie najazdy na Europę Zachodnią i wzmocniło władzę cesarską.";
-        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodę</color>";
-        ShowBattleInfo("Pa�stwo wschodniofrankijskie", "W�gry", btn, frankowie, wegry, opis, LechowePole, opisterenu);
+        string opis = "Battle of Lechfeld (955)\n\nThe Kingdom of the Franks led by Otto I defeated the Hungarian invasion. The victory ended Hungarian raids into Western Europe and strengthened imperial authority.";
+        string opisterenu = "<color=#663300>Terrain Elevation</color> | <color=#3399ff>Water Crossing</color>";
+        ShowBattleInfo("East Francia", "Hungary", btn, frankowie, wegry, opis, LechowePole, opisterenu);
     }
 
     public void Battle_Adrianopol(Button btn)
     {
-        string opis = "Bitwa pod Adrianopolem (378 r.)\n\nStarcie Cesarstwa Rzymskiego z Gotami. Rzym poniósł wielką porażkę, zginął cesarz Walens, a bitwa zapoczątkowała upadek zachodniego cesarstwa.";
-        string opisterenu = "<color=#663300>Wzniesienia terenu</color> | <color=#3399ff>Przeprawa przez wodę</color>";
-        ShowBattleInfo("Cesarstwo Rzymskie", "Goci", btn, roma, goci, opis, Adrianopol, opisterenu);
+        string opis = "Battle of Adrianople (378)\n\nA clash between the Roman Empire and the Goths. Rome suffered a major defeat, Emperor Valens was killed, and the battle marked the beginning of the fall of the Western Empire.";
+        string opisterenu = "<color=#663300>Terrain Elevation</color> | <color=#3399ff>Water Crossing</color>";
+        ShowBattleInfo("Roman Empire", "Goths", btn, roma, goci, opis, Adrianopol, opisterenu);
     }
 }
